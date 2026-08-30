@@ -68,6 +68,26 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Gastos_menores_has_a_minimal_iddoc_no_buyer_and_exempt_only_totales()
+    {
+        var root = Serialize(EcfTestData.GastosMenores());
+
+        var idDoc = root.Element("Encabezado")!.Element("IdDoc")!;
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["TipoeCF", "eNCF", "FechaVencimientoSecuencia", "TipoPago"]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("43");
+
+        root.Element("Encabezado")!.Element("Comprador").ShouldBeNull();
+        root.Element("Encabezado")!.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["Version", "IdDoc", "Emisor", "Totales"]);
+
+        var totales = root.Element("Encabezado")!.Element("Totales")!;
+        totales.Elements().Select(e => e.Name.LocalName).ShouldBe(["MontoExento", "MontoTotal"]);
+        totales.Element("MontoExento")!.Value.ShouldBe("350");
+        totales.Element("MontoTotal")!.Value.ShouldBe("350");
+    }
+
+    [Fact]
     public void Regimenes_especiales_iddoc_omits_the_taxed_indicator_and_totales_are_exempt_only()
     {
         var root = Serialize(EcfTestData.RegimenesEspeciales());

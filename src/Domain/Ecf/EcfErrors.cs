@@ -63,7 +63,15 @@ public static class EcfErrors
 
     public static Error OnlyExemptLinesAllowed(int documentType) => Error.Validation(
         code: "Ecf.OnlyExemptLinesAllowed",
-        description: $"El tipo {documentType} (Regímenes Especiales) solo admite líneas exentas de ITBIS.");
+        description: $"El tipo {documentType} solo admite líneas exentas de ITBIS.");
+
+    public static Error GastosMenoresLineTooComplex => Error.Validation(
+        code: "Ecf.GastosMenoresLineTooComplex",
+        description: "Las líneas del Comprobante de Gastos Menores (tipo 43) no admiten descuentos, recargos ni otros impuestos adicionales.");
+
+    public static Error NonInvoiceableAmountNotApplicable(int documentType) => Error.Validation(
+        code: "Ecf.NonInvoiceableAmountNotApplicable",
+        description: $"El tipo {documentType} no admite monto no facturable.");
 
     public static Error CreditNoteDueDateInThePast => Error.Validation(
         code: "Ecf.CreditNoteDueDateInThePast",

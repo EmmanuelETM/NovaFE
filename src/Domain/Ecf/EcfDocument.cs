@@ -131,14 +131,34 @@ public sealed class EcfDocument
         if (RequiresIncomeType(type) && string.IsNullOrWhiteSpace(header.IncomeType))
             errors.Add(EcfErrors.IncomeTypeRequired);
 
-        // Regímenes Especiales: el XSD del 44 no tiene campos gravados ni de ITBIS
-        // en <Totales> — todo va a <MontoExento>.
-        if (type == EcfType.RegimenesEspeciales && lines.Any(line => !line.Rate.IsExempt))
+        // Regímenes Especiales (44) y Gastos Menores (43): sus XSD no tienen campos
+        // gravados ni de ITBIS en <Totales> — todo va a <MontoExento>.
+        if ((type == EcfType.RegimenesEspeciales || type == EcfType.GastosMenores)
+            && lines.Any(line => !line.Rate.IsExempt))
             errors.Add(EcfErrors.OnlyExemptLinesAllowed(type.Id));
 
+        ValidateGastosMenores(type, header, lines, errors);
         ValidateRetention(type, lines, errors);
 
         return errors;
+    }
+
+    /// <summary>
+    /// El tipo 43 (Gastos Menores) es el más reducido: sus líneas no admiten
+    /// descuentos, recargos ni otros impuestos, y el encabezado no lleva monto no
+    /// facturable (nada de eso existe en su XSD).
+    /// </summary>
+    private static void ValidateGastosMenores(
+        EcfType type, EcfHeader header, IReadOnlyList<EcfLine> lines, List<Error> errors)
+    {
+        if (type != EcfType.GastosMenores)
+            return;
+
+        if (lines.Any(line => line.Discount > 0m || line.Surcharge > 0m || line.AdditionalTaxes > 0m))
+            errors.Add(EcfErrors.GastosMenoresLineTooComplex);
+
+        if (header.NonInvoiceableAmount != 0m)
+            errors.Add(EcfErrors.NonInvoiceableAmountNotApplicable(type.Id));
     }
 
     /// <summary>

@@ -11,11 +11,11 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: tipos 31–34, 41, 44 y 45 con los bloques de uso común (IdDoc, Emisor,
+/// v1: tipos 31–34, 41 y 43–45 con los bloques de uso común (IdDoc, Emisor,
 /// Comprador, Totales, DetallesItems, InformacionReferencia, Retencion). Faltan:
 /// InformacionesAdicionales, Transporte, OtraMoneda, Subtotales, DescuentosORecargos,
 /// Paginación, el desglose de ImpuestosAdicionales, el formato reducido RFCE y los
-/// tipos 43, 46 y 47. Ver <c>docs/ecf-xml.md</c>.
+/// tipos 46 y 47. Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -74,18 +74,23 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         El(w, "FechaEmision", EcfXmlFormat.Date(h.IssueDate));
         w.WriteEndElement(); // Emisor
 
-        w.WriteStartElement("Comprador");
-        if (h.Buyer.Rnc is { } buyerRnc)
-            El(w, "RNCComprador", buyerRnc.Value);
-        Opt(w, "IdentificadorExtranjero", h.Buyer.ForeignId);
-        Text(w, "RazonSocialComprador", h.Buyer.Name);
-        Text(w, "ContactoComprador", h.Buyer.Contact);
-        Text(w, "CorreoComprador", h.Buyer.Email);
-        Text(w, "DireccionComprador", h.Buyer.Address);
-        Text(w, "MunicipioComprador", h.Buyer.Municipality);
-        Text(w, "ProvinciaComprador", h.Buyer.Province);
-        Text(w, "InformacionAdicionalComprador", h.Buyer.AdditionalInfo);
-        w.WriteEndElement(); // Comprador
+        // El tipo 43 (Gastos Menores) no tiene bloque <Comprador>: es un gasto
+        // propio del emisor, no hay contraparte identificada.
+        if (doc.Type != EcfType.GastosMenores)
+        {
+            w.WriteStartElement("Comprador");
+            if (h.Buyer.Rnc is { } buyerRnc)
+                El(w, "RNCComprador", buyerRnc.Value);
+            Opt(w, "IdentificadorExtranjero", h.Buyer.ForeignId);
+            Text(w, "RazonSocialComprador", h.Buyer.Name);
+            Text(w, "ContactoComprador", h.Buyer.Contact);
+            Text(w, "CorreoComprador", h.Buyer.Email);
+            Text(w, "DireccionComprador", h.Buyer.Address);
+            Text(w, "MunicipioComprador", h.Buyer.Municipality);
+            Text(w, "ProvinciaComprador", h.Buyer.Province);
+            Text(w, "InformacionAdicionalComprador", h.Buyer.AdditionalInfo);
+            w.WriteEndElement(); // Comprador
+        }
 
         WriteTotales(w, doc);
         w.WriteEndElement(); // Encabezado
@@ -98,6 +103,8 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
     ///   en vez de <c>&lt;FechaVencimientoSecuencia&gt;</c>; su XSD no admite <c>&lt;TablaFormasPago&gt;</c>.</item>
     ///   <item>41 (Compras): su XSD no admite <c>&lt;TipoIngresos&gt;</c> ni <c>&lt;IndicadorEnvioDiferido&gt;</c>.</item>
     ///   <item>44 (Regímenes Especiales): su XSD no admite <c>&lt;IndicadorMontoGravado&gt;</c> (todo es exento).</item>
+    ///   <item>43 (Gastos Menores): IdDoc mínimo — solo <c>TipoeCF</c>, <c>eNCF</c>,
+    ///   <c>FechaVencimientoSecuencia</c> y <c>TipoPago</c>.</item>
     /// </list>
     /// </summary>
     private static void WriteIdDoc(XmlWriter w, EcfDocument doc)
@@ -110,6 +117,14 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         w.WriteStartElement("IdDoc");
         El(w, "TipoeCF", Int(doc.Type.Id));
         El(w, "eNCF", h.Encf.Value);
+
+        if (doc.Type == EcfType.GastosMenores)
+        {
+            El(w, "FechaVencimientoSecuencia", EcfXmlFormat.Date(h.SequenceExpiresOn!.Value));
+            El(w, "TipoPago", Int(h.Payment.Condition.Id));
+            w.WriteEndElement(); // IdDoc
+            return;
+        }
 
         if (isCreditNote)
             El(w, "IndicadorNotaCredito", Int(doc.CreditNoteIndicator ?? 0));

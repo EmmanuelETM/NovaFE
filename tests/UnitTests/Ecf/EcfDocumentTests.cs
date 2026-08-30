@@ -84,6 +84,30 @@ public class EcfDocumentTests
     }
 
     [Fact]
+    public void Gastos_menores_rejects_a_taxed_line()
+        => EcfDocument.Create(
+                EcfType.GastosMenores,
+                EcfTestData.Header(43),
+                [EcfTestData.Line(rate: ItbisRate.Eighteen)])
+            .FirstError.Code.ShouldBe("Ecf.OnlyExemptLinesAllowed");
+
+    [Fact]
+    public void Gastos_menores_rejects_a_line_discount()
+        => EcfDocument.Create(
+                EcfType.GastosMenores,
+                EcfTestData.Header(43),
+                [EcfTestData.Line(rate: ItbisRate.Exempt) with { Discount = 10m }])
+            .FirstError.Code.ShouldBe("Ecf.GastosMenoresLineTooComplex");
+
+    [Fact]
+    public void Gastos_menores_rejects_a_non_invoiceable_amount()
+        => EcfDocument.Create(
+                EcfType.GastosMenores,
+                EcfTestData.Header(43) with { NonInvoiceableAmount = 50m },
+                [EcfTestData.Line(rate: ItbisRate.Exempt)])
+            .FirstError.Code.ShouldBe("Ecf.NonInvoiceableAmountNotApplicable");
+
+    [Fact]
     public void Regimenes_especiales_rejects_a_taxed_line()
         => EcfDocument.Create(
                 EcfType.RegimenesEspeciales,

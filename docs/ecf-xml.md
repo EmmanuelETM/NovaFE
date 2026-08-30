@@ -51,10 +51,10 @@ relleno.
 
 ## Alcance v1
 
-**Incluido:** tipos **31**, **32**, **33**, **34**, **41**, **44** y **45** con
-IdDoc, Emisor, Comprador, Totales, DetallesItems, InformacionReferencia, Retencion.
-Descuentos/recargos de línea (`DescuentoMonto`/`RecargoMonto` directos), múltiples
-tasas de ITBIS, tipos de item (bien/servicio), formas de pago.
+**Incluido:** tipos **31**, **32**, **33**, **34**, **41**, **43**, **44** y **45**
+con IdDoc, Emisor, Comprador, Totales, DetallesItems, InformacionReferencia,
+Retencion. Descuentos/recargos de línea (`DescuentoMonto`/`RecargoMonto` directos),
+múltiples tasas de ITBIS, tipos de item (bien/servicio), formas de pago.
 
 **Tipo 32 (Factura de Consumo)** — `<IdDoc>` como el 31 pero **sin
 `<FechaVencimientoSecuencia>`** (`EcfType.HasSequenceExpiry` = false, igual que el
@@ -86,6 +86,17 @@ porqué (tasa de ISR variable, % de ITBIS según el proveedor). `<Totales>` agre
 retenciones`). Las retenciones **no** tocan `MontoTotal`. El resto de tipos v1
 rechaza `<Retencion>` en las líneas (`Ecf.RetentionNotApplicable`); el tipo 47
 (pendiente) reusa este mismo modelo.
+
+**Tipo 43 (Gastos Menores)** — caja chica: el comprobante **más reducido**. Su
+`<IdDoc>` lleva solo `TipoeCF`, `eNCF`, `FechaVencimientoSecuencia` y `TipoPago`
+(nada de `IndicadorMontoGravado`, `TipoIngresos`, `FechaLimitePago`,
+`TablaFormasPago`…). **No tiene bloque `<Comprador>`** (es un gasto propio del
+emisor). `<Totales>` es solo `<MontoExento>` + `<MontoTotal>` (+ `MontoPeriodo`
+opcional). Las líneas **no admiten** descuento, recargo ni otros impuestos, y el
+encabezado **no admite** monto no facturable. El dominio rechaza todo eso
+(`Ecf.OnlyExemptLinesAllowed`, `Ecf.GastosMenoresLineTooComplex`,
+`Ecf.NonInvoiceableAmountNotApplicable`). `EcfHeader.Buyer` sigue siendo obligatorio
+en el record pero no se serializa para el 43.
 
 **Tipo 44 (Regímenes Especiales)** — zona franca / regímenes de incentivo: **todo
 es exento**. Su `<Totales>` **no tiene campos gravados ni de ITBIS** (solo
@@ -121,9 +132,8 @@ original a la vista.
 **Falta (slices posteriores):**
 
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
-- Tipos 43, 46 y 47 — cada uno con su XSD embebido y sus reglas de obligatoriedad.
-  El 47 (Pagos al Exterior) también lleva retención de ISR; el 46 (Exportaciones)
-  va en moneda extranjera.
+- Tipos 46 y 47 — cada uno con su XSD embebido. El 47 (Pagos al Exterior) también
+  lleva retención de ISR; el 46 (Exportaciones) va en moneda extranjera.
 - Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `OtraMoneda`,
   `Subtotales`, `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
   `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo.
