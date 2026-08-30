@@ -56,6 +56,19 @@ public abstract class IntegrationTestBase(DatabaseFixture database) : IAsyncLife
         return response.Content.ReadFromJsonAsync<T>(Json);
     }
 
+    /// <summary>
+    /// Reconstruye la app con opciones de configuración extra (p. ej. apuntar la
+    /// DGII a un WireMock). Llamar al inicio de la prueba, antes de escribir nada.
+    /// </summary>
+    protected void Reconfigure(IReadOnlyDictionary<string, string?> overrides)
+    {
+        Client.Dispose();
+        _factory!.Dispose();
+
+        _factory = new ApiFactory(Database.ConnectionString, overrides);
+        Client = _factory.CreateClient();
+    }
+
     // --- helpers compartidos por los slices ---------------------------------
 
     /// <summary>Registra un contribuyente y devuelve su id.</summary>
