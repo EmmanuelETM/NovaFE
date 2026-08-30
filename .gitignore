@@ -29,3 +29,6 @@ appsettings.Local.json
 *.pfx
 *.p12
 .env
+
+# Claude Code — overrides locales (los hooks y permisos del equipo van en .claude/settings.json)
+.claude/settings.local.json

@@ -286,10 +286,11 @@ proyecto.
 
 ## Documentación
 
-Todo `.md` nuevo va en `docs/`. **Al crear un archivo en `docs/`, agrégalo también
-a la carpeta de solución `/docs/` en `NovaFE.slnx`** (`<File Path="docs/<nombre>.md" />`,
-en orden alfabético dentro del `<Folder Name="/docs/">`) para que aparezca en el
-Solution Explorer de Visual Studio sin abrir el explorador de archivos.
+Todo `.md` nuevo va en `docs/` y debe quedar listado en la carpeta de solución
+`/docs/` de `NovaFE.slnx` para verse en el Solution Explorer de Visual Studio. De
+eso se encarga un hook `PostToolUse` (`.claude/hooks/sync-docs-slnx.py`): al
+escribir un `docs/*.md` inserta su `<File Path="docs/<nombre>.md" />` ordenado
+alfabéticamente. Es idempotente. Si editas el `.slnx` a mano, mantené ese orden.
 
 
 ## Contexto del Proyecto
