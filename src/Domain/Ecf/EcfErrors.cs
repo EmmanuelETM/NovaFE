@@ -65,6 +65,10 @@ public static class EcfErrors
         code: "Ecf.OnlyExemptLinesAllowed",
         description: $"El tipo {documentType} solo admite líneas exentas de ITBIS.");
 
+    public static Error OnlyZeroRatedLinesAllowed(int documentType) => Error.Validation(
+        code: "Ecf.OnlyZeroRatedLinesAllowed",
+        description: $"El tipo {documentType} (Exportaciones) solo admite líneas con ITBIS a tasa cero (indicador de facturación 3).");
+
     public static Error GastosMenoresLineTooComplex => Error.Validation(
         code: "Ecf.GastosMenoresLineTooComplex",
         description: "Las líneas del Comprobante de Gastos Menores (tipo 43) no admiten descuentos, recargos ni otros impuestos adicionales.");

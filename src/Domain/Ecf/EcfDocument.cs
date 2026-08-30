@@ -132,10 +132,15 @@ public sealed class EcfDocument
             errors.Add(EcfErrors.IncomeTypeRequired);
 
         // Regímenes Especiales (44) y Gastos Menores (43): sus XSD no tienen campos
-        // gravados ni de ITBIS en <Totales> — todo va a <MontoExento>.
+        // gravados ni de ITBIS en <Totales> — todo va a <MontoExento> (Formato nota 50).
         if ((type == EcfType.RegimenesEspeciales || type == EcfType.GastosMenores)
             && lines.Any(line => !line.Rate.IsExempt))
             errors.Add(EcfErrors.OnlyExemptLinesAllowed(type.Id));
+
+        // Exportaciones (46): toda línea va a tasa 0 % (Formato nota 51); su
+        // <Totales> solo tiene el bucket I3.
+        if (type == EcfType.Exportaciones && lines.Any(line => line.Rate != ItbisRate.Zero))
+            errors.Add(EcfErrors.OnlyZeroRatedLinesAllowed(type.Id));
 
         ValidateGastosMenores(type, header, lines, errors);
         ValidateRetention(type, lines, errors);

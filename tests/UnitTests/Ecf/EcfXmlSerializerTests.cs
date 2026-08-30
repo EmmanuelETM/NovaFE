@@ -68,6 +68,32 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Exportaciones_omits_the_taxed_indicator_and_totales_use_the_zero_rate_bucket()
+    {
+        var root = Serialize(EcfTestData.Exportaciones());
+        var idDoc = root.Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "FechaVencimientoSecuencia",
+            "TipoIngresos", "TipoPago", "FechaLimitePago", "TablaFormasPago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("46");
+        idDoc.Element("IndicadorMontoGravado").ShouldBeNull();
+
+        root.Element("Encabezado")!.Element("Comprador")!.Element("IdentificadorExtranjero")!.Value
+            .ShouldBe("US-4471203");
+
+        var totales = root.Element("Encabezado")!.Element("Totales")!;
+        totales.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["MontoGravadoTotal", "MontoGravadoI3", "ITBIS3", "TotalITBIS3", "MontoTotal"]);
+        totales.Element("MontoGravadoI3")!.Value.ShouldBe("15000");
+        totales.Element("ITBIS3")!.Value.ShouldBe("0");
+        totales.Element("MontoTotal")!.Value.ShouldBe("15000");
+        totales.Element("MontoExento").ShouldBeNull();
+    }
+
+    [Fact]
     public void Gastos_menores_has_a_minimal_iddoc_no_buyer_and_exempt_only_totales()
     {
         var root = Serialize(EcfTestData.GastosMenores());

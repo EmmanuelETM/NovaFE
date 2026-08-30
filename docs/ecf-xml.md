@@ -51,8 +51,8 @@ relleno.
 
 ## Alcance v1
 
-**Incluido:** tipos **31**, **32**, **33**, **34**, **41**, **43**, **44** y **45**
-con IdDoc, Emisor, Comprador, Totales, DetallesItems, InformacionReferencia,
+**Incluido:** tipos **31**, **32**, **33**, **34**, **41**, **43**, **44**, **45**
+y **46** con IdDoc, Emisor, Comprador, Totales, DetallesItems, InformacionReferencia,
 Retencion. Descuentos/recargos de línea (`DescuentoMonto`/`RecargoMonto` directos),
 múltiples tasas de ITBIS, tipos de item (bien/servicio), formas de pago.
 
@@ -111,13 +111,27 @@ falta la rama que salta `<IndicadorMontoGravado>`.
 opcional). `RNCComprador` es `minOccurs="1"` (siempre); el 45 **no** tiene
 `<IdentificadorExtranjero>`. Sin rama propia en el serializador.
 
+**Tipo 46 (Exportaciones)** — venta al exterior, **siempre a ITBIS tasa 0 %**
+(Formato nota 51: `IndicadorFacturacion = 3`; el dominio rechaza cualquier otra
+tasa con `Ecf.OnlyZeroRatedLinesAllowed`). Su `<Totales>` solo tiene el bucket I3
+(`MontoGravadoI3`, `ITBIS3`, `TotalITBIS3`) — sin I1/I2, sin `MontoExento`, sin
+`MontoImpuestoAdicional` — y su `<IdDoc>` no lleva `<IndicadorMontoGravado>` (misma
+rama que el 44). El comprador puede identificarse por `RNCComprador` **o**
+`IdentificadorExtranjero` (o ninguno en casos de Zona Franca Comercial); solo
+`RazonSocialComprador` es obligatorio. **Moneda:** el XML puede ir enteramente en
+DOP — `<OtraMoneda>` es *condicional* a facturar en divisa (código 2 en la matriz
+del Formato, igual que todos los tipos), no un requisito del 46. `<OtraMoneda>`,
+`<PaisComprador>` y el bloque `<InformacionesAdicionales>` de exportación (FOB,
+seguro, flete, CIF, puertos) van en slices posteriores.
+
 **Verificado contra el XSD**: `IndicadorBienoServicio` es **1 = Bien, 2 = Servicio**
 (el contexto viejo decía B/S). `RNCValidationType` son 9 u 11 dígitos (no 10).
 `IndicadorFacturacion` admite `0` ("No Facturable"). En los tipos 32/33/34
 `RNCComprador` y `RazonSocialComprador` son `minOccurs="0"` (no estructural). El
 tipo 44 no tiene campos gravados en `<Totales>` ni `<IndicadorMontoGravado>`; el
 tipo 45 es estructuralmente el 31 pero sin `<IdentificadorExtranjero>` en el
-comprador.
+comprador; el tipo 46 solo tiene el bucket I3 (tasa 0 %) y tampoco lleva
+`<IndicadorMontoGravado>`.
 
 **Identificación del comprador** (`EcfDocument.RequiresBuyerIdentification`):
 31/41/44/45 siempre (el 45 lo exige el XSD con `minOccurs="1"`; el 44 lo exige la
@@ -132,8 +146,10 @@ original a la vista.
 **Falta (slices posteriores):**
 
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
-- Tipos 46 y 47 — cada uno con su XSD embebido. El 47 (Pagos al Exterior) también
-  lleva retención de ISR; el 46 (Exportaciones) va en moneda extranjera.
+- El bloque `<OtraMoneda>` (facturación en divisa) — condicional, transversal a
+  todos los tipos, hoy sin implementar.
+- Tipo 47 (Pagos al Exterior) — líneas exentas (Formato nota 50) + retención de ISR
+  (reusa el modelo de retención del 41).
 - Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `OtraMoneda`,
   `Subtotales`, `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
   `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo.

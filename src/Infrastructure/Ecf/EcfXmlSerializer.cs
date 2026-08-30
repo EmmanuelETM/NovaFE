@@ -11,11 +11,11 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: tipos 31–34, 41 y 43–45 con los bloques de uso común (IdDoc, Emisor,
+/// v1: tipos 31–34, 41 y 43–46 con los bloques de uso común (IdDoc, Emisor,
 /// Comprador, Totales, DetallesItems, InformacionReferencia, Retencion). Faltan:
 /// InformacionesAdicionales, Transporte, OtraMoneda, Subtotales, DescuentosORecargos,
-/// Paginación, el desglose de ImpuestosAdicionales, el formato reducido RFCE y los
-/// tipos 46 y 47. Ver <c>docs/ecf-xml.md</c>.
+/// Paginación, el desglose de ImpuestosAdicionales, el formato reducido RFCE y el
+/// tipo 47. Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -102,7 +102,8 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
     ///   <item>34 (Nota de Crédito): <c>&lt;IndicadorNotaCredito&gt;</c> (0/1, obligatorio)
     ///   en vez de <c>&lt;FechaVencimientoSecuencia&gt;</c>; su XSD no admite <c>&lt;TablaFormasPago&gt;</c>.</item>
     ///   <item>41 (Compras): su XSD no admite <c>&lt;TipoIngresos&gt;</c> ni <c>&lt;IndicadorEnvioDiferido&gt;</c>.</item>
-    ///   <item>44 (Regímenes Especiales): su XSD no admite <c>&lt;IndicadorMontoGravado&gt;</c> (todo es exento).</item>
+    ///   <item>44 (Regímenes Especiales) y 46 (Exportaciones): sus XSD no admiten
+    ///   <c>&lt;IndicadorMontoGravado&gt;</c> (todo exento o a tasa 0 %).</item>
     ///   <item>43 (Gastos Menores): IdDoc mínimo — solo <c>TipoeCF</c>, <c>eNCF</c>,
     ///   <c>FechaVencimientoSecuencia</c> y <c>TipoPago</c>.</item>
     /// </list>
@@ -112,7 +113,8 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         var h = doc.Header;
         var isCreditNote = doc.Type == EcfType.NotaCredito;
         var isCompras = doc.Type == EcfType.Compras;
-        var isRegimenesEspeciales = doc.Type == EcfType.RegimenesEspeciales;
+        var omitsTaxedIndicator =
+            doc.Type == EcfType.RegimenesEspeciales || doc.Type == EcfType.Exportaciones;
 
         w.WriteStartElement("IdDoc");
         El(w, "TipoeCF", Int(doc.Type.Id));
@@ -133,7 +135,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
 
         if (h.DeferredDelivery && !isCompras)
             El(w, "IndicadorEnvioDiferido", "1");
-        if (!isRegimenesEspeciales)
+        if (!omitsTaxedIndicator)
             El(w, "IndicadorMontoGravado", h.PricesIncludeTax ? "1" : "0");
         if (!isCompras)
             El(w, "TipoIngresos", h.IncomeType);
