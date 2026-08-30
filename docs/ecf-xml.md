@@ -52,9 +52,22 @@ relleno.
 ## Alcance v1
 
 **Incluido:** **los diez tipos** (31–34, 41, 43–47) con IdDoc, Emisor, Comprador,
-Totales, DetallesItems, InformacionReferencia, Retencion. Descuentos/recargos de
-línea (`DescuentoMonto`/`RecargoMonto` directos), múltiples tasas de ITBIS, tipos de
-item (bien/servicio), formas de pago.
+Totales, DetallesItems, InformacionReferencia, Retencion, **InformacionesAdicionales**
+y **Transporte**. Descuentos/recargos de línea (`DescuentoMonto`/`RecargoMonto`
+directos), múltiples tasas de ITBIS, tipos de item (bien/servicio), formas de pago.
+
+**Bloques transversales** (decisión: passthrough — el cliente trae los datos, el
+motor fiscal no los usa; ver plan):
+
+- **`InformacionesAdicionales`** (`EcfHeader.Shipping` → `EcfShippingInfo`) — datos
+  de embarque. Opcional en 31/32/33/34/44/45/46; el dominio lo rechaza en 41/43/47
+  (`Ecf.BlockNotApplicable`). Los campos de exportación (FOB/CIF, puertos,
+  `EcfExportDetails`) van en un sub-record y **solo aplican al tipo 46**
+  (`Ecf.ExportFieldsOnlyForExports`). Se emite entre `</Comprador>` y `<Transporte>`.
+- **`Transporte`** (`EcfHeader.Transport` → `EcfTransport`) — opcional en todos
+  menos 41/43. El tipo 46 antepone vía/país/compañía transportista; el tipo 47 solo
+  admite `<PaisDestino>` (`Ecf.TransportForPagosExteriorIsDestinationOnly`).
+  `TransportVia` es smart enum (01 terrestre / 02 marítimo / 03 aérea, solo 46).
 
 **Tipo 32 (Factura de Consumo)** — `<IdDoc>` como el 31 pero **sin
 `<FechaVencimientoSecuencia>`** (`EcfType.HasSequenceExpiry` = false, igual que el
@@ -158,11 +171,11 @@ original a la vista.
 **Falta (slices posteriores):**
 
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
-- El bloque `<OtraMoneda>` (facturación en divisa) — condicional, transversal a
-  todos los tipos, hoy sin implementar.
-- Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `Subtotales`,
-  `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
-  `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo.
+- Bloques transversales restantes (ver plan): `OtraMoneda` + `OtraMonedaDetalle`
+  (PR2), `DescuentosORecargos`/Sección D con reconciliación mecánica en el motor
+  (PR3), `Subtotales` + `Paginacion` + desglose de `ImpuestosAdicionales` + `Mineria`
+  + `TablaSubcantidad` (PR4).
+- Sub-tablas de descuento/recargo de línea (`TablaSubDescuento`/`TablaSubRecargo`).
 - El **cálculo** de las tasas de retención (hoy los montos los trae el cliente).
 - Habilitar `<Retencion>` opcional en los tipos que su XSD lo permite (31/33/34).
 - La matriz completa de obligatoriedad 0/1/2/3 por tipo en los validadores por

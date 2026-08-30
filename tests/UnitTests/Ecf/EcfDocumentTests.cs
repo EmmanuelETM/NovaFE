@@ -84,6 +84,38 @@ public class EcfDocumentTests
     }
 
     [Fact]
+    public void Compras_rejects_the_shipping_block()
+        => EcfDocument.Create(
+                EcfType.Compras,
+                EcfTestData.Header(41) with { Shipping = new EcfShippingInfo(ContainerNumber: "X") },
+                [EcfTestData.Line(retention: EcfTestData.Retention())])
+            .FirstError.Code.ShouldBe("Ecf.BlockNotApplicable");
+
+    [Fact]
+    public void A_non_export_rejects_export_shipping_fields()
+        => EcfDocument.Create(
+                EcfType.CreditoFiscal,
+                EcfTestData.Header(31) with
+                {
+                    Shipping = new EcfShippingInfo(Export: new EcfExportDetails(TotalFob: 100m)),
+                },
+                [EcfTestData.Line()])
+            .FirstError.Code.ShouldBe("Ecf.ExportFieldsOnlyForExports");
+
+    [Fact]
+    public void Pagos_exterior_transport_rejects_non_destination_fields()
+        => EcfDocument.Create(
+                EcfType.PagosExterior,
+                EcfTestData.Header(47) with
+                {
+                    Buyer = new EcfBuyer("Foreign Co", ForeignId: "X1"),
+                    Transport = new EcfTransport(Driver: "no permitido", DestinationCountry: "UK"),
+                },
+                [EcfTestData.Line(rate: ItbisRate.Exempt,
+                    retention: new EcfLineRetention(RetentionAgent.Withholding, IsrWithheld: 100m))])
+            .FirstError.Code.ShouldBe("Ecf.TransportForPagosExteriorIsDestinationOnly");
+
+    [Fact]
     public void Pagos_exterior_requires_isr_retention_on_every_line()
         => EcfDocument.Create(
                 EcfType.PagosExterior,

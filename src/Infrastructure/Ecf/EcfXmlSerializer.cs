@@ -11,11 +11,11 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: los diez tipos (31–34, 41, 43–47) con los bloques de uso común (IdDoc,
-/// Emisor, Comprador, Totales, DetallesItems, InformacionReferencia, Retencion).
-/// Faltan: InformacionesAdicionales, Transporte, OtraMoneda, Subtotales,
-/// DescuentosORecargos, Paginación, el desglose de ImpuestosAdicionales y el
-/// formato reducido RFCE (tipo 32 &lt; DOP 250 k). Ver <c>docs/ecf-xml.md</c>.
+/// v1: los diez tipos (31–34, 41, 43–47) con IdDoc, Emisor, Comprador, Totales,
+/// DetallesItems, InformacionReferencia, Retencion, InformacionesAdicionales y
+/// Transporte. Faltan: OtraMoneda, Subtotales, DescuentosORecargos, Paginación, el
+/// desglose de ImpuestosAdicionales y el formato reducido RFCE (tipo 32 &lt; DOP
+/// 250 k). Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -100,8 +100,92 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             w.WriteEndElement(); // Comprador
         }
 
+        WriteInformacionesAdicionales(w, doc);
+        WriteTransporte(w, doc);
         WriteTotales(w, doc);
         w.WriteEndElement(); // Encabezado
+    }
+
+    // ---- InformacionesAdicionales / Transporte (bloques transversales) ---
+
+    /// <summary>
+    /// <c>&lt;InformacionesAdicionales&gt;</c> (datos de embarque). Los campos de
+    /// exportación (FOB/CIF, puertos) se intercalan entre <c>NumeroReferencia</c> y
+    /// <c>PesoBruto</c>, solo para el tipo 46.
+    /// </summary>
+    private static void WriteInformacionesAdicionales(XmlWriter w, EcfDocument doc)
+    {
+        if (doc.Header.Shipping is not { } s)
+            return;
+
+        w.WriteStartElement("InformacionesAdicionales");
+        Opt(w, "FechaEmbarque", s.ShipmentDate is { } d ? EcfXmlFormat.Date(d) : null);
+        Opt(w, "NumeroEmbarque", s.ShipmentNumber);
+        Opt(w, "NumeroContenedor", s.ContainerNumber);
+        Opt(w, "NumeroReferencia", s.ReferenceNumber);
+
+        if (doc.Type == EcfType.Exportaciones && s.Export is { } e)
+        {
+            Opt(w, "NombrePuertoEmbarque", e.LoadingPortName);
+            Opt(w, "CondicionesEntrega", e.DeliveryTerms);
+            Amount(w, "TotalFob", e.TotalFob);
+            Amount(w, "Seguro", e.Insurance);
+            Amount(w, "Flete", e.Freight);
+            Amount(w, "OtrosGastos", e.OtherCharges);
+            Amount(w, "TotalCif", e.TotalCif);
+            Opt(w, "RegimenAduanero", e.CustomsRegime);
+            Opt(w, "NombrePuertoSalida", e.DeparturePortName);
+            Opt(w, "NombrePuertoDesembarque", e.UnloadingPortName);
+        }
+
+        Amount(w, "PesoBruto", s.GrossWeight);
+        Amount(w, "PesoNeto", s.NetWeight);
+        Opt(w, "UnidadPesoBruto", s.GrossWeightUnit);
+        Opt(w, "UnidadPesoNeto", s.NetWeightUnit);
+        Amount(w, "CantidadBulto", s.PackageCount);
+        Opt(w, "UnidadBulto", s.PackageUnit);
+        Amount(w, "VolumenBulto", s.Volume);
+        Opt(w, "UnidadVolumen", s.VolumeUnit);
+        w.WriteEndElement();
+    }
+
+    /// <summary>
+    /// <c>&lt;Transporte&gt;</c>. El tipo 46 antepone vía/país/compañía transportista;
+    /// el tipo 47 solo lleva <c>PaisDestino</c>; el resto, los campos básicos.
+    /// </summary>
+    private static void WriteTransporte(XmlWriter w, EcfDocument doc)
+    {
+        if (doc.Header.Transport is not { } t)
+            return;
+
+        w.WriteStartElement("Transporte");
+
+        if (doc.Type == EcfType.Exportaciones)
+        {
+            Opt(w, "ViaTransporte", t.Via?.Code);
+            Opt(w, "PaisOrigen", t.OriginCountry);
+            Opt(w, "DireccionDestino", t.DestinationAddress);
+            Opt(w, "PaisDestino", t.DestinationCountry);
+            Opt(w, "RNCIdentificacionCompaniaTransportista", t.CarrierRnc);
+            Opt(w, "NombreCompaniaTransportista", t.CarrierName);
+            Opt(w, "NumeroViaje", t.VoyageNumber);
+        }
+        else if (doc.Type == EcfType.PagosExterior)
+        {
+            // El XSD del 47 solo admite <PaisDestino> dentro de <Transporte>.
+            Opt(w, "PaisDestino", t.DestinationCountry);
+            w.WriteEndElement();
+            return;
+        }
+
+        Opt(w, "Conductor", t.Driver);
+        Opt(w, "DocumentoTransporte", t.TransportDocument);
+        Opt(w, "Ficha", t.VehicleId);
+        Opt(w, "Placa", t.Plate);
+        Opt(w, "RutaTransporte", t.Route);
+        Opt(w, "ZonaTransporte", t.Zone);
+        Opt(w, "NumeroAlbaran", t.DeliveryNote);
+        w.WriteEndElement();
     }
 
     /// <summary>
@@ -357,6 +441,16 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
     {
         if (!string.IsNullOrWhiteSpace(value))
             w.WriteElementString(name, value.Trim());
+    }
+
+    /// <summary>
+    /// Elemento monetario opcional (formato dinero). Se omite si es null o ≤ 0 — la
+    /// mayoría de estos campos del XSD son "mayor que cero" y un 0 significa "no aplica".
+    /// </summary>
+    private static void Amount(XmlWriter w, string name, decimal? value)
+    {
+        if (value is { } v and > 0m)
+            w.WriteElementString(name, EcfXmlFormat.Money(v));
     }
 
     /// <summary>Elemento de texto libre: <c>WriteElementString</c> escapa <c>&lt; &gt; &amp;</c>; el resto lo hace <see cref="EscapeDgii"/>.</summary>
