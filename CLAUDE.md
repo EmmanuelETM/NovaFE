@@ -142,6 +142,12 @@ vuelta). Consumir siempre vía interfaz de dominio (`IDgiiTokenCache`, etc.), nu
 `IDistributedCache` directo en casos de uso. **Idempotencia y lock de secuencias
 e-NCF van a PostgreSQL, no a caché**: exigen durabilidad y unicidad.
 
+**Vault de certificados** (`src/Infrastructure/Security`): el PKCS#12 se guarda
+detrás de `ICertificateVault` (impl. por defecto: envelope encryption AES-256-GCM,
+ciphertext en Postgres, KEK vía `IKeyProtector` desde config/KMS). Provider-agnóstico
+a propósito — ver `docs/certificates.md`. Un `Certificate` solo guarda una
+`VaultReference` opaca.
+
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
 - Con EF Core, la auditoría y el borrado lógico los aplican interceptores y un

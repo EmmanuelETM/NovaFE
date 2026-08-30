@@ -35,6 +35,13 @@ public static partial class Errors
             description: $"El valor del campo '{field}' no es válido.");
     }
 
+    public static class Auth
+    {
+        public static Error TenantNotResolved => Error.Validation(
+            code: "Auth.TenantNotResolved",
+            description: "La petición no identifica un contribuyente. Incluye el header X-Tenant-Id.");
+    }
+
     public static class Http
     {
         public static Error Timeout => Error.Failure(

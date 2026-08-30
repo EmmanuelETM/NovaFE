@@ -24,6 +24,9 @@ public sealed class ApiFactory(string connectionString) : WebApplicationFactory<
             {
                 ["ConnectionStrings:Default"] = connectionString,
 
+                // KEK de prueba (32 bytes base64) para el vault de certificados.
+                ["CertificateVault:MasterKey"] = "gAqfTFC7NyyvGyBE+DgYdfbnJNv06yqDMmD3RFzUEwo=",
+
                 // El rate limiting falsearía cualquier prueba que haga varias
                 // peticiones seguidas.
                 ["RateLimiting:Enabled"] = "false",

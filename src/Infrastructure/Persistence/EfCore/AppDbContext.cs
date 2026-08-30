@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Domain.Certificates;
 using NovaFE.Domain.Common.Entities;
 using NovaFE.Domain.Tenants;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,8 @@ public class AppDbContext(
     ICurrentTenant currentTenant) : DbContext(options)
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
+
+    public DbSet<Certificate> Certificates => Set<Certificate>();
 
     /// <summary>
     /// Tenant de la petición en curso. Los filtros globales de consulta de las

@@ -66,6 +66,14 @@ apertura de conexión:
 SELECT set_config('app.tenant_id', '<uuid o cadena vacía>', false)
 ```
 
+> **Restricción de pooling.** `app.tenant_id` se fija a nivel de sesión (`false`).
+> Con un pooler en modo *transaction* (p. ej. el puerto 6543 de Supabase, o
+> PgBouncer `pool_mode=transaction`) la sesión física puede cambiar entre
+> sentencias y la variable —y por tanto RLS— deja de aplicar sin avisar. Hay que
+> usar **conexión directa o pooler en modo *session*** (`:5432` / Supavisor
+> session mode / PgBouncer `pool_mode=session`). Aplica igual en DigitalOcean y
+> en Supabase.
+
 Cada migración de una tabla `ITenantOwned` llama a
 `RowLevelSecurity.Enable(migrationBuilder, "nombre_tabla")`, que emite:
 
