@@ -17,15 +17,17 @@ public sealed record RetentionAgent(int Id, string Name) : Enumeration<Retention
 }
 
 /// <summary>
-/// Área de retención de una línea de detalle (<c>&lt;Retencion&gt;</c>). Obligatoria
-/// en el tipo 41 (Comprobante de Compras), donde el emisor actúa como agente de
-/// retención frente a un proveedor informal.
+/// Área de retención de una línea de detalle (<c>&lt;Retencion&gt;</c>). Aplica a
+/// los tipos 41 (Compras) y 47 (Pagos al Exterior), donde el emisor actúa como
+/// agente de retención frente al proveedor.
 /// <para>
-/// Los montos los trae calculados el cliente según las normas de retención de la
-/// DGII (Norma 07-2007 y otras: 30 %/100 % de ITBIS, 10 %/2 % de ISR según el
-/// servicio). El motor fiscal no deriva las tasas: solo suma
-/// <see cref="ItbisWithheld"/> e <see cref="IsrWithheld"/> en
-/// <c>&lt;TotalITBISRetenido&gt;</c> y <c>&lt;TotalISRRetencion&gt;</c>.
+/// <b>Los montos los calcula y los presenta el cliente</b>, por línea. El motor
+/// fiscal no deriva porcentajes: solo suma <see cref="ItbisWithheld"/> e
+/// <see cref="IsrWithheld"/> en <c>&lt;TotalITBISRetenido&gt;</c> y
+/// <c>&lt;TotalISRRetencion&gt;</c>. El ITBIS de la línea sí es conocido, pero el
+/// porcentaje retenido (30 %/100 %) depende de la clasificación del proveedor; la
+/// tasa de ISR varía por la naturaleza del pago (2 %, 5 %, 10 %, y 27 % exclusivo
+/// del tipo 47). Ver <c>docs/fiscal.md</c> § Retenciones.
 /// </para>
 /// </summary>
 /// <param name="Agent"><c>&lt;IndicadorAgenteRetencionoPercepcion&gt;</c>.</param>

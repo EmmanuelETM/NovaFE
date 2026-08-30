@@ -74,16 +74,43 @@ llamador). Una NC con fecha anterior al original es un error.
   *aceptado condicional*; el motor solo lo anticipa (`ExpectConditionalAcceptance`)
   para avisar al cliente. El e-CF se envía igual.
 
+## Retenciones (ITBIS e ISR)
+
+Aplican a los tipos **41** (Compras) y **47** (Pagos al Exterior): el emisor es
+agente de retención y descuenta ITBIS y/o ISR del pago al proveedor. Van en el
+área `<Retencion>` de cada línea (`MontoITBISRetenido`, `MontoISRRetenido`) y se
+suman en `<TotalITBISRetenido>` / `<TotalISRRetencion>` del encabezado.
+
+**El monto retenido lo calcula y lo presenta el cliente, por línea.** El motor
+fiscal solo **suma** lo que recibe (`EcfLineInput.ItbisWithheld` / `IsrWithheld`
+→ `EcfTotals.TotalItbisWithheld` / `TotalIsrWithheld`). No deriva porcentajes.
+Motivo: la tasa depende de datos que no están en el e-CF.
+
+- **ITBIS retenido.** El ITBIS de la línea sí es conocido (sale del
+  `IndicadorFacturacion` 18/16/0/exento, ya calculado en `EcfLineResult.TaxAmount`),
+  pero el **porcentaje que se retiene** de ese ITBIS —típicamente **30 %** o
+  **100 %**— depende de la clasificación del proveedor (persona física vs.
+  sociedad, RST, Estado…), que el e-CF no lleva. Por eso el monto final lo pone
+  el cliente. Un chequeo sano —hoy no implementado— sería
+  `ItbisRetenido ≤ EcfLineResult.TaxAmount` de la misma línea.
+- **ISR retenido.** No hay nada que inferir: la tasa varía por la naturaleza del
+  pago —**2 %** (servicios en general / bienes), **5 %**, **10 %** (honorarios,
+  alquileres), **27 %**— y el desglose de la renta lo tiene el sistema del
+  cliente, no el comprobante. El **27 %** es exclusivo del tipo 47 (pago a
+  no residentes). El motor toma el número tal cual.
+
+Las retenciones **no** entran en `<MontoTotal>` (que es el valor de la factura):
+son lo que se descuenta al pagar. El neto a pagar es
+`MontoTotal − TotalITBISRetenido − TotalISRRetencion`, que el serializador emite
+como `<ValorPagar>` en el tipo 41.
+
 ## Alcance v1 y lo que falta
 
 **Incluido:** ITBIS (18/16/0/exento), ajustes de línea, "otros impuestos
 adicionales" que el cliente ya trae calculados (Propina Legal, CDT…), regla de
 los 30 días, chequeo de tolerancia, `MontoNoFacturable`/`MontoPeriodo`,
 `FiscalRules.CreditNoteTotalWithinOriginal`, y la **totalización** de retenciones
-de ITBIS/ISR por línea (`EcfLineInput.ItbisWithheld`/`IsrWithheld` →
-`<TotalITBISRetenido>`/`<TotalISRRetencion>`; montos que trae el cliente).
-Las retenciones **no** entran en `MontoTotal` — son lo que el emisor retiene al
-pagar (tipo 41); el neto es `MontoTotal − retenciones` (`<ValorPagar>`).
+de ITBIS/ISR por línea (ver arriba).
 
 **Slices aparte** (marcados en el código):
 
@@ -95,8 +122,7 @@ pagar (tipo 41); el neto es `MontoTotal − retenciones` (`<ValorPagar>`).
 - **Descuentos y recargos globales (Sección D)** — RF-06.8. Se distribuyen
   proporcionalmente por `MontoItem / ΣMontoItem` y afectan la base imponible;
   la excepción Norma 10-07 (solo tipo 31) no rebaja el gravado a tasa 1.
-- **Cálculo** de las tasas de retención de ITBIS/ISR (30 %/100 % de ITBIS,
-  10 %/2 % de ISR según el servicio, Norma 07-2007 y otras) — las fórmulas no
-  están en la documentación procesada. Hoy el motor solo **suma** los montos
-  retenidos que trae el cliente por línea.
+- **Cálculo** de las tasas de retención de ITBIS/ISR — a propósito fuera de
+  alcance (ver "Retenciones" arriba): lo hace el cliente. Lo que sí podría
+  agregarse es el chequeo `ItbisRetenido ≤ ITBIS de la línea`.
 - **Otra moneda** — RF-06.9: calcular en DOP y dividir por `TipoCambio`.
