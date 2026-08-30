@@ -194,6 +194,16 @@ asignación **atómica** con `SELECT … FOR UPDATE` (raw SQL vía
 puntero `Next`; el pool de secuencias liberadas y el ciclo de vida por secuencia
 son slices posteriores. No cambiar sin leer `docs/sequences.md`.
 
+**Motor de cálculo fiscal** (`src/Domain/Fiscal`): dominio puro, sin E/S ni reloj.
+`EcfCalculator.Calculate(lines)` da `<MontoItem>` por línea y todos los
+totalizadores del Encabezado. `EcfRounding` (regla DGII: mitad hacia afuera del
+cero; 2 dec dinero, 4 dec precio unitario y tipo de cambio, 3 dec subcantidad).
+`ItbisRate` (indicadores 1–4). `CreditNoteIndicator` — regla de los 30 días para
+tipo 34, **valores 0/1** (el Plan Técnico dice 1/2: está mal). La tolerancia de
+cuadratura **nunca rechaza** (RF-06.6). ISC de alcoholes/cigarrillos, descuentos
+globales (Sección D) y retenciones son slices posteriores. No cambiar sin leer
+`docs/fiscal.md`.
+
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
 - Con EF Core, la auditoría y el borrado lógico los aplican interceptores y un
