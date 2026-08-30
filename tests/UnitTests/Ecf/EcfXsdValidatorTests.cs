@@ -46,6 +46,30 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_regimenes_especiales_validates_against_the_official_type_44_xsd()
+    {
+        var document = EcfTestData.RegimenesEspeciales(
+            EcfTestData.Line(number: 1, rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 1500m),
+            EcfTestData.Line(number: 2, rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 800m));
+
+        var result = Validator.Validate(SignedShapeXml(document), EcfType.RegimenesEspeciales);
+
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
+    public void A_gubernamental_validates_against_the_official_type_45_xsd()
+    {
+        var document = EcfTestData.Gubernamental(
+            EcfTestData.Line(number: 1, unitPrice: 1000m),
+            EcfTestData.Line(number: 2, rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 300m));
+
+        var result = Validator.Validate(SignedShapeXml(document), EcfType.Gubernamental);
+
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void A_compras_with_retention_validates_against_the_official_type_41_xsd()
     {
         var document = EcfTestData.Compras(

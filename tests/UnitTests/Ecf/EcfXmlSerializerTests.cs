@@ -68,6 +68,40 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Regimenes_especiales_iddoc_omits_the_taxed_indicator_and_totales_are_exempt_only()
+    {
+        var root = Serialize(EcfTestData.RegimenesEspeciales());
+        var idDoc = root.Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "FechaVencimientoSecuencia",
+            "TipoIngresos", "TipoPago", "FechaLimitePago", "TablaFormasPago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("44");
+        idDoc.Element("IndicadorMontoGravado").ShouldBeNull();
+
+        var totales = root.Element("Encabezado")!.Element("Totales")!;
+        totales.Elements().Select(e => e.Name.LocalName).ShouldBe(["MontoExento", "MontoTotal"]);
+        totales.Element("MontoExento")!.Value.ShouldBe("2000");
+        totales.Element("MontoGravadoTotal").ShouldBeNull();
+        totales.Element("ITBIS1").ShouldBeNull();
+    }
+
+    [Fact]
+    public void Gubernamental_serializes_exactly_like_a_credito_fiscal()
+    {
+        var idDoc = Serialize(EcfTestData.Gubernamental()).Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "FechaVencimientoSecuencia", "IndicadorMontoGravado",
+            "TipoIngresos", "TipoPago", "FechaLimitePago", "TablaFormasPago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("45");
+    }
+
+    [Fact]
     public void Compras_iddoc_omits_the_income_type_and_the_item_carries_the_retention()
     {
         var root = Serialize(EcfTestData.Compras(

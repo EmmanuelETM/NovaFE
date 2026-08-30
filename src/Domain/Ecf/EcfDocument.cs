@@ -131,6 +131,11 @@ public sealed class EcfDocument
         if (RequiresIncomeType(type) && string.IsNullOrWhiteSpace(header.IncomeType))
             errors.Add(EcfErrors.IncomeTypeRequired);
 
+        // Regímenes Especiales: el XSD del 44 no tiene campos gravados ni de ITBIS
+        // en <Totales> — todo va a <MontoExento>.
+        if (type == EcfType.RegimenesEspeciales && lines.Any(line => !line.Rate.IsExempt))
+            errors.Add(EcfErrors.OnlyExemptLinesAllowed(type.Id));
+
         ValidateRetention(type, lines, errors);
 
         return errors;
@@ -221,6 +226,7 @@ public sealed class EcfDocument
         || type == EcfType.Consumo
         || type == EcfType.NotaDebito
         || type == EcfType.NotaCredito
+        || type == EcfType.RegimenesEspeciales
         || type == EcfType.Gubernamental
         || type == EcfType.Exportaciones
         || type == EcfType.PagosExterior;

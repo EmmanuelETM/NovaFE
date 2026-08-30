@@ -199,9 +199,11 @@ son slices posteriores. No cambiar sin leer `docs/sequences.md`.
 produce el `<ECF>` con el orden exacto del XSD, sin tags vacíos, escape DGII (8
 caracteres), formato numérico y fechas `dd-MM-yyyy`; incluye `<FechaHoraFirma>`
 pero no `<Signature>`. `IEcfXsdValidator` valida contra los XSD oficiales
-**vendorizados y embebidos** en `src/Infrastructure/Ecf/Xsd/`. v1: tipos 31–34 y 41
-(el 41 con área `<Retencion>` por línea). No cambiar sin leer `docs/ecf-xml.md`.
-`EcfDocument` **no es** el payload de la API (ese es curado — `docs/api-ecf.md`).
+**vendorizados y embebidos** en `src/Infrastructure/Ecf/Xsd/`. v1: tipos 31–34, 41,
+44 y 45 (41 con área `<Retencion>` por línea; 44 Regímenes Especiales solo admite
+líneas exentas y su `<Totales>` no tiene campos gravados; 45 es estructuralmente el
+31). No cambiar sin leer `docs/ecf-xml.md`. `EcfDocument` **no es** el payload de la
+API (ese es curado — `docs/api-ecf.md`).
 
 **Motor de cálculo fiscal** (`src/Domain/Fiscal`): dominio puro, sin E/S ni reloj.
 `EcfCalculator.Calculate(lines)` da `<MontoItem>` por línea y todos los

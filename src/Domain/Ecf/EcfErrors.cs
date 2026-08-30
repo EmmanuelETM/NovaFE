@@ -61,6 +61,10 @@ public static class EcfErrors
         code: "Ecf.RetentionNotApplicable",
         description: $"El tipo {documentType} no lleva área de retención en las líneas de detalle.");
 
+    public static Error OnlyExemptLinesAllowed(int documentType) => Error.Validation(
+        code: "Ecf.OnlyExemptLinesAllowed",
+        description: $"El tipo {documentType} (Regímenes Especiales) solo admite líneas exentas de ITBIS.");
+
     public static Error CreditNoteDueDateInThePast => Error.Validation(
         code: "Ecf.CreditNoteDueDateInThePast",
         description: "La fecha del comprobante modificado no puede ser posterior a la emisión de la nota.");
