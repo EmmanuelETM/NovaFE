@@ -46,6 +46,18 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void An_exportacion_validates_against_the_official_type_46_xsd()
+    {
+        var document = EcfTestData.Exportaciones(
+            EcfTestData.Line(number: 1, rate: NovaFE.Domain.Fiscal.ItbisRate.Zero, unitPrice: 15000m, name: "Cacao"),
+            EcfTestData.Line(number: 2, rate: NovaFE.Domain.Fiscal.ItbisRate.Zero, unitPrice: 4200m, name: "Empaque"));
+
+        var result = Validator.Validate(SignedShapeXml(document), EcfType.Exportaciones);
+
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void A_gastos_menores_validates_against_the_official_type_43_xsd()
     {
         var document = EcfTestData.GastosMenores(

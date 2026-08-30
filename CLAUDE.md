@@ -200,11 +200,12 @@ produce el `<ECF>` con el orden exacto del XSD, sin tags vacíos, escape DGII (8
 caracteres), formato numérico y fechas `dd-MM-yyyy`; incluye `<FechaHoraFirma>`
 pero no `<Signature>`. `IEcfXsdValidator` valida contra los XSD oficiales
 **vendorizados y embebidos** en `src/Infrastructure/Ecf/Xsd/`. v1: tipos 31–34, 41
-y 43–45 (41 con área `<Retencion>` por línea; 43 Gastos Menores es el más reducido:
+y 43–46 (41 con área `<Retencion>` por línea; 43 Gastos Menores es el más reducido:
 sin `<Comprador>`, sin formas de pago, líneas exentas sin ajustes; 44 Regímenes
-Especiales solo admite líneas exentas y su `<Totales>` no tiene campos gravados; 45
-es estructuralmente el 31). No cambiar sin leer `docs/ecf-xml.md`. `EcfDocument`
-**no es** el payload de la API (ese es curado — `docs/api-ecf.md`).
+Especiales solo líneas exentas y su `<Totales>` sin campos gravados; 45 es
+estructuralmente el 31; 46 Exportaciones solo líneas a tasa 0 % —bucket I3—). No
+cambiar sin leer `docs/ecf-xml.md`. `EcfDocument` **no es** el payload de la API
+(ese es curado — `docs/api-ecf.md`).
 
 **Motor de cálculo fiscal** (`src/Domain/Fiscal`): dominio puro, sin E/S ni reloj.
 `EcfCalculator.Calculate(lines)` da `<MontoItem>` por línea y todos los

@@ -82,6 +82,20 @@ internal static class EcfTestData
             lines.Length == 0 ? [Line(rate: ItbisRate.Exempt)] : lines).Value;
 
     /// <summary>
+    /// Comprobante de Exportaciones (tipo 46): venta al exterior. Toda línea a
+    /// ITBIS tasa 0 % (Formato nota 51); su XSD solo tiene el bucket I3 en
+    /// <c>&lt;Totales&gt;</c> y no lleva <c>&lt;IndicadorMontoGravado&gt;</c>. Moneda
+    /// local salvo que se use <c>&lt;OtraMoneda&gt;</c> (pendiente).
+    /// </summary>
+    public static EcfDocument Exportaciones(params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.Exportaciones,
+            Header(46) with { Buyer = new EcfBuyer("Global Imports LLC", ForeignId: "US-4471203") },
+            lines.Length == 0
+                ? [Line(rate: ItbisRate.Zero, unitPrice: 15000m, name: "Cacao orgánico en grano", kind: ItemKind.Good)]
+                : lines).Value;
+
+    /// <summary>
     /// Comprobante Gubernamental (tipo 45): venta a una entidad del Estado. El XSD
     /// es igual al del 31 (IdDoc, Totales, Comprador con RNC obligatorio).
     /// </summary>

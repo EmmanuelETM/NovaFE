@@ -84,6 +84,22 @@ public class EcfDocumentTests
     }
 
     [Fact]
+    public void Exportaciones_rejects_an_exempt_line()
+        => EcfDocument.Create(
+                EcfType.Exportaciones,
+                EcfTestData.Header(46) with { Buyer = new EcfBuyer("Global Imports LLC", ForeignId: "US-1") },
+                [EcfTestData.Line(rate: ItbisRate.Exempt)])
+            .FirstError.Code.ShouldBe("Ecf.OnlyZeroRatedLinesAllowed");
+
+    [Fact]
+    public void Exportaciones_rejects_a_taxed_line()
+        => EcfDocument.Create(
+                EcfType.Exportaciones,
+                EcfTestData.Header(46) with { Buyer = new EcfBuyer("Global Imports LLC", ForeignId: "US-1") },
+                [EcfTestData.Line(rate: ItbisRate.Eighteen)])
+            .FirstError.Code.ShouldBe("Ecf.OnlyZeroRatedLinesAllowed");
+
+    [Fact]
     public void Gastos_menores_rejects_a_taxed_line()
         => EcfDocument.Create(
                 EcfType.GastosMenores,
