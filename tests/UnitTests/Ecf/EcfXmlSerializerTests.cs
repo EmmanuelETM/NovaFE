@@ -40,6 +40,47 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Nota_credito_iddoc_swaps_the_sequence_expiry_for_the_credit_note_indicator()
+    {
+        var idDoc = Serialize(EcfTestData.NotaCredito()).Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "IndicadorNotaCredito", "IndicadorMontoGravado",
+            "TipoIngresos", "TipoPago", "FechaLimitePago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("34");
+        idDoc.Element("FechaVencimientoSecuencia").ShouldBeNull();
+        idDoc.Element("IndicadorNotaCredito")!.Value.ShouldBe("0"); // modifica 20 días atrás
+        idDoc.Element("TablaFormasPago").ShouldBeNull();            // el XSD del 34 no lo admite
+    }
+
+    [Fact]
+    public void Nota_credito_after_thirty_days_carries_indicator_one()
+    {
+        var reference = new EcfReference(
+            "E310000000010", EcfTestData.IssueDate.AddDays(-45), ModificationCode.CorrectsAmounts);
+
+        var idDoc = Serialize(EcfTestData.NotaCredito(reference))
+            .Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Element("IndicadorNotaCredito")!.Value.ShouldBe("1");
+    }
+
+    [Fact]
+    public void Nota_credito_emits_the_reference_section_before_the_signature_timestamp()
+    {
+        var root = Serialize(EcfTestData.NotaCredito());
+
+        root.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["Encabezado", "DetallesItems", "InformacionReferencia", "FechaHoraFirma"]);
+        var reference = root.Element("InformacionReferencia")!;
+        reference.Element("NCFModificado")!.Value.ShouldBe("E310000000010");
+        reference.Element("FechaNCFModificado")!.Value.ShouldBe("01-02-2026");
+        reference.Element("CodigoModificacion")!.Value.ShouldBe("3");
+    }
+
+    [Fact]
     public void Totales_reflect_the_fiscal_engine()
     {
         var totales = Serialize(EcfTestData.CreditoFiscal()).Element("Encabezado")!.Element("Totales")!;

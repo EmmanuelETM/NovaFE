@@ -11,15 +11,15 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: tipo 31 con los bloques de uso común (IdDoc, Emisor, Comprador, Totales,
-/// DetallesItems, InformacionReferencia). Faltan: InformacionesAdicionales,
+/// v1: tipos 31 y 34 con los bloques de uso común (IdDoc, Emisor, Comprador,
+/// Totales, DetallesItems, InformacionReferencia). Faltan: InformacionesAdicionales,
 /// Transporte, OtraMoneda, Subtotales, DescuentosORecargos, Paginación, el desglose
-/// de ImpuestosAdicionales y los tipos 32–47. Ver <c>docs/ecf-xml.md</c>.
+/// de ImpuestosAdicionales y los tipos 32/33/41–47. Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
 {
-    private static readonly XmlWriterSettings Settings = new()
+    private static readonly XmlWriterSettings _settings = new()
     {
         OmitXmlDeclaration = true,
         Indent = false,
@@ -32,7 +32,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         ArgumentNullException.ThrowIfNull(document);
 
         var buffer = new StringBuilder();
-        using (var writer = XmlWriter.Create(buffer, Settings))
+        using (var writer = XmlWriter.Create(buffer, _settings))
         {
             writer.WriteStartElement("ECF");
             WriteEncabezado(writer, document);
@@ -54,18 +54,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         w.WriteStartElement("Encabezado");
         El(w, "Version", "1.0");
 
-        w.WriteStartElement("IdDoc");
-        El(w, "TipoeCF", doc.Type.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        El(w, "eNCF", h.Encf.Value);
-        Opt(w, "FechaVencimientoSecuencia", h.SequenceExpiresOn is { } exp ? EcfXmlFormat.Date(exp) : null);
-        if (h.DeferredDelivery)
-            El(w, "IndicadorEnvioDiferido", "1");
-        El(w, "IndicadorMontoGravado", h.PricesIncludeTax ? "1" : "0");
-        El(w, "TipoIngresos", h.IncomeType);
-        El(w, "TipoPago", h.Payment.Condition.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        Opt(w, "FechaLimitePago", h.Payment.DueDate is { } due ? EcfXmlFormat.Date(due) : null);
-        WriteFormasPago(w, h.Payment.Methods);
-        w.WriteEndElement(); // IdDoc
+        WriteIdDoc(w, doc);
 
         w.WriteStartElement("Emisor");
         El(w, "RNCEmisor", h.Issuer.Rnc.Value);
@@ -99,6 +88,37 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
 
         WriteTotales(w, doc);
         w.WriteEndElement(); // Encabezado
+    }
+
+    /// <summary>
+    /// <c>&lt;IdDoc&gt;</c>. El tipo 34 (Nota de Crédito) cambia la secuencia inicial:
+    /// lleva <c>&lt;IndicadorNotaCredito&gt;</c> (0/1, obligatorio) en vez de
+    /// <c>&lt;FechaVencimientoSecuencia&gt;</c>, y su XSD no admite <c>&lt;TablaFormasPago&gt;</c>.
+    /// </summary>
+    private static void WriteIdDoc(XmlWriter w, EcfDocument doc)
+    {
+        var h = doc.Header;
+        var isCreditNote = doc.Type == EcfType.NotaCredito;
+
+        w.WriteStartElement("IdDoc");
+        El(w, "TipoeCF", Int(doc.Type.Id));
+        El(w, "eNCF", h.Encf.Value);
+
+        if (isCreditNote)
+            El(w, "IndicadorNotaCredito", Int(doc.CreditNoteIndicator ?? 0));
+        else
+            Opt(w, "FechaVencimientoSecuencia", h.SequenceExpiresOn is { } exp ? EcfXmlFormat.Date(exp) : null);
+
+        if (h.DeferredDelivery)
+            El(w, "IndicadorEnvioDiferido", "1");
+        El(w, "IndicadorMontoGravado", h.PricesIncludeTax ? "1" : "0");
+        El(w, "TipoIngresos", h.IncomeType);
+        El(w, "TipoPago", Int(h.Payment.Condition.Id));
+        Opt(w, "FechaLimitePago", h.Payment.DueDate is { } due ? EcfXmlFormat.Date(due) : null);
+        if (!isCreditNote)
+            WriteFormasPago(w, h.Payment.Methods);
+
+        w.WriteEndElement(); // IdDoc
     }
 
     private static void WriteFormasPago(XmlWriter w, IReadOnlyList<EcfPaymentMethod> methods)
@@ -242,6 +262,10 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
     /// <summary>Elemento con valor fijo (ya seguro para XML).</summary>
     private static void El(XmlWriter w, string name, string value) =>
         w.WriteElementString(name, value);
+
+    /// <summary>Entero en cultura invariante.</summary>
+    private static string Int(int value) =>
+        value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Elemento opcional con valor ya seguro; se omite si es null/vacío.</summary>
     private static void Opt(XmlWriter w, string name, string? value)

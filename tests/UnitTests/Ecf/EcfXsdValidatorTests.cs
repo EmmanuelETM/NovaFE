@@ -46,6 +46,14 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_nota_credito_validates_against_the_official_type_34_xsd()
+    {
+        var result = Validator.Validate(SignedShapeXml(EcfTestData.NotaCredito()), EcfType.NotaCredito);
+
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void Malformed_xml_is_reported()
         => Validator.Validate("<ECF><Encabezado></ECF>", EcfType.CreditoFiscal)
             .FirstError.Code.ShouldBe("Ecf.MalformedXml");

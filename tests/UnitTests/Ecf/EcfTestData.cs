@@ -64,4 +64,20 @@ internal static class EcfTestData
             EcfType.CreditoFiscal,
             Header(31),
             lines.Length == 0 ? [Line()] : lines).Value;
+
+    /// <summary>
+    /// Nota de Crédito (tipo 34) que modifica un e-CF de crédito fiscal 20 días
+    /// antes (indicador dentro de 30 días → 0). Sin vencimiento de secuencia.
+    /// </summary>
+    public static EcfDocument NotaCredito(
+        EcfReference? reference = null,
+        params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.NotaCredito,
+            Header(34) with { SequenceExpiresOn = null },
+            lines.Length == 0 ? [Line()] : lines,
+            reference ?? new EcfReference(
+                "E310000000010",
+                IssueDate.AddDays(-20),
+                ModificationCode.CorrectsAmounts)).Value;
 }
