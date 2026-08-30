@@ -110,6 +110,21 @@ internal static class EcfTestData
         => new(RetentionAgent.Withholding, itbisWithheld, isrWithheld);
 
     /// <summary>
+    /// Comprobante para Pagos al Exterior (tipo 47): pago a un no residente. Líneas
+    /// exentas (Formato nota 50); cada una lleva retención de <b>solo ISR</b>
+    /// (obligatoria); el comprador es un bloque reducido (identificador extranjero
+    /// + razón social).
+    /// </summary>
+    public static EcfDocument PagosExterior(params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.PagosExterior,
+            Header(47) with { Buyer = new EcfBuyer("Consultancy Group Ltd.", ForeignId: "GB-882910") },
+            lines.Length == 0
+                ? [Line(rate: ItbisRate.Exempt, unitPrice: 50000m, name: "Servicios de consultoría internacional",
+                        retention: new EcfLineRetention(RetentionAgent.Withholding, IsrWithheld: 13500.00m))]
+                : lines).Value;
+
+    /// <summary>
     /// Comprobante de Compras (tipo 41): el emisor registra una compra a un
     /// proveedor informal y actúa como agente de retención. Cada línea lleva
     /// <c>&lt;Retencion&gt;</c>; el IdDoc no lleva <c>&lt;TipoIngresos&gt;</c>.

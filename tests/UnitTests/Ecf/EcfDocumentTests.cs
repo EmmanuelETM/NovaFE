@@ -84,6 +84,34 @@ public class EcfDocumentTests
     }
 
     [Fact]
+    public void Pagos_exterior_requires_isr_retention_on_every_line()
+        => EcfDocument.Create(
+                EcfType.PagosExterior,
+                EcfTestData.Header(47) with { Buyer = new EcfBuyer("Foreign Co", ForeignId: "X1") },
+                [EcfTestData.Line(rate: ItbisRate.Exempt,
+                    retention: new EcfLineRetention(RetentionAgent.Withholding, IsrWithheld: 100m)),
+                 EcfTestData.Line(number: 2, rate: ItbisRate.Exempt)])
+            .FirstError.Code.ShouldBe("Ecf.RetentionRequired");
+
+    [Fact]
+    public void Pagos_exterior_rejects_itbis_in_the_retention()
+        => EcfDocument.Create(
+                EcfType.PagosExterior,
+                EcfTestData.Header(47) with { Buyer = new EcfBuyer("Foreign Co", ForeignId: "X1") },
+                [EcfTestData.Line(rate: ItbisRate.Exempt,
+                    retention: new EcfLineRetention(RetentionAgent.Withholding, ItbisWithheld: 50m, IsrWithheld: 100m))])
+            .FirstError.Code.ShouldBe("Ecf.ItbisRetentionNotApplicable");
+
+    [Fact]
+    public void Pagos_exterior_rejects_a_non_exempt_line()
+        => EcfDocument.Create(
+                EcfType.PagosExterior,
+                EcfTestData.Header(47) with { Buyer = new EcfBuyer("Foreign Co", ForeignId: "X1") },
+                [EcfTestData.Line(rate: ItbisRate.Eighteen,
+                    retention: new EcfLineRetention(RetentionAgent.Withholding, IsrWithheld: 100m))])
+            .FirstError.Code.ShouldBe("Ecf.OnlyExemptLinesAllowed");
+
+    [Fact]
     public void Exportaciones_rejects_an_exempt_line()
         => EcfDocument.Create(
                 EcfType.Exportaciones,
@@ -113,7 +141,7 @@ public class EcfDocumentTests
                 EcfType.GastosMenores,
                 EcfTestData.Header(43),
                 [EcfTestData.Line(rate: ItbisRate.Exempt) with { Discount = 10m }])
-            .FirstError.Code.ShouldBe("Ecf.GastosMenoresLineTooComplex");
+            .FirstError.Code.ShouldBe("Ecf.LineAdjustmentsNotApplicable");
 
     [Fact]
     public void Gastos_menores_rejects_a_non_invoiceable_amount()

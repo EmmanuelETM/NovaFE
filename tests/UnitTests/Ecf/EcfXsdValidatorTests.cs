@@ -46,6 +46,20 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_pago_al_exterior_validates_against_the_official_type_47_xsd()
+    {
+        var document = EcfTestData.PagosExterior(
+            EcfTestData.Line(number: 1, rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 50000m, name: "Consultoría",
+                retention: new NovaFE.Domain.Ecf.EcfLineRetention(NovaFE.Domain.Ecf.RetentionAgent.Withholding, IsrWithheld: 13500m)),
+            EcfTestData.Line(number: 2, rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 8000m, name: "Licencia software",
+                retention: new NovaFE.Domain.Ecf.EcfLineRetention(NovaFE.Domain.Ecf.RetentionAgent.Withholding, IsrWithheld: 2160m)));
+
+        var result = Validator.Validate(SignedShapeXml(document), EcfType.PagosExterior);
+
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void An_exportacion_validates_against_the_official_type_46_xsd()
     {
         var document = EcfTestData.Exportaciones(

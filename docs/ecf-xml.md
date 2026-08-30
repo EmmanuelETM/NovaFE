@@ -51,10 +51,10 @@ relleno.
 
 ## Alcance v1
 
-**Incluido:** tipos **31**, **32**, **33**, **34**, **41**, **43**, **44**, **45**
-y **46** con IdDoc, Emisor, Comprador, Totales, DetallesItems, InformacionReferencia,
-Retencion. Descuentos/recargos de línea (`DescuentoMonto`/`RecargoMonto` directos),
-múltiples tasas de ITBIS, tipos de item (bien/servicio), formas de pago.
+**Incluido:** **los diez tipos** (31–34, 41, 43–47) con IdDoc, Emisor, Comprador,
+Totales, DetallesItems, InformacionReferencia, Retencion. Descuentos/recargos de
+línea (`DescuentoMonto`/`RecargoMonto` directos), múltiples tasas de ITBIS, tipos de
+item (bien/servicio), formas de pago.
 
 **Tipo 32 (Factura de Consumo)** — `<IdDoc>` como el 31 pero **sin
 `<FechaVencimientoSecuencia>`** (`EcfType.HasSequenceExpiry` = false, igual que el
@@ -83,9 +83,9 @@ actúa como agente de retención. El `<IdDoc>` **no lleva `<TipoIngresos>`** (ni
 cliente** — el motor solo los suma; ver `docs/fiscal.md` § Retenciones para el
 porqué (tasa de ISR variable, % de ITBIS según el proveedor). `<Totales>` agrega
 `<TotalITBISRetenido>`, `<TotalISRRetencion>` y `<ValorPagar>` (= `MontoTotal −
-retenciones`). Las retenciones **no** tocan `MontoTotal`. El resto de tipos v1
-rechaza `<Retencion>` en las líneas (`Ecf.RetentionNotApplicable`); el tipo 47
-(pendiente) reusa este mismo modelo.
+retenciones`). Las retenciones **no** tocan `MontoTotal`. El tipo 47 reusa este
+modelo (solo ISR); los demás tipos v1 rechazan `<Retencion>` en las líneas
+(`Ecf.RetentionNotApplicable`).
 
 **Tipo 43 (Gastos Menores)** — caja chica: el comprobante **más reducido**. Su
 `<IdDoc>` lleva solo `TipoeCF`, `eNCF`, `FechaVencimientoSecuencia` y `TipoPago`
@@ -94,7 +94,7 @@ rechaza `<Retencion>` en las líneas (`Ecf.RetentionNotApplicable`); el tipo 47
 emisor). `<Totales>` es solo `<MontoExento>` + `<MontoTotal>` (+ `MontoPeriodo`
 opcional). Las líneas **no admiten** descuento, recargo ni otros impuestos, y el
 encabezado **no admite** monto no facturable. El dominio rechaza todo eso
-(`Ecf.OnlyExemptLinesAllowed`, `Ecf.GastosMenoresLineTooComplex`,
+(`Ecf.OnlyExemptLinesAllowed`, `Ecf.LineAdjustmentsNotApplicable`,
 `Ecf.NonInvoiceableAmountNotApplicable`). `EcfHeader.Buyer` sigue siendo obligatorio
 en el record pero no se serializa para el 43.
 
@@ -124,6 +124,18 @@ del Formato, igual que todos los tipos), no un requisito del 46. `<OtraMoneda>`,
 `<PaisComprador>` y el bloque `<InformacionesAdicionales>` de exportación (FOB,
 seguro, flete, CIF, puertos) van en slices posteriores.
 
+**Tipo 47 (Pagos al Exterior)** — pago a un no residente; el emisor retiene ISR.
+Líneas **exentas** (Formato nota 50). Su `<IdDoc>` no lleva `<TipoIngresos>`,
+`<IndicadorMontoGravado>` ni `<IndicadorEnvioDiferido>`. `<Comprador>` es un bloque
+**reducido**: solo `<IdentificadorExtranjero>` y `<RazonSocialComprador>`. Cada
+`<Item>` lleva `<Retencion>` **obligatoria de solo ISR** —
+`<IndicadorAgenteRetencionoPercepcion>` + `<MontoISRRetenido>` (siempre presente,
+aunque sea 0); su XSD **no tiene `<MontoITBISRetenido>`** (el dominio rechaza ITBIS
+en la retención del 47 con `Ecf.ItbisRetentionNotApplicable`). `<Totales>` = solo
+`<MontoExento>`, `<MontoTotal>`, `<ValorPagar>` (= `MontoTotal − ISR`) y
+`<TotalISRRetencion>`. Comparte con el 43 el rechazo de ajustes de línea y de monto
+no facturable (`Ecf.LineAdjustmentsNotApplicable`, `Ecf.NonInvoiceableAmountNotApplicable`).
+
 **Verificado contra el XSD**: `IndicadorBienoServicio` es **1 = Bien, 2 = Servicio**
 (el contexto viejo decía B/S). `RNCValidationType` son 9 u 11 dígitos (no 10).
 `IndicadorFacturacion` admite `0` ("No Facturable"). En los tipos 32/33/34
@@ -148,10 +160,8 @@ original a la vista.
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
 - El bloque `<OtraMoneda>` (facturación en divisa) — condicional, transversal a
   todos los tipos, hoy sin implementar.
-- Tipo 47 (Pagos al Exterior) — líneas exentas (Formato nota 50) + retención de ISR
-  (reusa el modelo de retención del 41).
-- Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `OtraMoneda`,
-  `Subtotales`, `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
+- Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `Subtotales`,
+  `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
   `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo.
 - El **cálculo** de las tasas de retención (hoy los montos los trae el cliente).
 - Habilitar `<Retencion>` opcional en los tipos que su XSD lo permite (31/33/34).

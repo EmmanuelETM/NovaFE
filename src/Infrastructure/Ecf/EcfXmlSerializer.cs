@@ -11,11 +11,11 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: tipos 31–34, 41 y 43–46 con los bloques de uso común (IdDoc, Emisor,
-/// Comprador, Totales, DetallesItems, InformacionReferencia, Retencion). Faltan:
-/// InformacionesAdicionales, Transporte, OtraMoneda, Subtotales, DescuentosORecargos,
-/// Paginación, el desglose de ImpuestosAdicionales, el formato reducido RFCE y el
-/// tipo 47. Ver <c>docs/ecf-xml.md</c>.
+/// v1: los diez tipos (31–34, 41, 43–47) con los bloques de uso común (IdDoc,
+/// Emisor, Comprador, Totales, DetallesItems, InformacionReferencia, Retencion).
+/// Faltan: InformacionesAdicionales, Transporte, OtraMoneda, Subtotales,
+/// DescuentosORecargos, Paginación, el desglose de ImpuestosAdicionales y el
+/// formato reducido RFCE (tipo 32 &lt; DOP 250 k). Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -75,8 +75,16 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         w.WriteEndElement(); // Emisor
 
         // El tipo 43 (Gastos Menores) no tiene bloque <Comprador>: es un gasto
-        // propio del emisor, no hay contraparte identificada.
-        if (doc.Type != EcfType.GastosMenores)
+        // propio del emisor. El tipo 47 (Pagos al Exterior) lo tiene reducido:
+        // solo identificador extranjero y razón social.
+        if (doc.Type == EcfType.PagosExterior)
+        {
+            w.WriteStartElement("Comprador");
+            Opt(w, "IdentificadorExtranjero", h.Buyer.ForeignId);
+            Text(w, "RazonSocialComprador", h.Buyer.Name);
+            w.WriteEndElement(); // Comprador
+        }
+        else if (doc.Type != EcfType.GastosMenores)
         {
             w.WriteStartElement("Comprador");
             if (h.Buyer.Rnc is { } buyerRnc)
@@ -101,9 +109,10 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
     /// <list type="bullet">
     ///   <item>34 (Nota de Crédito): <c>&lt;IndicadorNotaCredito&gt;</c> (0/1, obligatorio)
     ///   en vez de <c>&lt;FechaVencimientoSecuencia&gt;</c>; su XSD no admite <c>&lt;TablaFormasPago&gt;</c>.</item>
-    ///   <item>41 (Compras): su XSD no admite <c>&lt;TipoIngresos&gt;</c> ni <c>&lt;IndicadorEnvioDiferido&gt;</c>.</item>
-    ///   <item>44 (Regímenes Especiales) y 46 (Exportaciones): sus XSD no admiten
-    ///   <c>&lt;IndicadorMontoGravado&gt;</c> (todo exento o a tasa 0 %).</item>
+    ///   <item>41 (Compras) y 47 (Pagos al Exterior): sus XSD no admiten
+    ///   <c>&lt;TipoIngresos&gt;</c> ni <c>&lt;IndicadorEnvioDiferido&gt;</c>.</item>
+    ///   <item>44 (Regímenes Especiales), 46 (Exportaciones) y 47 (Pagos al Exterior):
+    ///   sus XSD no admiten <c>&lt;IndicadorMontoGravado&gt;</c>.</item>
     ///   <item>43 (Gastos Menores): IdDoc mínimo — solo <c>TipoeCF</c>, <c>eNCF</c>,
     ///   <c>FechaVencimientoSecuencia</c> y <c>TipoPago</c>.</item>
     /// </list>
@@ -112,9 +121,10 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
     {
         var h = doc.Header;
         var isCreditNote = doc.Type == EcfType.NotaCredito;
-        var isCompras = doc.Type == EcfType.Compras;
-        var omitsTaxedIndicator =
-            doc.Type == EcfType.RegimenesEspeciales || doc.Type == EcfType.Exportaciones;
+        var omitsIncomeType = doc.Type == EcfType.Compras || doc.Type == EcfType.PagosExterior;
+        var omitsTaxedIndicator = doc.Type == EcfType.RegimenesEspeciales
+            || doc.Type == EcfType.Exportaciones
+            || doc.Type == EcfType.PagosExterior;
 
         w.WriteStartElement("IdDoc");
         El(w, "TipoeCF", Int(doc.Type.Id));
@@ -133,11 +143,11 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         else
             Opt(w, "FechaVencimientoSecuencia", h.SequenceExpiresOn is { } exp ? EcfXmlFormat.Date(exp) : null);
 
-        if (h.DeferredDelivery && !isCompras)
+        if (h.DeferredDelivery && !omitsIncomeType)
             El(w, "IndicadorEnvioDiferido", "1");
         if (!omitsTaxedIndicator)
             El(w, "IndicadorMontoGravado", h.PricesIncludeTax ? "1" : "0");
-        if (!isCompras)
+        if (!omitsIncomeType)
             El(w, "TipoIngresos", h.IncomeType);
         El(w, "TipoPago", Int(h.Payment.Condition.Id));
         Opt(w, "FechaLimitePago", h.Payment.DueDate is { } due ? EcfXmlFormat.Date(due) : null);
@@ -210,15 +220,24 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             El(w, "MontoPeriodo", EcfXmlFormat.Money(t.MontoPeriodo));
         }
 
-        // Retenciones (tipo 41): el valor neto a pagar y los totales retenidos.
-        var retenido = t.TotalItbisWithheld + t.TotalIsrWithheld;
-        if (retenido > 0m)
+        // Retenciones: el valor neto a pagar y los totales retenidos.
+        if (doc.Type == EcfType.PagosExterior)
         {
-            El(w, "ValorPagar", EcfXmlFormat.Money(t.MontoTotal - retenido));
-            if (t.TotalItbisWithheld > 0m)
-                El(w, "TotalITBISRetenido", EcfXmlFormat.Money(t.TotalItbisWithheld));
-            if (t.TotalIsrWithheld > 0m)
-                El(w, "TotalISRRetencion", EcfXmlFormat.Money(t.TotalIsrWithheld));
+            // El 47 siempre lleva retención de ISR (obligatoria por línea).
+            El(w, "ValorPagar", EcfXmlFormat.Money(t.MontoTotal - t.TotalIsrWithheld));
+            El(w, "TotalISRRetencion", EcfXmlFormat.Money(t.TotalIsrWithheld));
+        }
+        else
+        {
+            var retenido = t.TotalItbisWithheld + t.TotalIsrWithheld;
+            if (retenido > 0m)
+            {
+                El(w, "ValorPagar", EcfXmlFormat.Money(t.MontoTotal - retenido));
+                if (t.TotalItbisWithheld > 0m)
+                    El(w, "TotalITBISRetenido", EcfXmlFormat.Money(t.TotalItbisWithheld));
+                if (t.TotalIsrWithheld > 0m)
+                    El(w, "TotalISRRetencion", EcfXmlFormat.Money(t.TotalIsrWithheld));
+            }
         }
 
         w.WriteEndElement();
@@ -244,7 +263,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             El(w, "NumeroLinea", line.Number.ToString(System.Globalization.CultureInfo.InvariantCulture));
             WriteCodigosItem(w, line.Codes);
             El(w, "IndicadorFacturacion", line.Rate.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            WriteRetencion(w, line.Retention);
+            WriteRetencion(w, line.Retention, doc.Type);
             Text(w, "NombreItem", line.Name);
             El(w, "IndicadorBienoServicio", line.Kind.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Text(w, "DescripcionItem", line.Description);
@@ -262,18 +281,31 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         w.WriteEndElement();
     }
 
-    /// <summary><c>&lt;Retencion&gt;</c> del detalle (obligatorio en el tipo 41).</summary>
-    private static void WriteRetencion(XmlWriter w, EcfLineRetention? retention)
+    /// <summary>
+    /// <c>&lt;Retencion&gt;</c> del detalle (obligatorio en los tipos 41 y 47). El
+    /// tipo 47 solo lleva ISR y el monto es obligatorio (aunque sea 0); su XSD no
+    /// tiene <c>&lt;MontoITBISRetenido&gt;</c>.
+    /// </summary>
+    private static void WriteRetencion(XmlWriter w, EcfLineRetention? retention, EcfType type)
     {
         if (retention is null)
             return;
 
         w.WriteStartElement("Retencion");
         El(w, "IndicadorAgenteRetencionoPercepcion", Int(retention.Agent.Id));
-        if (retention.ItbisWithheld > 0m)
-            El(w, "MontoITBISRetenido", EcfXmlFormat.Money(retention.ItbisWithheld));
-        if (retention.IsrWithheld > 0m)
+
+        if (type == EcfType.PagosExterior)
+        {
             El(w, "MontoISRRetenido", EcfXmlFormat.Money(retention.IsrWithheld));
+        }
+        else
+        {
+            if (retention.ItbisWithheld > 0m)
+                El(w, "MontoITBISRetenido", EcfXmlFormat.Money(retention.ItbisWithheld));
+            if (retention.IsrWithheld > 0m)
+                El(w, "MontoISRRetenido", EcfXmlFormat.Money(retention.IsrWithheld));
+        }
+
         w.WriteEndElement();
     }
 
