@@ -51,17 +51,21 @@ relleno.
 
 ## Alcance v1
 
-**Incluido:** tipos **31** y **34** con IdDoc, Emisor, Comprador, Totales,
+**Incluido:** tipos **31**, **33** y **34** con IdDoc, Emisor, Comprador, Totales,
 DetallesItems, InformacionReferencia. Descuentos/recargos de línea (`DescuentoMonto`/
 `RecargoMonto` directos), múltiples tasas de ITBIS, tipos de item (bien/servicio),
 formas de pago.
+
+**Tipo 33 (Nota de Débito)** — `<IdDoc>` idéntico al 31 (mantiene
+`<FechaVencimientoSecuencia>` y `<TablaFormasPago>`); lo propio es que
+`<InformacionReferencia>` es obligatoria (el dominio ya lo exige para 33 y 34).
+No lleva `<IndicadorNotaCredito>`.
 
 **Tipo 34 (Nota de Crédito)** — el `<IdDoc>` cambia respecto al 31: lleva
 `<IndicadorNotaCredito>` (0 = dentro de 30 días calendario del e-CF modificado,
 1 = después; lo calcula `CreditNoteIndicator` en el dominio) en lugar de
 `<FechaVencimientoSecuencia>`, y su XSD **no admite `<TablaFormasPago>`** en el
-IdDoc. `<InformacionReferencia>` es obligatoria (el dominio ya lo exige). El
-resto de bloques es idéntico al 31.
+IdDoc. `<InformacionReferencia>` es obligatoria. El resto de bloques es idéntico al 31.
 
 **Verificado contra el XSD**: `IndicadorBienoServicio` es **1 = Bien, 2 = Servicio**
 (el contexto viejo decía B/S). `RNCValidationType` son 9 u 11 dígitos (no 10).
@@ -78,7 +82,7 @@ original a la vista.
 
 **Falta (slices posteriores):**
 
-- Tipos 32 (con bifurcación RFCE &lt; DOP 250 k), 33, 41, 43–47 — cada uno con
+- Tipos 32 (con bifurcación RFCE &lt; DOP 250 k), 41, 43–47 — cada uno con
   su XSD embebido y sus reglas de obligatoriedad.
 - Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `OtraMoneda`,
   `Subtotales`, `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
