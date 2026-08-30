@@ -2,6 +2,8 @@ using ErrorOr;
 using FluentValidation;
 using NovaFE.Application.Common;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Dgii.Contracts;
+using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Domain.Common;
 using Microsoft.Extensions.Logging;
 
@@ -12,9 +14,9 @@ public sealed class CheckDgiiConnectionUseCase(
     IValidator<CheckDgiiConnectionQuery> validator,
     ICurrentTenant currentTenant,
     IDgiiTokenProvider tokenProvider)
-    : QueryUseCase<CheckDgiiConnectionQuery, DgiiConnectionStatus>(loggerFactory, validator)
+    : QueryUseCase<CheckDgiiConnectionQuery, DgiiConnectionDto>(loggerFactory, validator)
 {
-    protected override async Task<ErrorOr<DgiiConnectionStatus>> ExecuteCore(
+    protected override async Task<ErrorOr<DgiiConnectionDto>> ExecuteCore(
         CheckDgiiConnectionQuery request,
         CancellationToken ct)
     {
@@ -28,7 +30,7 @@ public sealed class CheckDgiiConnectionUseCase(
         if (token.IsError)
             return token.Errors;
 
-        return new DgiiConnectionStatus(
+        return new DgiiConnectionDto(
             Connected: true,
             Environment: environment.Name,
             IssuedAt: token.Value.IssuedAt,

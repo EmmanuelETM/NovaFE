@@ -2,6 +2,7 @@ using ErrorOr;
 using FluentValidation;
 using NovaFE.Application.Common;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Sequences.Contracts;
 using NovaFE.Application.Sequences.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Sequences;
@@ -14,9 +15,9 @@ public sealed class AllocateNcfUseCase(
     IValidator<AllocateNcfCommand> validator,
     ICurrentTenant currentTenant,
     INcfSequenceAllocator allocator)
-    : CommandUseCase<AllocateNcfCommand, AllocatedNcf>(loggerFactory, validator)
+    : CommandUseCase<AllocateNcfCommand, AllocatedNcfDto>(loggerFactory, validator)
 {
-    protected override async Task<ErrorOr<AllocatedNcf>> ExecuteCore(
+    protected override async Task<ErrorOr<AllocatedNcfDto>> ExecuteCore(
         AllocateNcfCommand request,
         CancellationToken ct)
     {
@@ -35,6 +36,6 @@ public sealed class AllocateNcfUseCase(
             return allocation.Errors;
 
         var encf = allocation.Value;
-        return new AllocatedNcf(encf.Value, encf.TypeCode, encf.Series.ToString(), encf.Sequential);
+        return new AllocatedNcfDto(encf.Value, encf.TypeCode, encf.Series.ToString(), encf.Sequential);
     }
 }

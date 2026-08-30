@@ -1,8 +1,8 @@
 using ErrorOr;
 using NovaFE.Application.Common;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Sequences.Contracts;
 using NovaFE.Application.Sequences.Interfaces;
-using NovaFE.Application.Sequences.ReadModels;
 using NovaFE.Domain.Common;
 using Microsoft.Extensions.Logging;
 
@@ -12,9 +12,9 @@ public sealed class ListSequencesUseCase(
     ILoggerFactory loggerFactory,
     ICurrentTenant currentTenant,
     INcfSequenceReadRepository sequences)
-    : ParameterlessQueryUseCase<IReadOnlyList<NcfSequenceView>>(loggerFactory)
+    : ParameterlessQueryUseCase<IReadOnlyList<NcfSequenceDto>>(loggerFactory)
 {
-    protected override async Task<ErrorOr<IReadOnlyList<NcfSequenceView>>> ExecuteCore(
+    protected override async Task<ErrorOr<IReadOnlyList<NcfSequenceDto>>> ExecuteCore(
         NoRequest request,
         CancellationToken ct)
     {

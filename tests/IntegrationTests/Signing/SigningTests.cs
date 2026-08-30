@@ -1,4 +1,4 @@
-using NovaFE.Application.Signing;
+using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.IntegrationTests.Fixtures;
 using NovaFE.Service.Common;

@@ -40,13 +40,13 @@ vertical slice de referencia — cópialo.
 1. `src/Domain/<Module>/<Entity>.cs` y `<Entity>Errors.cs`
 2. `src/Application/<Module>/Interfaces/I<Entity>Repository.cs` (escritura, EF) e
    `I<Entity>ReadRepository.cs` (lectura, Dapper)
-3. `src/Application/<Module>/<Action>/<Action>Command.cs` (o `Query.cs`) y sus
-   read models si es query
+3. `src/Application/<Module>/<Action>/<Action>Command.cs` (o `Query.cs`); los read
+   models / DTOs de salida van en `src/Application/<Module>/Contracts/<X>Dto.cs`
 4. `src/Application/<Module>/<Action>/<Action>CommandValidator.cs`
 5. `src/Application/<Module>/<Action>/<Action>UseCase.cs`
-6. `src/Infrastructure/Persistence/EfCore/Configurations/<Entity>Configuration.cs`
-7. `src/Infrastructure/Persistence/EfCore/Repositories/<Entity>Repository.cs` y
-   `.../Sql/Repositories/<Entity>ReadRepository.cs`
+6. `src/Infrastructure/<Module>/EfCore/<Entity>Configuration.cs`
+7. `src/Infrastructure/<Module>/EfCore/<Entity>Repository.cs` y
+   `src/Infrastructure/<Module>/Sql/<Entity>ReadRepository.cs`
 8. Registrar **solo los repositorios** en `src/Infrastructure/InfrastructureService.cs`
 9. Migración: `dotnet dotnet-ef migrations add <Name> --project src/Infrastructure
    --startup-project src/Service` (necesita `ASPNETCORE_ENVIRONMENT=Development`
@@ -110,10 +110,17 @@ uso nunca menciona un status code. Los errores de cada módulo se declaran en
 ### Persistencia
 
 La base de datos es **PostgreSQL** (proveedor Npgsql), esquema **snake_case**
-(`UseSnakeCaseNamingConvention`). Conviven los dos accesos:
-`src/Infrastructure/Persistence/EfCore` (EF Core) y `src/Infrastructure/Persistence/Sql`
-(Dapper). La convención es **EF Core para escrituras, Dapper para lecturas**, con
-interfaces separadas (`I<Entity>Repository` e `I<Entity>ReadRepository`).
+(`UseSnakeCaseNamingConvention`). Conviven los dos accesos, EF Core y Dapper. La
+convención es **EF Core para escrituras, Dapper para lecturas**, con interfaces
+separadas (`I<Entity>Repository` e `I<Entity>ReadRepository`).
+
+- **Plomería** compartida en `src/Infrastructure/Persistence/` — `EfCore/`
+  (`AppDbContext`, interceptores, `RowLevelSecurity`, migraciones, `EfCoreUnitOfWork`)
+  y `Sql/` (`DbSession`, `DateTimeOffsetHandler`).
+- **Implementación por módulo** en `src/Infrastructure/<Module>/EfCore/`
+  (configuración + repositorio de escritura) y `src/Infrastructure/<Module>/Sql/`
+  (repositorio de lectura). Igual que `Dgii/` y `Signing/`: cada módulo agrupa su
+  infraestructura bajo `src/Infrastructure/<Module>/`.
 
 - **Migraciones EF Core**, no `schema.sql`. `dotnet-ef` está en el manifiesto de
   herramientas (`dotnet tool restore`). Las pruebas de integración corren las
@@ -148,7 +155,7 @@ ciphertext en Postgres, KEK vía `IKeyProtector` desde config/KMS). Provider-agn
 a propósito — ver `docs/certificates.md`. Un `Certificate` solo guarda una
 `VaultReference` opaca.
 
-**Firma XMLDSig** (`src/Infrastructure/Security/XmlDsigSigner.cs`): `IXmlSigner`
+**Firma XMLDSig** (`src/Infrastructure/Signing/XmlDsigSigner.cs`): `IXmlSigner`
 (cripto pura) e `ICertificateSigner` (orquesta vault + vigencia + firma). Los
 parámetros de la DGII (C14N **estándar** no exclusivo, SHA-256, `Reference URI=""`,
 `preserveWhitespace=false`, cert embebido) están fijos y afirmados en las pruebas.

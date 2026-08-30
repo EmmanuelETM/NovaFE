@@ -1,6 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
-using NovaFE.Infrastructure.Security;
+using NovaFE.Infrastructure.Signing;
 using NovaFE.UnitTests.Certificates;
 
 namespace NovaFE.UnitTests.Signing;
