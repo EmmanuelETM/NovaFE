@@ -105,4 +105,19 @@ Content-Type: application/json
   "securityCode": "aB3xZ9"
 }
 
+### GET — un ejemplo YA FIRMADO (Modulo 3, cert autofirmado efimero; la DGII no la aceptaria)
+GET {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/samples/credito-fiscal?signed=true&raw=true
+
+### GET — tipo 32 de bajo monto firmado -> el RFCE firmado (atado al e-CF por el codigo de seguridad)
+GET {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/samples/consumo?signed=true&rfce=true&raw=true
+
+### POST — cuerpo crudo, firmado (JSON con xml + securityCode + documentHash)
+POST {{Service_HostAddress}}/api/v1.0/dev/ecf-preview?signed=true
+Content-Type: application/json
+
+{
+  "type": 31,
+  "lines": [ { "rate": 1, "name": "Item gravado", "unitPrice": 1000 } ]
+}
+
 ###

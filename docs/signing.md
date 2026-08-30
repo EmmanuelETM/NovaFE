@@ -47,6 +47,17 @@ if doc.QualifiesForRfce (tipo 32 < DOP 250 000):
 - RF-03.3.2 (el `SN` del certificado = RNC del tenant) ya se garantiza al **subir**
   el certificado (`Certificate.Issue` → `HolderMatchesRnc`), no en cada firma.
 
+### Ver el XML firmado
+
+- **Galería** (`EcfXmlGallery`, proyecto de pruebas): las variantes
+  `samples/ecf/*-firmado.xml` salen de `EcfSigner` con una firma autofirmada
+  efímera. Ver `docs/ecf-xml.md`.
+- **Endpoint dev** `GET/POST /api/v1.0/dev/ecf-preview?signed=true` — firma con un
+  certificado autofirmado efímero (`DevEcfSigner`, solo Development). Sirve para ver
+  la forma; **la DGII no aceptaría esa firma**. La firma real (certificado del
+  tenant) es `IEcfSigner`, que hoy no está expuesto por HTTP — lo consumirá el
+  endpoint de emisión en Módulo 4.
+
 ## Parámetros que NO se tocan
 
 Verificados en `XmlDsigSignerTests` (se afirman los URIs literales).

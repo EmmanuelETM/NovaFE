@@ -84,7 +84,39 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
+    [RequiresDockerFact]
+    public async Task Signed_true_runs_the_document_through_module_3()
+    {
+        var response = await Client.PostAsJsonAsync("/api/v1.0/dev/ecf-preview?signed=true", new
+        {
+            type = 31,
+            lines = new[] { new { rate = 1, name = "Item gravado", unitPrice = 1000m } },
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = await LeerAsync<SignedPreviewResponse>(response);
+        body!.XsdValid.ShouldBeTrue();
+        body.Xml.ShouldContain("<Signature");
+        body.SecurityCode.Length.ShouldBe(6);
+        body.DocumentHash.Length.ShouldBe(64);
+    }
+
+    [RequiresDockerFact]
+    public async Task A_low_amount_consumo_sample_signed_yields_the_signed_rfce()
+    {
+        var response = await Client.GetAsync("/api/v1.0/dev/ecf-preview/samples/consumo?signed=true&rfce=true&raw=true");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Headers.GetValues("X-Ecf-Xsd-Valid").ShouldBe(["true"]);
+        var xml = await response.Content.ReadAsStringAsync();
+        xml.ShouldContain("<RFCE>");
+        xml.ShouldContain("<Signature");
+        xml.ShouldContain("<CodigoSeguridadeCF>");
+    }
+
     private sealed record SampleRow(string Slug, string Title);
 
     private sealed record PreviewResponse(string Xml, bool XsdValid, string? XsdError);
+
+    private sealed record SignedPreviewResponse(string Xml, bool XsdValid, string SecurityCode, string DocumentHash);
 }

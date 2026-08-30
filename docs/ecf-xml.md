@@ -32,9 +32,11 @@ dotnet test tests/UnitTests/NovaFE.UnitTests.csproj --filter "FullyQualifiedName
 
 Abrí `samples/ecf/_README.md` para el índice con el estado de validación. Cubre
 los 10 tipos + combinaciones (OtraMoneda, Sección D, desglose ISC, embarque,
-Subtotales/Paginacion, multi-tasa, precios con ITBIS) + el RFCE. Para probar una
-combinación propia, agregá una entrada a `Documents()` en ese archivo. También es
-prueba de humo: si un serializador tira o genera XML inválido, falla.
+Subtotales/Paginacion, multi-tasa, precios con ITBIS) + el RFCE + unas variantes
+**`*-firmado.xml`** (el e-CF pasado por `EcfSigner` con una firma autofirmada
+efímera — muestran la `<Signature>` real y, para el tipo 32, el RFCE firmado). Para
+probar una combinación propia, agregá una entrada a `Documents()` en ese archivo.
+También es prueba de humo: si un serializador tira o genera XML inválido, falla.
 
 ### 2. Endpoint dev-only (HTTP, interactivo)
 
@@ -42,15 +44,22 @@ prueba de humo: si un serializador tira o genera XML inválido, falla.
 no existe fuera de Development). Ejemplos en `src/Service/NovaFE.Service.http`.
 
 - `GET .../samples` — lista los ejemplos (uno por tipo).
-- `GET .../samples/{slug}[?raw=true][&rfce=true]` — el XML de un ejemplo.
+- `GET .../samples/{slug}[?raw=true][&rfce=true][&signed=true]` — el XML de un ejemplo.
 - `POST .../` — cuerpo crudo (`EcfPreviewRequest`, todo con defaults; mínimo
   `{ "type": 31, "lines": [{ "unitPrice": 1000 }] }`). Soporta retención, desglose
-  ISC, `OtraMoneda` y Sección D.
-- `POST .../rfce` — el RFCE (el `document` debe ser tipo 32).
+  ISC, `OtraMoneda` y Sección D. `?signed=true` para firmarlo.
+- `POST .../rfce` — el RFCE (el `document` debe ser tipo 32). `?signed=true` firma
+  el e-CF, deriva el código de seguridad y firma también el RFCE.
 
 Respuesta: JSON `{ xml, xsdValid, xsdError }`, o con `?raw=true` el XML crudo con
 la cabecera `X-Ecf-Xsd-Valid`. Errores de dominio → 400 ProblemDetails.
 Mapeo DTO→dominio en `src/Service/DevTools/EcfPreviewMapper.cs`.
+
+**`?signed=true`** pasa el documento por Módulo 3 (`DevEcfSigner`): lo firma con un
+certificado **autofirmado efímero** (sin vault, sin tenant) y valida el XML
+*firmado* contra el XSD. La respuesta agrega `securityCode` + `documentHash`. Es
+para *ver* la forma del documento firmado — **esa firma no la aceptaría la DGII**.
+La firma real, con el certificado del tenant, es `IEcfSigner` (ver `docs/signing.md`).
 
 ## Organización del serializador
 
