@@ -284,6 +284,13 @@ Las versiones de paquetes están centralizadas en `Directory.Packages.props`. Un
 la versión en `Directory.Packages.props` y la referencia sin versión en el
 proyecto.
 
+## Documentación
+
+Todo `.md` nuevo va en `docs/`. **Al crear un archivo en `docs/`, agrégalo también
+a la carpeta de solución `/docs/` en `NovaFE.slnx`** (`<File Path="docs/<nombre>.md" />`,
+en orden alfabético dentro del `<Folder Name="/docs/">`) para que aparezca en el
+Solution Explorer de Visual Studio sin abrir el explorador de archivos.
+
 
 ## Contexto del Proyecto
 
