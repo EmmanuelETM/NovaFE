@@ -51,10 +51,10 @@ relleno.
 
 ## Alcance v1
 
-**Incluido:** tipos **31**, **32**, **33** y **34** con IdDoc, Emisor, Comprador,
-Totales, DetallesItems, InformacionReferencia. Descuentos/recargos de línea
-(`DescuentoMonto`/`RecargoMonto` directos), múltiples tasas de ITBIS, tipos de item
-(bien/servicio), formas de pago.
+**Incluido:** tipos **31**, **32**, **33**, **34** y **41** con IdDoc, Emisor,
+Comprador, Totales, DetallesItems, InformacionReferencia, Retencion.
+Descuentos/recargos de línea (`DescuentoMonto`/`RecargoMonto` directos), múltiples
+tasas de ITBIS, tipos de item (bien/servicio), formas de pago.
 
 **Tipo 32 (Factura de Consumo)** — `<IdDoc>` como el 31 pero **sin
 `<FechaVencimientoSecuencia>`** (`EcfType.HasSequenceExpiry` = false, igual que el
@@ -74,6 +74,16 @@ No lleva `<IndicadorNotaCredito>`.
 `<FechaVencimientoSecuencia>`, y su XSD **no admite `<TablaFormasPago>`** en el
 IdDoc. `<InformacionReferencia>` es obligatoria. El resto de bloques es idéntico al 31.
 
+**Tipo 41 (Compras)** — el emisor registra una compra a un proveedor informal y
+actúa como agente de retención. El `<IdDoc>` **no lleva `<TipoIngresos>`** (ni
+`<IndicadorEnvioDiferido>`); mantiene `<FechaVencimientoSecuencia>` y
+`<TablaFormasPago>`. Cada `<Item>` lleva el área **`<Retencion>`** obligatoria
+(`EcfLineRetention` en el dominio: agente 1/2 + `MontoITBISRetenido` /
+`MontoISRRetenido`, montos que trae el cliente). `<Totales>` agrega
+`<TotalITBISRetenido>`, `<TotalISRRetencion>` y `<ValorPagar>` (= `MontoTotal −
+retenciones`). Las retenciones **no** tocan `MontoTotal`. El resto de tipos v1
+rechaza `<Retencion>` en las líneas (`Ecf.RetentionNotApplicable`).
+
 **Verificado contra el XSD**: `IndicadorBienoServicio` es **1 = Bien, 2 = Servicio**
 (el contexto viejo decía B/S). `RNCValidationType` son 9 u 11 dígitos (no 10).
 `IndicadorFacturacion` admite `0` ("No Facturable"). En los tipos 32/33/34
@@ -90,10 +100,13 @@ original a la vista.
 **Falta (slices posteriores):**
 
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
-- Tipos 41, 43–47 — cada uno con su XSD embebido y sus reglas de obligatoriedad.
+- Tipos 43–47 — cada uno con su XSD embebido y sus reglas de obligatoriedad. El 47
+  (Pagos al Exterior) también lleva retención de ISR.
 - Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `OtraMoneda`,
   `Subtotales`, `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
-  `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo, retenciones.
+  `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo.
+- El **cálculo** de las tasas de retención (hoy los montos los trae el cliente).
+- Habilitar `<Retencion>` opcional en los tipos que su XSD lo permite (31/33/34).
 - La matriz completa de obligatoriedad 0/1/2/3 por tipo en los validadores por
   tipo (Módulo 12).
 - El agregado persistido `Ecf` + tabla `comprobantes_ecf` — llega con Módulo 4.

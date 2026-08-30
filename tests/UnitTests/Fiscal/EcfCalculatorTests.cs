@@ -14,8 +14,10 @@ public class EcfCalculatorTests
         decimal surcharge = 0m,
         bool priceIncludesTax = false,
         decimal additionalTaxes = 0m,
-        decimal? supplied = null)
-        => new(number, rate, quantity, unitPrice, discount, surcharge, priceIncludesTax, additionalTaxes, supplied);
+        decimal? supplied = null,
+        decimal itbisWithheld = 0m,
+        decimal isrWithheld = 0m)
+        => new(number, rate, quantity, unitPrice, discount, surcharge, priceIncludesTax, additionalTaxes, supplied, itbisWithheld, isrWithheld);
 
     [Fact]
     public void Taxed_line_with_tax_on_top()
@@ -155,6 +157,26 @@ public class EcfCalculatorTests
         result.Value.Totals.MontoNoFacturable.ShouldBe(-30.00m);
         result.Value.Totals.MontoPeriodo.ShouldBe(88.00m);
     }
+
+    [Fact]
+    public void Retentions_are_totalized_and_do_not_touch_the_invoice_total()
+    {
+        var result = EcfCalculator.Calculate(
+        [
+            Line(1, ItbisRate.Eighteen, 1m, 1000m, itbisWithheld: 54m, isrWithheld: 100m),
+            Line(2, ItbisRate.Eighteen, 1m, 2000m, itbisWithheld: 108m, isrWithheld: 200m),
+        ]);
+
+        var t = result.Value.Totals;
+        t.MontoTotal.ShouldBe(3540.00m);                 // 3000 + 540 ITBIS, sin tocar
+        t.TotalItbisWithheld.ShouldBe(162.00m);
+        t.TotalIsrWithheld.ShouldBe(300.00m);
+    }
+
+    [Fact]
+    public void Rejects_a_negative_retention()
+        => EcfCalculator.Calculate([Line(1, ItbisRate.Eighteen, 1m, 100m, itbisWithheld: -5m)])
+            .FirstError.Code.ShouldBe("Fiscal.NegativeRetention");
 
     [Fact]
     public void Tolerance_within_limits_is_not_flagged()

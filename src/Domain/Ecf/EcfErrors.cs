@@ -53,6 +53,14 @@ public static class EcfErrors
         code: "Ecf.IncomeTypeRequired",
         description: "El tipo de ingresos es obligatorio para este comprobante.");
 
+    public static Error RetentionRequired(int lineNumber) => Error.Validation(
+        code: "Ecf.RetentionRequired",
+        description: $"La línea {lineNumber} del Comprobante de Compras (tipo 41) necesita el área de retención (agente de retención o percepción).");
+
+    public static Error RetentionNotApplicable(int documentType) => Error.Validation(
+        code: "Ecf.RetentionNotApplicable",
+        description: $"El tipo {documentType} no lleva área de retención en las líneas de detalle.");
+
     public static Error CreditNoteDueDateInThePast => Error.Validation(
         code: "Ecf.CreditNoteDueDateInThePast",
         description: "La fecha del comprobante modificado no puede ser posterior a la emisión de la nota.");

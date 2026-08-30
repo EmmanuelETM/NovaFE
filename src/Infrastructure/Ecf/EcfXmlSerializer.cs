@@ -11,11 +11,11 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: tipos 31–34 con los bloques de uso común (IdDoc, Emisor, Comprador,
-/// Totales, DetallesItems, InformacionReferencia). Faltan: InformacionesAdicionales,
-/// Transporte, OtraMoneda, Subtotales, DescuentosORecargos, Paginación, el desglose
-/// de ImpuestosAdicionales, el formato reducido RFCE y los tipos 41–47. Ver
-/// <c>docs/ecf-xml.md</c>.
+/// v1: tipos 31–34 y 41 con los bloques de uso común (IdDoc, Emisor, Comprador,
+/// Totales, DetallesItems, InformacionReferencia, Retencion). Faltan:
+/// InformacionesAdicionales, Transporte, OtraMoneda, Subtotales, DescuentosORecargos,
+/// Paginación, el desglose de ImpuestosAdicionales, el formato reducido RFCE y los
+/// tipos 43–47. Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -92,14 +92,18 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
     }
 
     /// <summary>
-    /// <c>&lt;IdDoc&gt;</c>. El tipo 34 (Nota de Crédito) cambia la secuencia inicial:
-    /// lleva <c>&lt;IndicadorNotaCredito&gt;</c> (0/1, obligatorio) en vez de
-    /// <c>&lt;FechaVencimientoSecuencia&gt;</c>, y su XSD no admite <c>&lt;TablaFormasPago&gt;</c>.
+    /// <c>&lt;IdDoc&gt;</c>. Variaciones por tipo:
+    /// <list type="bullet">
+    ///   <item>34 (Nota de Crédito): <c>&lt;IndicadorNotaCredito&gt;</c> (0/1, obligatorio)
+    ///   en vez de <c>&lt;FechaVencimientoSecuencia&gt;</c>; su XSD no admite <c>&lt;TablaFormasPago&gt;</c>.</item>
+    ///   <item>41 (Compras): su XSD no admite <c>&lt;TipoIngresos&gt;</c> ni <c>&lt;IndicadorEnvioDiferido&gt;</c>.</item>
+    /// </list>
     /// </summary>
     private static void WriteIdDoc(XmlWriter w, EcfDocument doc)
     {
         var h = doc.Header;
         var isCreditNote = doc.Type == EcfType.NotaCredito;
+        var isCompras = doc.Type == EcfType.Compras;
 
         w.WriteStartElement("IdDoc");
         El(w, "TipoeCF", Int(doc.Type.Id));
@@ -110,10 +114,11 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         else
             Opt(w, "FechaVencimientoSecuencia", h.SequenceExpiresOn is { } exp ? EcfXmlFormat.Date(exp) : null);
 
-        if (h.DeferredDelivery)
+        if (h.DeferredDelivery && !isCompras)
             El(w, "IndicadorEnvioDiferido", "1");
         El(w, "IndicadorMontoGravado", h.PricesIncludeTax ? "1" : "0");
-        El(w, "TipoIngresos", h.IncomeType);
+        if (!isCompras)
+            El(w, "TipoIngresos", h.IncomeType);
         El(w, "TipoPago", Int(h.Payment.Condition.Id));
         Opt(w, "FechaLimitePago", h.Payment.DueDate is { } due ? EcfXmlFormat.Date(due) : null);
         if (!isCreditNote)
@@ -185,6 +190,17 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             El(w, "MontoPeriodo", EcfXmlFormat.Money(t.MontoPeriodo));
         }
 
+        // Retenciones (tipo 41): el valor neto a pagar y los totales retenidos.
+        var retenido = t.TotalItbisWithheld + t.TotalIsrWithheld;
+        if (retenido > 0m)
+        {
+            El(w, "ValorPagar", EcfXmlFormat.Money(t.MontoTotal - retenido));
+            if (t.TotalItbisWithheld > 0m)
+                El(w, "TotalITBISRetenido", EcfXmlFormat.Money(t.TotalItbisWithheld));
+            if (t.TotalIsrWithheld > 0m)
+                El(w, "TotalISRRetencion", EcfXmlFormat.Money(t.TotalIsrWithheld));
+        }
+
         w.WriteEndElement();
 
         void RateBucket(XmlWriter writer, string name, decimal value)
@@ -208,6 +224,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             El(w, "NumeroLinea", line.Number.ToString(System.Globalization.CultureInfo.InvariantCulture));
             WriteCodigosItem(w, line.Codes);
             El(w, "IndicadorFacturacion", line.Rate.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            WriteRetencion(w, line.Retention);
             Text(w, "NombreItem", line.Name);
             El(w, "IndicadorBienoServicio", line.Kind.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
             Text(w, "DescripcionItem", line.Description);
@@ -222,6 +239,21 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             w.WriteEndElement();
         }
 
+        w.WriteEndElement();
+    }
+
+    /// <summary><c>&lt;Retencion&gt;</c> del detalle (obligatorio en el tipo 41).</summary>
+    private static void WriteRetencion(XmlWriter w, EcfLineRetention? retention)
+    {
+        if (retention is null)
+            return;
+
+        w.WriteStartElement("Retencion");
+        El(w, "IndicadorAgenteRetencionoPercepcion", Int(retention.Agent.Id));
+        if (retention.ItbisWithheld > 0m)
+            El(w, "MontoITBISRetenido", EcfXmlFormat.Money(retention.ItbisWithheld));
+        if (retention.IsrWithheld > 0m)
+            El(w, "MontoISRRetenido", EcfXmlFormat.Money(retention.IsrWithheld));
         w.WriteEndElement();
     }
 

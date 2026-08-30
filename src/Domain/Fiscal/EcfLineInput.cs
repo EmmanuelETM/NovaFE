@@ -25,6 +25,14 @@ namespace NovaFE.Domain.Fiscal;
 /// <c>&lt;MontoItem&gt;</c> tal como lo calculó el sistema del cliente, si se
 /// quiere el chequeo de tolerancia (RF-06.6). Null = no comparar.
 /// </param>
+/// <param name="ItbisWithheld">
+/// <c>&lt;MontoITBISRetenido&gt;</c> de la línea, ya calculado por el cliente. Se
+/// acumula en <c>&lt;TotalITBISRetenido&gt;</c>; no afecta a <c>&lt;MontoTotal&gt;</c>.
+/// </param>
+/// <param name="IsrWithheld">
+/// <c>&lt;MontoISRRetenido&gt;</c> de la línea, ya calculado por el cliente. Se
+/// acumula en <c>&lt;TotalISRRetencion&gt;</c>; no afecta a <c>&lt;MontoTotal&gt;</c>.
+/// </param>
 public sealed record EcfLineInput(
     int LineNumber,
     ItbisRate Rate,
@@ -34,4 +42,6 @@ public sealed record EcfLineInput(
     decimal Surcharge = 0m,
     bool PriceIncludesTax = false,
     decimal AdditionalTaxes = 0m,
-    decimal? SuppliedLineAmount = null);
+    decimal? SuppliedLineAmount = null,
+    decimal ItbisWithheld = 0m,
+    decimal IsrWithheld = 0m);
