@@ -79,6 +79,7 @@ public static class InfrastructureService
 
         // Generación y validación del XML del e-CF (Módulo 2). Sin estado.
         services.AddSingleton<IEcfXmlSerializer, EcfXmlSerializer>();
+        services.AddSingleton<IRfceSerializer, RfceSerializer>();
         services.AddSingleton<IEcfXsdValidator, EcfXsdValidator>();
 
         // ==========================================

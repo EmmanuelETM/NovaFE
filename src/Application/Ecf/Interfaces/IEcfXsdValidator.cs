@@ -10,8 +10,12 @@ namespace NovaFE.Application.Ecf.Interfaces;
 public interface IEcfXsdValidator
 {
     /// <summary>
-    /// Devuelve <see cref="Result.Success"/> si el XML valida, o un
+    /// Valida el XML <c>&lt;ECF&gt;</c> contra el XSD del <paramref name="type"/>.
+    /// Devuelve <see cref="Result.Success"/> si valida, o un
     /// <see cref="Error.Validation"/> con el detalle de las violaciones.
     /// </summary>
     ErrorOr<Success> Validate(string xml, EcfType type);
+
+    /// <summary>Valida el XML <c>&lt;RFCE&gt;</c> contra <c>RFCE-32-v1.0.xsd</c>.</summary>
+    ErrorOr<Success> ValidateRfce(string xml);
 }

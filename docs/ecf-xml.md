@@ -8,9 +8,10 @@ tiene errores, el XSD no**.
 
 | Interfaz (Application) | Impl (Infrastructure) | Rol |
 |---|---|---|
-| — | `EcfDocument` (Domain, `src/Domain/Ecf`) | Modelo fiscal validado. `Create(...)` valida estructura y calcula todos los totales con Módulo 6 (`EcfCalculator`). Un documento construido siempre está cuadrado. |
+| — | `EcfDocument` (Domain, `src/Domain/Ecf`) | Modelo fiscal validado. `Create(...)` valida estructura y calcula todos los totales con Módulo 6 (`EcfCalculator`). Un documento construido siempre está cuadrado. `QualifiesForRfce` = tipo 32 con `MontoTotal < DOP 250 000`. |
 | `IEcfXmlSerializer` | `EcfXmlSerializer` | Serializa a `<ECF>` con el orden del XSD, sin tags vacíos, escape DGII, formato numérico/fechas. Incluye `<FechaHoraFirma>`, **no** `<Signature>`. |
-| `IEcfXsdValidator` | `EcfXsdValidator` | Valida contra el XSD embebido del tipo. |
+| `IRfceSerializer` | `RfceSerializer` | Serializa el `<RFCE>` (resumen del tipo 32 < DOP 250 k). Recibe el e-CF 32 + el `CodigoSeguridadeCF` (6 chars, de Módulo 3). |
+| `IEcfXsdValidator` | `EcfXsdValidator` | `Validate(xml, type)` contra el XSD del tipo; `ValidateRfce(xml)` contra `RFCE-32-v1.0.xsd`. |
 
 `EcfDocument` **no es** el payload de la API (`docs/api-ecf.md`, curado). Es el
 modelo interno que mapea 1:1 al XML: enums en vez de strings mágicos, `decimal` en
@@ -81,8 +82,29 @@ formato**: IdDoc, Emisor, Comprador, InformacionesAdicionales, Transporte, Total
 (+ desglose ImpuestosAdicionales), OtraMoneda, DetallesItems (+ TablaSubcantidad,
 Mineria, TablaImpuestoAdicional, OtraMonedaDetalle, GradosAlcohol,
 CantidadReferencia, fechas de elaboración/vencimiento), Subtotales,
-DescuentosORecargos (Sección D), Paginacion, InformacionReferencia, Retencion.
-**Solo falta el formato reducido RFCE** (tipo 32 &lt; DOP 250 k).
+DescuentosORecargos (Sección D), Paginacion, InformacionReferencia, Retencion. Y
+el **RFCE** (resumen del tipo 32 &lt; DOP 250 k). El formato del e-CF está completo.
+
+### RFCE — Resumen de Factura de Consumo Electrónica
+
+El tipo 32 con `MontoTotal < DOP 250 000` **no se envía a la DGII como `<ECF>`
+completo, sino como `<RFCE>`** (RF-02.6). El `<ECF>` igual se genera y se guarda
+local; el `<RFCE>` es su resumen: `<Encabezado>` con IdDoc, Emisor reducido
+(RNC + razón social + fecha), Comprador reducido (RNC/IdExtranjero/razón social),
+`<Totales>` (**sin** los indicadores de tasa `<ITBIS1/2/3>`), y un
+`<CodigoSeguridadeCF>` de 6 caracteres — los primeros del `SignatureValue` del
+`<ECF>` firmado (Módulo 3), que ata el resumen al original. **Sin `<DetallesItems>`
+ni `<FechaHoraFirma>`.**
+
+- `RfceSerializer` (`src/Infrastructure/Ecf/RfceSerializer.cs`) — documento aparte,
+  no un `EcfXmlProfile`. Comparte `EcfElementWriter` y `EcfXml` con el e-CF; el
+  resto es propio. `Serialize(EcfDocument, string securityCode)` — tira
+  `ArgumentException` si el tipo ≠ 32 o el código ≠ 6 chars.
+- **Montos:** el XSD del RFCE exige **exactamente 2 decimales** (o ninguno) —
+  `EcfXmlFormat.Money2`, no `Money`. El `EcfElementWriter` recibe el formateador
+  en el constructor.
+- El bloque `<ImpuestosAdicionales>` del RFCE **no lleva `<TasaImpuestoAdicional>`**.
+- `EcfDocument.QualifiesForRfce` — el ruteo ECF-vs-RFCE (lo consume Módulo 4).
 
 **Bloques transversales** (decisión: passthrough — el cliente trae los datos, el
 motor fiscal no los usa; ver plan):
@@ -142,8 +164,8 @@ motor fiscal no los usa; ver plan):
 `<FechaVencimientoSecuencia>`** (`EcfType.HasSequenceExpiry` = false, igual que el
 34); mantiene `<TablaFormasPago>`. `TipoIngresos` es obligatorio (XSD
 `minOccurs="1"`; el dominio lo exige). El comprador solo se identifica si
-`MontoTotal ≥ DOP 250 000` (ver `EcfDocument.RequiresBuyerIdentification`). No hace
-la bifurcación al formato reducido RFCE — sigue pendiente.
+`MontoTotal ≥ DOP 250 000` (ver `EcfDocument.RequiresBuyerIdentification`). Si
+`MontoTotal < DOP 250 000` se envía como **RFCE** (ver arriba), no como `<ECF>`.
 
 **Tipo 33 (Nota de Débito)** — `<IdDoc>` idéntico al 31 (mantiene
 `<FechaVencimientoSecuencia>` y `<TablaFormasPago>`); lo propio es que
@@ -239,7 +261,6 @@ original a la vista.
 
 **Falta (slices posteriores):**
 
-- El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
 - El bloque anidado `ImpuestosAdicionalesOtraMoneda` (dentro de `OtraMoneda`).
 - La distribución proporcional de la Sección D a nivel de línea (Formato notas 28/29).
 - `TablaSubDescuento`/`TablaSubRecargo` a nivel de línea.

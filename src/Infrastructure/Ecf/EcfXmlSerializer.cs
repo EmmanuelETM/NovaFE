@@ -20,14 +20,6 @@ namespace NovaFE.Infrastructure.Ecf;
 /// </summary>
 internal sealed partial class EcfXmlSerializer : IEcfXmlSerializer
 {
-    private static readonly XmlWriterSettings _settings = new()
-    {
-        OmitXmlDeclaration = true,
-        Indent = false,
-        NewLineHandling = NewLineHandling.None,
-        Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
-    };
-
     public string Serialize(EcfDocument document, DateTimeOffset signedAt)
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -35,7 +27,7 @@ internal sealed partial class EcfXmlSerializer : IEcfXmlSerializer
         var profile = EcfXmlProfiles.For(document.Type);
         var buffer = new StringBuilder();
 
-        using (var xmlWriter = XmlWriter.Create(buffer, _settings))
+        using (var xmlWriter = XmlWriter.Create(buffer, EcfXml.WriterSettings))
         {
             var w = new EcfElementWriter(xmlWriter);
             using (w.Element("ECF"))
@@ -50,19 +42,6 @@ internal sealed partial class EcfXmlSerializer : IEcfXmlSerializer
             }
         }
 
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + EscapeDgii(buffer.ToString());
+        return EcfXml.Finish(buffer.ToString());
     }
-
-    /// <summary>
-    /// Completa el escape de la DGII (RF-02.3) sobre el cuerpo ya bien formado:
-    /// <c>&lt; &gt; &amp;</c> los hizo <see cref="XmlWriter"/>; acá van <c>" ' © ® €</c>.
-    /// El e-CF no tiene atributos, así que reemplazar en todo el cuerpo es seguro.
-    /// </summary>
-    private static string EscapeDgii(string body) =>
-        body
-            .Replace("\"", "&quot;", StringComparison.Ordinal)
-            .Replace("'", "&apos;", StringComparison.Ordinal)
-            .Replace("©", "&#169;", StringComparison.Ordinal)
-            .Replace("®", "&#174;", StringComparison.Ordinal)
-            .Replace("€", "&#8364;", StringComparison.Ordinal);
 }
