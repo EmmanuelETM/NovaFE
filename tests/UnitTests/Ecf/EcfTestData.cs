@@ -62,6 +62,16 @@ internal static class EcfTestData
             Retention: retention);
 
     /// <summary>
+    /// Comprobante de Gastos Menores (tipo 43): caja chica. El más reducido —
+    /// sin bloque comprador, sin formas de pago, líneas exentas y sin ajustes.
+    /// </summary>
+    public static EcfDocument GastosMenores(params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.GastosMenores,
+            Header(43),
+            lines.Length == 0 ? [Line(rate: ItbisRate.Exempt, unitPrice: 350m, name: "Café y agua para reunión")] : lines).Value;
+
+    /// <summary>
     /// Comprobante de Regímenes Especiales (tipo 44): zona franca / regímenes de
     /// incentivo. Todo exento — su XSD no tiene campos gravados en <c>&lt;Totales&gt;</c>.
     /// </summary>

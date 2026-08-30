@@ -46,6 +46,18 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_gastos_menores_validates_against_the_official_type_43_xsd()
+    {
+        var document = EcfTestData.GastosMenores(
+            EcfTestData.Line(number: 1, rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 200m, name: "Taxi"),
+            EcfTestData.Line(number: 2, rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 150m, name: "Parqueo"));
+
+        var result = Validator.Validate(SignedShapeXml(document), EcfType.GastosMenores);
+
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void A_regimenes_especiales_validates_against_the_official_type_44_xsd()
     {
         var document = EcfTestData.RegimenesEspeciales(
