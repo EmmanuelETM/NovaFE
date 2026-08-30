@@ -216,8 +216,11 @@ cero; 2 dec dinero, 4 dec precio unitario y tipo de cambio, 3 dec subcantidad).
 tipo 34, **valores 0/1** (el Plan Técnico dice 1/2: está mal). La tolerancia de
 cuadratura **nunca rechaza** (RF-06.6). Las retenciones de ITBIS/ISR se
 **totalizan** (montos por línea que trae el cliente → `<TotalITBISRetenido>` /
-`<TotalISRRetencion>`; no tocan `<MontoTotal>`); el **cálculo** de las tasas, el
-ISC de alcoholes/cigarrillos y los descuentos globales (Sección D) son slices
+`<TotalISRRetencion>`; no tocan `<MontoTotal>`). La **Sección D**
+(descuentos/recargos globales) se **reconcilia mecánicamente**: el monto se aplica
+al bucket que indica `AffectsRate` y se recalcula su ITBIS; la Norma 10-07 solo
+baja el `<ValorPagar>`. El **cálculo** de las tasas de retención, el ISC de
+alcoholes/cigarrillos y la distribución de la Sección D a nivel de línea son slices
 posteriores. No cambiar sin leer `docs/fiscal.md`.
 
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado

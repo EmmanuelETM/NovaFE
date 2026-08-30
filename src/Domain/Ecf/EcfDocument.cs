@@ -84,7 +84,10 @@ public sealed class EcfDocument
 
         var calculation = EcfCalculator.Calculate(
             [.. lines.Select(line => ToLineInput(line, header.PricesIncludeTax))],
-            header.NonInvoiceableAmount);
+            header.NonInvoiceableAmount,
+            header.GlobalAdjustments is { } adjustments
+                ? [.. adjustments.Select(ToAdjustmentInput)]
+                : null);
         if (calculation.IsError)
             return calculation.Errors;
 
@@ -202,6 +205,9 @@ public sealed class EcfDocument
             errors.Add(EcfErrors.LineForeignCurrencyWithoutHeader);
         }
 
+        if (header.GlobalAdjustments is { Count: > 0 } adjustments)
+            ValidateGlobalAdjustments(type, adjustments, errors);
+
         if (header.Shipping is { } shipping)
         {
             if (type == EcfType.Compras || type == EcfType.GastosMenores || type == EcfType.PagosExterior)
@@ -223,6 +229,51 @@ public sealed class EcfDocument
             else if (type == EcfType.PagosExterior && HasNonDestinationTransportFields(transport))
             {
                 errors.Add(EcfErrors.TransportForPagosExteriorIsDestinationOnly);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sección D (<c>&lt;DescuentosORecargos&gt;</c>): no aplica a 43/47; hasta 20
+    /// líneas con <c>NumeroLinea</c> secuencial; el <c>IndicadorNorma1007</c> solo en
+    /// 31/32/33/34/45 y solo para descuentos a la tasa 1.
+    /// </summary>
+    private static void ValidateGlobalAdjustments(
+        EcfType type, IReadOnlyList<EcfGlobalAdjustment> adjustments, List<Error> errors)
+    {
+        if (type == EcfType.GastosMenores || type == EcfType.PagosExterior)
+        {
+            errors.Add(EcfErrors.BlockNotApplicable("DescuentosORecargos", type.Id));
+            return;
+        }
+
+        if (adjustments.Count > 20)
+            errors.Add(EcfErrors.TooManyGlobalAdjustments);
+
+        var expected = 1;
+        foreach (var line in adjustments.Select(a => a.Line).OrderBy(n => n))
+        {
+            if (line != expected++)
+            {
+                errors.Add(EcfErrors.NonContiguousGlobalAdjustmentLines);
+                break;
+            }
+        }
+
+        var norma1007Allowed = type == EcfType.CreditoFiscal
+            || type == EcfType.Consumo
+            || type == EcfType.NotaDebito
+            || type == EcfType.NotaCredito
+            || type == EcfType.Gubernamental;
+
+        foreach (var adj in adjustments.Where(a => a.Norma1007))
+        {
+            if (!norma1007Allowed
+                || adj.Kind != AdjustmentKind.Discount
+                || adj.AffectsRate != ItbisRate.Eighteen)
+            {
+                errors.Add(EcfErrors.Norma1007NotApplicable(type.Id));
+                break;
             }
         }
     }
@@ -356,6 +407,13 @@ public sealed class EcfDocument
         || type == EcfType.RegimenesEspeciales
         || type == EcfType.Gubernamental
         || type == EcfType.Exportaciones;
+
+    private static EcfGlobalAdjustmentInput ToAdjustmentInput(EcfGlobalAdjustment adj) =>
+        new(
+            IsDiscount: adj.Kind == AdjustmentKind.Discount,
+            AffectsRate: adj.AffectsRate,
+            Amount: adj.Amount,
+            Norma1007: adj.Norma1007);
 
     private static EcfLineInput ToLineInput(EcfLine line, bool headerPricesIncludeTax) =>
         new(

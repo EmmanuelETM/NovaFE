@@ -365,6 +365,54 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Seccion_d_is_emitted_after_detalles_items_and_reconciles_the_totales()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            GlobalAdjustments =
+            [
+                new EcfGlobalAdjustment(1, AdjustmentKind.Discount, ItbisRate.Eighteen, 1000m, Description: "Promo lanzamiento"),
+            ],
+        };
+        var root = XDocument.Parse(Sut.Serialize(
+            EcfDocument.Create(EcfType.CreditoFiscal, header, [EcfTestData.Line(unitPrice: 10000m)]).Value,
+            EcfTestData.SignedAt)).Root!;
+
+        root.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["Encabezado", "DetallesItems", "DescuentosORecargos", "FechaHoraFirma"]);
+        var dr = root.Element("DescuentosORecargos")!.Element("DescuentoORecargo")!;
+        dr.Element("TipoAjuste")!.Value.ShouldBe("D");
+        dr.Element("MontoDescuentooRecargo")!.Value.ShouldBe("1000");
+        dr.Element("IndicadorFacturacionDescuentooRecargo")!.Value.ShouldBe("1");
+
+        var totales = root.Element("Encabezado")!.Element("Totales")!;
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("9000");
+        totales.Element("TotalITBIS")!.Value.ShouldBe("1620");
+        totales.Element("MontoTotal")!.Value.ShouldBe("10620");
+    }
+
+    [Fact]
+    public void Norma_10_07_discount_emits_valor_pagar_below_monto_total()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            GlobalAdjustments =
+            [
+                new EcfGlobalAdjustment(1, AdjustmentKind.Discount, ItbisRate.Eighteen, 1000m, Norma1007: true),
+            ],
+        };
+        var totales = XDocument.Parse(Sut.Serialize(
+                EcfDocument.Create(EcfType.CreditoFiscal, header, [EcfTestData.Line(unitPrice: 10000m)]).Value,
+                EcfTestData.SignedAt)).Root!
+            .Element("Encabezado")!.Element("Totales")!;
+
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("10000");   // base intacta
+        totales.Element("MontoTotal")!.Value.ShouldBe("11800");
+        totales.Element("ValorPagar")!.Value.ShouldBe("10800");       // 11800 - 1000
+        totales.Element("DescuentoORecargo").ShouldBeNull();          // no se emite en Totales
+    }
+
+    [Fact]
     public void Totales_reflect_the_fiscal_engine()
     {
         var totales = Serialize(EcfTestData.CreditoFiscal()).Element("Encabezado")!.Element("Totales")!;

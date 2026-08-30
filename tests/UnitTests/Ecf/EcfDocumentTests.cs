@@ -131,6 +131,46 @@ public class EcfDocumentTests
             .FirstError.Code.ShouldBe("Ecf.InvalidExchangeRate");
 
     [Fact]
+    public void Pagos_exterior_rejects_seccion_d()
+        => EcfDocument.Create(
+                EcfType.PagosExterior,
+                EcfTestData.Header(47) with
+                {
+                    Buyer = new EcfBuyer("Foreign Co", ForeignId: "X1"),
+                    GlobalAdjustments = [new EcfGlobalAdjustment(1, AdjustmentKind.Discount, ItbisRate.Exempt, 10m)],
+                },
+                [EcfTestData.Line(rate: ItbisRate.Exempt,
+                    retention: new EcfLineRetention(RetentionAgent.Withholding, IsrWithheld: 100m))])
+            .FirstError.Code.ShouldBe("Ecf.BlockNotApplicable");
+
+    [Fact]
+    public void Norma_10_07_is_rejected_on_a_surcharge()
+        => EcfDocument.Create(
+                EcfType.CreditoFiscal,
+                EcfTestData.Header(31) with
+                {
+                    GlobalAdjustments =
+                        [new EcfGlobalAdjustment(1, AdjustmentKind.Surcharge, ItbisRate.Eighteen, 100m, Norma1007: true)],
+                },
+                [EcfTestData.Line()])
+            .FirstError.Code.ShouldBe("Ecf.Norma1007NotApplicable");
+
+    [Fact]
+    public void Seccion_d_line_numbers_must_be_contiguous()
+        => EcfDocument.Create(
+                EcfType.CreditoFiscal,
+                EcfTestData.Header(31) with
+                {
+                    GlobalAdjustments =
+                    [
+                        new EcfGlobalAdjustment(1, AdjustmentKind.Discount, ItbisRate.Eighteen, 10m),
+                        new EcfGlobalAdjustment(3, AdjustmentKind.Discount, ItbisRate.Eighteen, 10m),
+                    ],
+                },
+                [EcfTestData.Line()])
+            .FirstError.Code.ShouldBe("Ecf.NonContiguousGlobalAdjustmentLines");
+
+    [Fact]
     public void Compras_rejects_the_shipping_block()
         => EcfDocument.Create(
                 EcfType.Compras,

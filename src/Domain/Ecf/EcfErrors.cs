@@ -97,6 +97,18 @@ public static class EcfErrors
         code: "Ecf.LineForeignCurrencyWithoutHeader",
         description: "Una línea trae montos en otra moneda pero el encabezado no declara el bloque OtraMoneda.");
 
+    public static Error TooManyGlobalAdjustments => Error.Validation(
+        code: "Ecf.TooManyGlobalAdjustments",
+        description: "La Sección D admite hasta 20 descuentos o recargos globales.");
+
+    public static Error NonContiguousGlobalAdjustmentLines => Error.Validation(
+        code: "Ecf.NonContiguousGlobalAdjustmentLines",
+        description: "Los números de línea de la Sección D deben ir de 1 a N, sin saltos ni repetidos.");
+
+    public static Error Norma1007NotApplicable(int documentType) => Error.Validation(
+        code: "Ecf.Norma1007NotApplicable",
+        description: $"El Indicador Norma 10-07 solo aplica en el tipo {documentType} para descuentos globales sobre la tasa 1 (18 %) — y solo en los tipos 31/32/33/34/45.");
+
     public static Error NonInvoiceableAmountNotApplicable(int documentType) => Error.Validation(
         code: "Ecf.NonInvoiceableAmountNotApplicable",
         description: $"El tipo {documentType} no admite monto no facturable.");

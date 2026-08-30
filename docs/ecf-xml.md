@@ -53,9 +53,9 @@ relleno.
 
 **Incluido:** **los diez tipos** (31–34, 41, 43–47) con IdDoc, Emisor, Comprador,
 Totales, DetallesItems, InformacionReferencia, Retencion, **InformacionesAdicionales**,
-**Transporte** y **OtraMoneda**. Descuentos/recargos de línea (`DescuentoMonto`/
-`RecargoMonto` directos), múltiples tasas de ITBIS, tipos de item (bien/servicio),
-formas de pago.
+**Transporte**, **OtraMoneda** y **DescuentosORecargos** (Sección D). Descuentos/
+recargos de línea (`DescuentoMonto`/`RecargoMonto` directos), múltiples tasas de
+ITBIS, tipos de item (bien/servicio), formas de pago.
 
 **Bloques transversales** (decisión: passthrough — el cliente trae los datos, el
 motor fiscal no los usa; ver plan):
@@ -84,6 +84,16 @@ motor fiscal no los usa; ver plan):
 - **`<OtraMoneda>` — derivación pendiente de debatir:** hoy el cliente provee los
   montos en divisa; una alternativa es derivarlos (`Money(dop / TipoCambio)`) para
   garantizar consistencia con `<Totales>`.
+- **`DescuentosORecargos`** (Sección D, `EcfHeader.GlobalAdjustments` →
+  `EcfGlobalAdjustment`) — descuentos/recargos globales; sección **condicional**
+  (obligatoriedad 2) en todos menos 43/47 (`Ecf.BlockNotApplicable`). Va tras
+  `</DetallesItems>`. **El motor los reconcilia mecánicamente** (`docs/fiscal.md`
+  § Sección D): el monto se aplica al bucket que indica `AffectsRate` (un
+  `ItbisRate`) y se recalcula su ITBIS; `MontoTotal` cuadra solo. `AdjustmentKind`
+  smart enum D/R. `IndicadorNorma1007` solo en 31/32/33/34/45 y solo para
+  descuentos a la tasa 1 (`Ecf.Norma1007NotApplicable`) — no baja la base, solo el
+  `<ValorPagar>`. Hasta 20, `NumeroLinea` secuencial
+  (`Ecf.NonContiguousGlobalAdjustmentLines`).
 
 **Tipo 32 (Factura de Consumo)** — `<IdDoc>` como el 31 pero **sin
 `<FechaVencimientoSecuencia>`** (`EcfType.HasSequenceExpiry` = false, igual que el
@@ -187,11 +197,11 @@ original a la vista.
 **Falta (slices posteriores):**
 
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
-- Bloques transversales restantes (ver plan): `DescuentosORecargos`/Sección D con
-  reconciliación mecánica en el motor (PR3), `Subtotales` + `Paginacion` + desglose
-  de `ImpuestosAdicionales` + `Mineria` + `TablaSubcantidad` (PR4).
+- Bloques transversales restantes (ver plan): `Subtotales` + `Paginacion` +
+  desglose de `ImpuestosAdicionales` + `Mineria` + `TablaSubcantidad` (PR4).
 - El bloque anidado `ImpuestosAdicionalesOtraMoneda` (dentro de `OtraMoneda`) —
   pareado con el desglose ISC de PR4.
+- La distribución proporcional de la Sección D a nivel de línea (Formato notas 28/29).
 - Sub-tablas de descuento/recargo de línea (`TablaSubDescuento`/`TablaSubRecargo`).
 - El **cálculo** de las tasas de retención (hoy los montos los trae el cliente).
 - Habilitar `<Retencion>` opcional en los tipos que su XSD lo permite (31/33/34).

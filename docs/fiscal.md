@@ -115,8 +115,33 @@ como `<ValorPagar>` en el tipo 41.
 **Incluido:** ITBIS (18/16/0/exento), ajustes de línea, "otros impuestos
 adicionales" que el cliente ya trae calculados (Propina Legal, CDT…), regla de
 los 30 días, chequeo de tolerancia, `MontoNoFacturable`/`MontoPeriodo`,
-`FiscalRules.CreditNoteTotalWithinOriginal`, y la **totalización** de retenciones
-de ITBIS/ISR por línea (ver arriba).
+`FiscalRules.CreditNoteTotalWithinOriginal`, la **totalización** de retenciones
+de ITBIS/ISR por línea (ver arriba), y la **reconciliación mecánica de la
+Sección D**.
+
+## Descuentos y recargos globales (Sección D)
+
+`EcfCalculator.Calculate(lines, montoNoFacturable, globalAdjustments)` — el tercer
+parámetro es una lista de `EcfGlobalAdjustmentInput(IsDiscount, AffectsRate, Amount,
+Norma1007)`. **Después** de acumular los buckets de línea:
+
+1. Por cada ajuste, el `Amount` se aplica al bucket que indica `AffectsRate`
+   (1 → `MontoGravadoI1`, 2 → `I2`, 3 → `I3`, 4 → `MontoExento`): descuento resta,
+   recargo suma.
+2. Si el bucket es gravado (1 o 2), su ITBIS se **recalcula** sobre la nueva base
+   (`gravadoIn × tasa`). El bucket 3 es 0 %. El exento no lleva ITBIS.
+3. `MontoTotal` sale de los buckets ya ajustados → el `<Totales>` emitido cuadra.
+4. Si un descuento deja un bucket en negativo → `Fiscal.GlobalAdjustmentExceedsBucket`.
+
+**Norma 10-07** (`IndicadorNorma1007 = 1`, solo descuentos a la tasa 1 y solo en
+31/32/33/34/45): el descuento **no** rebaja `MontoGravadoI1` ni `ITBIS1` ni
+`MontoTotal` — se acumula en `EcfTotals.Norma1007Discount` y solo baja el
+`<ValorPagar>` (`MontoTotal − retenciones − Norma1007Discount`). Formato notas 12,
+27 y campo `<ValorPagar>` nota c.
+
+**Fuera de alcance:** la distribución proporcional de la Sección D **a nivel de
+línea** (`MontoItem/ΣMontoItem`, para el cálculo del ISC y de los descuentos por
+código de impuesto adicional — Formato notas 28/29).
 
 **Slices aparte** (marcados en el código):
 
@@ -125,10 +150,9 @@ de ITBIS/ISR por línea (ver arriba).
   las fórmulas de derivación desde `GradosAlcohol`/`CantidadReferencia` son
   RF-06.4 (alcoholes) y RF-06.5 (cigarrillos). Hoy `TotalImpuestoSelectivoConsumo`
   siempre es 0.
-- **Descuentos y recargos globales (Sección D)** — RF-06.8. Se distribuyen
-  proporcionalmente por `MontoItem / ΣMontoItem` y afectan la base imponible;
-  la excepción Norma 10-07 (solo tipo 31) no rebaja el gravado a tasa 1.
 - **Cálculo** de las tasas de retención de ITBIS/ISR — a propósito fuera de
   alcance (ver "Retenciones" arriba): lo hace el cliente. Lo que sí podría
   agregarse es el chequeo `ItbisRetenido ≤ ITBIS de la línea`.
-- **Otra moneda** — RF-06.9: calcular en DOP y dividir por `TipoCambio`.
+- **Otra moneda** — RF-06.9: hoy el cliente provee los `*OtraMoneda`; el motor
+  solo hace cross-check (`docs/ecf-xml.md`). Derivarlos (`Money(dop / TipoCambio)`)
+  está a debatir.

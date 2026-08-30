@@ -26,6 +26,7 @@ namespace NovaFE.Domain.Ecf;
 /// <param name="ForeignCurrency"><c>&lt;OtraMoneda&gt;</c> — facturación en divisa; null = solo DOP.</param>
 /// <param name="Shipping"><c>&lt;InformacionesAdicionales&gt;</c> — datos de embarque; opcional.</param>
 /// <param name="Transport"><c>&lt;Transporte&gt;</c> — datos de transporte; opcional.</param>
+/// <param name="GlobalAdjustments"><c>&lt;DescuentosORecargos&gt;</c> — Sección D; null = ninguno.</param>
 public sealed record EcfHeader(
     Encf Encf,
     DateOnly? SequenceExpiresOn,
@@ -39,4 +40,5 @@ public sealed record EcfHeader(
     decimal NonInvoiceableAmount = 0m,
     EcfForeignCurrency? ForeignCurrency = null,
     EcfShippingInfo? Shipping = null,
-    EcfTransport? Transport = null);
+    EcfTransport? Transport = null,
+    IReadOnlyList<EcfGlobalAdjustment>? GlobalAdjustments = null);

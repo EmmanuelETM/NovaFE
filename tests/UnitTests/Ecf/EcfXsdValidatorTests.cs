@@ -124,6 +124,43 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_credito_fiscal_with_seccion_d_validates_against_the_xsd()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            GlobalAdjustments =
+            [
+                new EcfGlobalAdjustment(1, AdjustmentKind.Discount, NovaFE.Domain.Fiscal.ItbisRate.Eighteen, 1000m,
+                    Description: "Descuento por volumen", Percentage: 10m),
+                new EcfGlobalAdjustment(2, AdjustmentKind.Surcharge, NovaFE.Domain.Fiscal.ItbisRate.Exempt, 250m),
+            ],
+        };
+        var doc = EcfDocument.Create(EcfType.CreditoFiscal, header,
+            [EcfTestData.Line(unitPrice: 10000m), EcfTestData.Line(number: 2, rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 3000m)]).Value;
+
+        var result = Validator.Validate(SignedShapeXml(doc), EcfType.CreditoFiscal);
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
+    public void A_regimenes_especiales_with_seccion_d_validates_against_the_type_44_xsd()
+    {
+        var header = EcfTestData.Header(44) with
+        {
+            SequenceExpiresOn = new DateOnly(2027, 12, 31),
+            GlobalAdjustments =
+            [
+                new EcfGlobalAdjustment(1, AdjustmentKind.Discount, NovaFE.Domain.Fiscal.ItbisRate.Exempt, 500m),
+            ],
+        };
+        var doc = EcfDocument.Create(EcfType.RegimenesEspeciales, header,
+            [EcfTestData.Line(rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 5000m)]).Value;
+
+        var result = Validator.Validate(SignedShapeXml(doc), EcfType.RegimenesEspeciales);
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void A_pago_al_exterior_with_destination_country_validates()
     {
         var header = EcfTestData.Header(47) with
