@@ -17,7 +17,11 @@ tiene errores, el XSD no**.
 modelo interno que mapea 1:1 al XML: enums en vez de strings mágicos, `decimal` en
 vez de strings formateados, `DateOnly` en vez de `"dd-MM-yyyy"`.
 
-## Ver el XML — galería de ejemplos
+## Ver el XML
+
+Dos formas:
+
+### 1. Galería (archivos, para diffear)
 
 `EcfXmlGallery` (`tests/UnitTests/Ecf/EcfXmlGallery.cs`) genera un XML por
 tipo/combinación en `samples/ecf/` (gitignored) y valida cada uno contra su XSD:
@@ -28,10 +32,25 @@ dotnet test tests/UnitTests/NovaFE.UnitTests.csproj --filter "FullyQualifiedName
 
 Abrí `samples/ecf/_README.md` para el índice con el estado de validación. Cubre
 los 10 tipos + combinaciones (OtraMoneda, Sección D, desglose ISC, embarque,
-Subtotales/Paginacion, multi-tasa, precios con ITBIS) + el RFCE. **Para probar una
-combinación propia:** agregá una entrada a `Documents()` en ese archivo.
+Subtotales/Paginacion, multi-tasa, precios con ITBIS) + el RFCE. Para probar una
+combinación propia, agregá una entrada a `Documents()` en ese archivo. También es
+prueba de humo: si un serializador tira o genera XML inválido, falla.
 
-También es una prueba de humo: si un serializador tira o genera XML inválido, falla.
+### 2. Endpoint dev-only (HTTP, interactivo)
+
+`GET/POST /api/v1.0/dev/ecf-preview` (`EcfPreviewController`, `[DevelopmentOnly]` —
+no existe fuera de Development). Ejemplos en `src/Service/NovaFE.Service.http`.
+
+- `GET .../samples` — lista los ejemplos (uno por tipo).
+- `GET .../samples/{slug}[?raw=true][&rfce=true]` — el XML de un ejemplo.
+- `POST .../` — cuerpo crudo (`EcfPreviewRequest`, todo con defaults; mínimo
+  `{ "type": 31, "lines": [{ "unitPrice": 1000 }] }`). Soporta retención, desglose
+  ISC, `OtraMoneda` y Sección D.
+- `POST .../rfce` — el RFCE (el `document` debe ser tipo 32).
+
+Respuesta: JSON `{ xml, xsdValid, xsdError }`, o con `?raw=true` el XML crudo con
+la cabecera `X-Ecf-Xsd-Valid`. Errores de dominio → 400 ProblemDetails.
+Mapeo DTO→dominio en `src/Service/DevTools/EcfPreviewMapper.cs`.
 
 ## Organización del serializador
 

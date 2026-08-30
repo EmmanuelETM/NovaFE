@@ -20,3 +20,89 @@ GET {{Service_HostAddress}}/api/v1.0/tenants/00000000-0000-0000-0000-00000000000
 Accept: application/json
 
 ###
+
+# ==========================================================================
+#  e-CF preview  —  SOLO Development. Genera el XML sin firmar ni enviar.
+# ==========================================================================
+
+### Lista los ejemplos (uno por tipo)
+GET {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/samples
+Accept: application/json
+
+### El XML de un ejemplo (JSON con { xml, xsdValid })
+GET {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/samples/compras
+Accept: application/json
+
+### El XML crudo de un ejemplo (?raw=true)  — cabecera X-Ecf-Xsd-Valid
+GET {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/samples/exportacion?raw=true
+
+### El RFCE de un ejemplo tipo 32
+GET {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/samples/consumo?rfce=true&raw=true
+
+### POST — cuerpo crudo (todo tiene defaults; en el mínimo alcanza el tipo + líneas)
+POST {{Service_HostAddress}}/api/v1.0/dev/ecf-preview
+Content-Type: application/json
+
+{
+  "type": 31,
+  "lines": [
+    { "rate": 1, "name": "Consultoria", "unitPrice": 1000 },
+    { "rate": 2, "name": "Seguro", "unitPrice": 500 },
+    { "rate": 4, "name": "Medicamento", "unitPrice": 300 }
+  ]
+}
+
+### POST — compras (41) con retencion por linea
+POST {{Service_HostAddress}}/api/v1.0/dev/ecf-preview?raw=true
+Content-Type: application/json
+
+{
+  "type": 41,
+  "lines": [
+    { "rate": 1, "name": "Servicio informal", "unitPrice": 5000,
+      "retention": { "agent": 1, "itbisWithheld": 270, "isrWithheld": 500 } }
+  ]
+}
+
+### POST — credito fiscal en USD (bloque OtraMoneda)
+POST {{Service_HostAddress}}/api/v1.0/dev/ecf-preview?raw=true
+Content-Type: application/json
+
+{
+  "type": 31,
+  "foreignCurrency": {
+    "currency": "USD",
+    "exchangeRate": 58.50,
+    "totals": { "montoGravadoTotal": 34.19, "montoGravadoI1": 34.19,
+                "totalItbis": 6.15, "totalItbis1": 6.15, "montoTotal": 40.34 }
+  },
+  "lines": [ { "rate": 1, "name": "Item", "unitPrice": 2000 } ]
+}
+
+### POST — descuento global (Seccion D) sobre la tasa 18%
+POST {{Service_HostAddress}}/api/v1.0/dev/ecf-preview?raw=true
+Content-Type: application/json
+
+{
+  "type": 31,
+  "globalAdjustments": [
+    { "line": 1, "kind": 1, "affectsRate": 1, "amount": 1000, "description": "Descuento por volumen", "percentage": 10 }
+  ],
+  "lines": [ { "rate": 1, "name": "Mercancia", "unitPrice": 10000 } ]
+}
+
+### POST rfce — resumen del tipo 32
+POST {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/rfce?raw=true
+Content-Type: application/json
+
+{
+  "document": {
+    "type": 32,
+    "sequenceExpiresOn": null,
+    "buyer": { "name": "Consumidor Final", "rnc": null },
+    "lines": [ { "rate": 1, "name": "Producto", "unitPrice": 800 } ]
+  },
+  "securityCode": "aB3xZ9"
+}
+
+###

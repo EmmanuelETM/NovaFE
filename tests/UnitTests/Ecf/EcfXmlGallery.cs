@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 using ErrorOr;
@@ -36,7 +37,8 @@ public class EcfXmlGallery(ITestOutputHelper output)
         var index = new StringBuilder()
             .AppendLine("# Galería de XML de ejemplo del e-CF")
             .AppendLine()
-            .AppendLine($"Generado por `EcfXmlGallery` — {DateTimeOffset.Now:yyyy-MM-dd HH:mm}.")
+            .Append("Generado por `EcfXmlGallery` — ")
+            .AppendLine(DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture))
             .AppendLine("XML *pretty-printed* para leer; en el cable va en una sola línea.")
             .AppendLine()
             .AppendLine("| Archivo | Descripción | XSD |")
@@ -48,8 +50,8 @@ public class EcfXmlGallery(ITestOutputHelper output)
         {
             File.WriteAllText(Path.Combine(folder, name + ".xml"), Prettify(xml));
 
-            var status = validation.IsError ? $"❌ {validation.FirstError.Description}" : "✅";
-            index.AppendLine($"| `{name}.xml` | {description} | {status} |");
+            var status = validation.IsError ? "❌ " + validation.FirstError.Description : "✅";
+            index.Append("| `").Append(name).Append(".xml` | ").Append(description).Append(" | ").Append(status).AppendLine(" |");
             if (validation.IsError)
                 failures.Add($"{name}: {validation.FirstError.Description}");
         }

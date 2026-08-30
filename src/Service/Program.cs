@@ -126,7 +126,12 @@ try
     //   8. Controllers, Versionado & OpenAPI
     // ==========================================
 
-    builder.Services.AddControllers()
+    builder.Services.AddControllers(options =>
+        {
+            // Fuera de Development, los controllers [DevelopmentOnly] no existen.
+            if (!builder.Environment.IsDevelopment())
+                options.Conventions.Add(new RemoveDevelopmentOnlyConvention());
+        })
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.PropertyNameCaseInsensitive = JsonSettings.Bulletproof.PropertyNameCaseInsensitive;
