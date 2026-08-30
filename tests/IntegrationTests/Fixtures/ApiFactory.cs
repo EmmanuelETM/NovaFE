@@ -26,6 +26,10 @@ public sealed class ApiFactory(
             {
                 ["ConnectionStrings:Default"] = connectionString,
 
+                // El esquema de las pruebas lo aplica DatabaseFixture; el arranque
+                // de la app no debe migrar ni sembrar nada.
+                ["Database:MigrateOnStartup"] = "false",
+
                 // KEK de prueba (32 bytes base64) para el vault de certificados.
                 ["CertificateVault:MasterKey"] = "gAqfTFC7NyyvGyBE+DgYdfbnJNv06yqDMmD3RFzUEwo=",
 

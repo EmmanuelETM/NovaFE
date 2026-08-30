@@ -25,6 +25,14 @@ public sealed class DatabaseOptions
     [Range(1, 600)]
     public int CommandTimeoutSeconds { get; set; } = 30;
 
+    /// <summary>
+    /// Si es <c>true</c>, al arrancar el servicio aplica las migraciones pendientes
+    /// y corre los <c>IDataSeeder</c> antes de aceptar tráfico. Cómodo en local;
+    /// <b>false</b> por defecto. En producción con varias instancias, las
+    /// migraciones deben ser un paso del despliegue, no del arranque.
+    /// </summary>
+    public bool MigrateOnStartup { get; set; }
+
     /// <summary>Reintentos ante fallos transitorios de PostgreSQL. 0 los desactiva.</summary>
     [Range(0, 10)]
     public int MaxRetryCount { get; set; } = 3;

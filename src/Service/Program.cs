@@ -4,6 +4,7 @@ using NovaFE.Application;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Domain.Common.Json;
 using NovaFE.Infrastructure;
+using NovaFE.Infrastructure.Persistence;
 using NovaFE.Service.Common;
 using NovaFE.Service.Configuration;
 using NovaFE.Service.Extensions;
@@ -149,7 +150,10 @@ try
 
     var app = builder.Build();
 
-    // Aquí puedes agregar lógica de seeding si es necesario
+    // Migraciones + seeds al arrancar, solo si Database:MigrateOnStartup está
+    // activo (por defecto: on en Development, off en el resto). Corre antes de
+    // aceptar tráfico.
+    await app.MigrateAndSeedDatabaseAsync();
 
     // El orden de los middlewares importa. Cada línea está donde está por una razón:
     app.UseExceptionHandler();
@@ -201,7 +205,7 @@ try
     app.MapControllers();
     app.MapHealthCheckEndpoints();
 
-    app.Run();
+    await app.RunAsync();
 
     return 0;
 }
