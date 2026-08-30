@@ -32,6 +32,9 @@ services:
       # El doble guion bajo es el separador de secciones de configuración en
       # .NET: esta variable sobrescribe ConnectionStrings:Default de appsettings.
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NovaFE;Username=postgres;Password=${POSTGRES_PASSWORD:-Local_dev_password_123}"
+      # En Development, la KEK del vault de certificados sale de
+      # appsettings.Development.json. En producción se define
+      # CertificateVault__MasterKey por el mecanismo de secretos del proveedor.
     depends_on:
       postgres:
         # PostgreSQL crea la base NovaFE en el primer arranque; se espera a su

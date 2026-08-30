@@ -1,3 +1,4 @@
+using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Infrastructure.Caching;
@@ -6,6 +7,7 @@ using NovaFE.Infrastructure.Persistence.EfCore;
 using NovaFE.Infrastructure.Persistence.EfCore.Repositories;
 using NovaFE.Infrastructure.Persistence.Sql;
 using NovaFE.Infrastructure.Persistence.Sql.Repositories;
+using NovaFE.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -46,10 +48,26 @@ public static class InfrastructureService
         services.AddCache();
 
         // ==========================================
+        //        Vault de certificados
+        // ==========================================
+        // Envelope encryption (AES-256-GCM) con el ciphertext en la base y la KEK
+        // en configuración/KMS. Ver docs/certificates.md para el porqué y los
+        // otros backends posibles (Supabase Vault, HashiCorp Vault).
+        services.AddOptions<CertificateVaultOptions>()
+            .Bind(configuration.GetSection(CertificateVaultOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddSingleton<IKeyProtector, LocalKeyProtector>();
+        services.AddScoped<ICertificateVault, EnvelopeCertificateVault>();
+
+        // ==========================================
         //             Repositorios
         // ==========================================
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantReadRepository, TenantReadRepository>();
+        services.AddScoped<ICertificateRepository, CertificateRepository>();
+        services.AddScoped<ICertificateReadRepository, CertificateReadRepository>();
 
         // ==========================================
         //         Clientes HTTP externos

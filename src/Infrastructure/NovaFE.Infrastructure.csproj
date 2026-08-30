@@ -38,4 +38,10 @@
     <ProjectReference Include="..\Application\NovaFE.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Las pruebas ejercen tipos internos (vault, key protector). -->
+    <InternalsVisibleTo Include="NovaFE.UnitTests" />
+    <InternalsVisibleTo Include="NovaFE.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

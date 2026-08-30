@@ -18,6 +18,9 @@ public abstract class IntegrationTestBase(DatabaseFixture database) : IAsyncLife
 
     protected HttpClient Client { get; private set; } = null!;
 
+    /// <summary>La fábrica de la app, para resolver servicios en pruebas que lo necesiten.</summary>
+    protected ApiFactory Factory => _factory!;
+
     /// <summary>Las respuestas usan la misma configuración JSON que la API.</summary>
     protected static JsonSerializerOptions Json => JsonSettings.Bulletproof;
 

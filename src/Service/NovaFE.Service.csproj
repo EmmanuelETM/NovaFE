@@ -61,4 +61,8 @@
     <ProjectReference Include="..\Infrastructure\NovaFE.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="NovaFE.IntegrationTests" />
+  </ItemGroup>
+
 </Project>

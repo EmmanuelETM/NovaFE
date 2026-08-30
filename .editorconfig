@@ -116,3 +116,8 @@ dotnet_diagnostic.CA1014.severity = none
 dotnet_diagnostic.CA1707.severity = none
 # CA1711: xUnit exige que la clase de CollectionDefinition se llame "...Collection".
 dotnet_diagnostic.CA1711.severity = none
+
+[**/Persistence/EfCore/Migrations/*.cs]
+# Código generado por `dotnet ef migrations`. No lo editamos por estilo.
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1002.severity = none
