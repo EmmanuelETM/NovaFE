@@ -40,6 +40,34 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Consumo_iddoc_drops_the_sequence_expiry_but_keeps_the_payment_methods()
+    {
+        var root = Serialize(EcfTestData.Consumo());
+        var idDoc = root.Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "IndicadorMontoGravado",
+            "TipoIngresos", "TipoPago", "FechaLimitePago", "TablaFormasPago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("32");
+        idDoc.Element("FechaVencimientoSecuencia").ShouldBeNull();
+        idDoc.Element("IndicadorNotaCredito").ShouldBeNull();
+
+        root.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["Encabezado", "DetallesItems", "FechaHoraFirma"]);   // sin InformacionReferencia
+    }
+
+    [Fact]
+    public void Consumo_below_the_threshold_omits_the_buyer_rnc()
+    {
+        var comprador = Serialize(EcfTestData.Consumo()).Element("Encabezado")!.Element("Comprador")!;
+
+        comprador.Element("RNCComprador").ShouldBeNull();
+        comprador.Element("RazonSocialComprador")!.Value.ShouldBe("Consumidor Final");
+    }
+
+    [Fact]
     public void Nota_debito_keeps_the_type_31_iddoc_and_adds_the_mandatory_reference()
     {
         var root = Serialize(EcfTestData.NotaDebito());

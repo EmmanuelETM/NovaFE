@@ -46,6 +46,14 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_consumo_validates_against_the_official_type_32_xsd()
+    {
+        var result = Validator.Validate(SignedShapeXml(EcfTestData.Consumo()), EcfType.Consumo);
+
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void A_nota_debito_validates_against_the_official_type_33_xsd()
     {
         var result = Validator.Validate(SignedShapeXml(EcfTestData.NotaDebito()), EcfType.NotaDebito);

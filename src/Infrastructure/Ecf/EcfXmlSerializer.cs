@@ -11,10 +11,11 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: tipos 31, 33 y 34 con los bloques de uso común (IdDoc, Emisor, Comprador,
+/// v1: tipos 31–34 con los bloques de uso común (IdDoc, Emisor, Comprador,
 /// Totales, DetallesItems, InformacionReferencia). Faltan: InformacionesAdicionales,
 /// Transporte, OtraMoneda, Subtotales, DescuentosORecargos, Paginación, el desglose
-/// de ImpuestosAdicionales y los tipos 32/41–47. Ver <c>docs/ecf-xml.md</c>.
+/// de ImpuestosAdicionales, el formato reducido RFCE y los tipos 41–47. Ver
+/// <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
