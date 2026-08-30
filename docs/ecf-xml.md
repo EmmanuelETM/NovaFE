@@ -79,10 +79,13 @@ actúa como agente de retención. El `<IdDoc>` **no lleva `<TipoIngresos>`** (ni
 `<IndicadorEnvioDiferido>`); mantiene `<FechaVencimientoSecuencia>` y
 `<TablaFormasPago>`. Cada `<Item>` lleva el área **`<Retencion>`** obligatoria
 (`EcfLineRetention` en el dominio: agente 1/2 + `MontoITBISRetenido` /
-`MontoISRRetenido`, montos que trae el cliente). `<Totales>` agrega
+`MontoISRRetenido`). **Los montos de retención los calcula y los presenta el
+cliente** — el motor solo los suma; ver `docs/fiscal.md` § Retenciones para el
+porqué (tasa de ISR variable, % de ITBIS según el proveedor). `<Totales>` agrega
 `<TotalITBISRetenido>`, `<TotalISRRetencion>` y `<ValorPagar>` (= `MontoTotal −
 retenciones`). Las retenciones **no** tocan `MontoTotal`. El resto de tipos v1
-rechaza `<Retencion>` en las líneas (`Ecf.RetentionNotApplicable`).
+rechaza `<Retencion>` en las líneas (`Ecf.RetentionNotApplicable`); el tipo 47
+(pendiente) reusa este mismo modelo.
 
 **Verificado contra el XSD**: `IndicadorBienoServicio` es **1 = Bien, 2 = Servicio**
 (el contexto viejo decía B/S). `RNCValidationType` son 9 u 11 dígitos (no 10).
