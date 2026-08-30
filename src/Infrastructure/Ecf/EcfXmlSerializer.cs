@@ -12,10 +12,10 @@ namespace NovaFE.Infrastructure.Ecf;
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
 /// v1: los diez tipos (31–34, 41, 43–47) con IdDoc, Emisor, Comprador, Totales,
-/// DetallesItems, InformacionReferencia, Retencion, InformacionesAdicionales y
-/// Transporte. Faltan: OtraMoneda, Subtotales, DescuentosORecargos, Paginación, el
-/// desglose de ImpuestosAdicionales y el formato reducido RFCE (tipo 32 &lt; DOP
-/// 250 k). Ver <c>docs/ecf-xml.md</c>.
+/// DetallesItems, InformacionReferencia, Retencion, InformacionesAdicionales,
+/// Transporte y OtraMoneda (+ OtraMonedaDetalle). Faltan: Subtotales,
+/// DescuentosORecargos, Paginación, el desglose de ImpuestosAdicionales y el
+/// formato reducido RFCE (tipo 32 &lt; DOP 250 k). Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -103,7 +103,57 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         WriteInformacionesAdicionales(w, doc);
         WriteTransporte(w, doc);
         WriteTotales(w, doc);
+        WriteOtraMoneda(w, doc);
         w.WriteEndElement(); // Encabezado
+    }
+
+    /// <summary>
+    /// <c>&lt;OtraMoneda&gt;</c> del encabezado. Emite el subconjunto de
+    /// <c>*OtraMoneda</c> que corresponde al <c>&lt;Totales&gt;</c> del tipo: los
+    /// tipos con ITBIS completo usan todos; 43/44/47 solo exento + total; el 46 solo
+    /// el bucket a tasa 0.
+    /// </summary>
+    private static void WriteOtraMoneda(XmlWriter w, EcfDocument doc)
+    {
+        if (doc.Header.ForeignCurrency is not { } fx)
+            return;
+
+        var t = fx.Totals;
+        var exemptOnly = doc.Type == EcfType.GastosMenores
+            || doc.Type == EcfType.RegimenesEspeciales
+            || doc.Type == EcfType.PagosExterior;
+        var zeroRateOnly = doc.Type == EcfType.Exportaciones;
+
+        w.WriteStartElement("OtraMoneda");
+        El(w, "TipoMoneda", fx.Currency.Name);
+        El(w, "TipoCambio", EcfXmlFormat.UnitPrice(fx.ExchangeRate));
+
+        if (exemptOnly)
+        {
+            Amount(w, "MontoExentoOtraMoneda", t.MontoExento);
+        }
+        else if (zeroRateOnly)
+        {
+            Amount(w, "MontoGravadoTotalOtraMoneda", t.MontoGravadoTotal);
+            Amount(w, "MontoGravado3OtraMoneda", t.MontoGravadoI3);
+            Amount(w, "TotalITBISOtraMoneda", t.TotalItbis);
+            Amount(w, "TotalITBIS3OtraMoneda", t.TotalItbis3);
+        }
+        else
+        {
+            Amount(w, "MontoGravadoTotalOtraMoneda", t.MontoGravadoTotal);
+            Amount(w, "MontoGravado1OtraMoneda", t.MontoGravadoI1);
+            Amount(w, "MontoGravado2OtraMoneda", t.MontoGravadoI2);
+            Amount(w, "MontoGravado3OtraMoneda", t.MontoGravadoI3);
+            Amount(w, "MontoExentoOtraMoneda", t.MontoExento);
+            Amount(w, "TotalITBISOtraMoneda", t.TotalItbis);
+            Amount(w, "TotalITBIS1OtraMoneda", t.TotalItbis1);
+            Amount(w, "TotalITBIS2OtraMoneda", t.TotalItbis2);
+            Amount(w, "TotalITBIS3OtraMoneda", t.TotalItbis3);
+        }
+
+        Amount(w, "MontoTotalOtraMoneda", t.MontoTotal);
+        w.WriteEndElement();
     }
 
     // ---- InformacionesAdicionales / Transporte (bloques transversales) ---
@@ -358,10 +408,26 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
                 El(w, "DescuentoMonto", EcfXmlFormat.Money(line.Discount));
             if (line.Surcharge > 0m)
                 El(w, "RecargoMonto", EcfXmlFormat.Money(line.Surcharge));
+            WriteOtraMonedaDetalle(w, line.ForeignCurrency);
             El(w, "MontoItem", EcfXmlFormat.Money(amounts[line.Number].LineAmount));
             w.WriteEndElement();
         }
 
+        w.WriteEndElement();
+    }
+
+    /// <summary><c>&lt;OtraMonedaDetalle&gt;</c> — precio y montos de la línea en divisa.</summary>
+    private static void WriteOtraMonedaDetalle(XmlWriter w, EcfLineForeignCurrency? fx)
+    {
+        if (fx is null)
+            return;
+
+        w.WriteStartElement("OtraMonedaDetalle");
+        if (fx.UnitPrice is { } up and > 0m)
+            El(w, "PrecioOtraMoneda", EcfXmlFormat.UnitPrice(up));
+        Amount(w, "DescuentoOtraMoneda", fx.Discount);
+        Amount(w, "RecargoOtraMoneda", fx.Surcharge);
+        Amount(w, "MontoItemOtraMoneda", fx.LineAmount);
         w.WriteEndElement();
     }
 

@@ -33,7 +33,8 @@ public sealed class EcfDocument
         IReadOnlyList<EcfLine> lines,
         EcfReference? reference,
         EcfCalculationResult calculation,
-        int? creditNoteIndicator)
+        int? creditNoteIndicator,
+        EcfForeignCurrencyCheck? foreignCurrencyCheck)
     {
         Type = type;
         Header = header;
@@ -41,6 +42,7 @@ public sealed class EcfDocument
         Reference = reference;
         Calculation = calculation;
         CreditNoteIndicator = creditNoteIndicator;
+        ForeignCurrencyCheck = foreignCurrencyCheck;
     }
 
     public EcfType Type { get; }
@@ -56,6 +58,13 @@ public sealed class EcfDocument
 
     /// <summary><c>&lt;IndicadorNotaCredito&gt;</c> (0 / 1) para el tipo 34; null para el resto.</summary>
     public int? CreditNoteIndicator { get; }
+
+    /// <summary>
+    /// Cross-check de <c>&lt;OtraMoneda&gt;</c> (<c>MontoTotal</c> declarado en divisa
+    /// vs. <c>MontoTotal_DOP / TipoCambio</c>). Null si el comprobante no lleva divisa.
+    /// Informativo — no bloquea la emisión.
+    /// </summary>
+    public EcfForeignCurrencyCheck? ForeignCurrencyCheck { get; }
 
     public EcfTotals Totals => Calculation.Totals;
 
@@ -98,7 +107,25 @@ public sealed class EcfDocument
             creditNoteIndicator = indicator.Value.Value;
         }
 
-        return new EcfDocument(type, header, lines, reference, calculation.Value, creditNoteIndicator);
+        var fxCheck = CheckForeignCurrency(header.ForeignCurrency, calculation.Value.Totals.MontoTotal, lines.Count);
+
+        return new EcfDocument(type, header, lines, reference, calculation.Value, creditNoteIndicator, fxCheck);
+    }
+
+    /// <summary>
+    /// Compara el <c>MontoTotal</c> declarado en divisa con
+    /// <c>MontoTotal_DOP / TipoCambio</c>. Tolerancia: 1 unidad de divisa por línea
+    /// (misma filosofía que la cuadratura — nunca rechaza).
+    /// </summary>
+    private static EcfForeignCurrencyCheck? CheckForeignCurrency(
+        EcfForeignCurrency? fx, decimal montoTotalDop, int lineCount)
+    {
+        if (fx is null || fx.Totals.MontoTotal is not { } declared)
+            return null;
+
+        var expected = decimal.Round(montoTotalDop / fx.ExchangeRate, 2, MidpointRounding.AwayFromZero);
+        var difference = Math.Abs(expected - declared);
+        return new EcfForeignCurrencyCheck(expected, declared, difference, difference <= Math.Max(1m, lineCount));
     }
 
     private static List<Error> ValidateStructure(
@@ -147,7 +174,7 @@ public sealed class EcfDocument
 
         ValidateSimpleLineDocument(type, header, lines, errors);
         ValidateRetention(type, lines, errors);
-        ValidateTransversalBlocks(type, header, errors);
+        ValidateTransversalBlocks(type, header, lines, errors);
 
         return errors;
     }
@@ -160,9 +187,20 @@ public sealed class EcfDocument
     ///   <item>Los campos de exportación (FOB/CIF, vía, país, transportista) son solo del tipo 46.</item>
     /// </list>
     /// </summary>
-    private static void ValidateTransversalBlocks(EcfType type, EcfHeader header, List<Error> errors)
+    private static void ValidateTransversalBlocks(
+        EcfType type, EcfHeader header, IReadOnlyList<EcfLine> lines, List<Error> errors)
     {
         var isExport = type == EcfType.Exportaciones;
+
+        if (header.ForeignCurrency is { } fx)
+        {
+            if (fx.ExchangeRate <= 0m)
+                errors.Add(EcfErrors.InvalidExchangeRate);
+        }
+        else if (lines.Any(line => line.ForeignCurrency is not null))
+        {
+            errors.Add(EcfErrors.LineForeignCurrencyWithoutHeader);
+        }
 
         if (header.Shipping is { } shipping)
         {

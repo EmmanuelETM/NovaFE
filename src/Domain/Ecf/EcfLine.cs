@@ -24,6 +24,7 @@ public sealed record EcfItemCode(string Type, string Value);
 /// <param name="AdditionalTaxes">Suma de "otros impuestos adicionales" ya calculados (Propina, CDT…).</param>
 /// <param name="Codes"><c>&lt;TablaCodigosItem&gt;</c> — hasta 5.</param>
 /// <param name="Retention"><c>&lt;Retencion&gt;</c> — área de retención de la línea; obligatoria en el tipo 41.</param>
+/// <param name="ForeignCurrency"><c>&lt;OtraMonedaDetalle&gt;</c> — precio y montos de la línea en divisa.</param>
 public sealed record EcfLine(
     int Number,
     ItbisRate Rate,
@@ -38,4 +39,5 @@ public sealed record EcfLine(
     bool? PriceIncludesTax = null,
     decimal AdditionalTaxes = 0m,
     IReadOnlyList<EcfItemCode>? Codes = null,
-    EcfLineRetention? Retention = null);
+    EcfLineRetention? Retention = null,
+    EcfLineForeignCurrency? ForeignCurrency = null);

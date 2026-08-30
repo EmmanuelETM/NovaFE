@@ -23,8 +23,7 @@ namespace NovaFE.Domain.Ecf;
 /// <param name="Payment">Bloque de pago.</param>
 /// <param name="DeferredDelivery"><c>&lt;IndicadorEnvioDiferido&gt;</c> — solo autorizados.</param>
 /// <param name="NonInvoiceableAmount"><c>&lt;MontoNoFacturable&gt;</c> — puede ser negativo.</param>
-/// <param name="Currency"><c>&lt;TipoMoneda&gt;</c> — ISO Tabla II. Null = DOP.</param>
-/// <param name="ExchangeRate"><c>&lt;TipoCambio&gt;</c> — obligatorio si hay moneda.</param>
+/// <param name="ForeignCurrency"><c>&lt;OtraMoneda&gt;</c> — facturación en divisa; null = solo DOP.</param>
 /// <param name="Shipping"><c>&lt;InformacionesAdicionales&gt;</c> — datos de embarque; opcional.</param>
 /// <param name="Transport"><c>&lt;Transporte&gt;</c> — datos de transporte; opcional.</param>
 public sealed record EcfHeader(
@@ -38,7 +37,6 @@ public sealed record EcfHeader(
     EcfPayment Payment,
     bool DeferredDelivery = false,
     decimal NonInvoiceableAmount = 0m,
-    string? Currency = null,
-    decimal? ExchangeRate = null,
+    EcfForeignCurrency? ForeignCurrency = null,
     EcfShippingInfo? Shipping = null,
     EcfTransport? Transport = null);

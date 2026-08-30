@@ -332,6 +332,39 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Otra_moneda_block_follows_totales_with_the_full_itbis_subset()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            ForeignCurrency = new EcfForeignCurrency(
+                CurrencyCode.USD, 58.50m,
+                new EcfForeignCurrencyTotals(
+                    MontoGravadoTotal: 34.19m, MontoGravadoI1: 34.19m,
+                    TotalItbis: 6.15m, TotalItbis1: 6.15m, MontoTotal: 40.34m)),
+        };
+        var line = EcfTestData.Line() with
+        {
+            ForeignCurrency = new EcfLineForeignCurrency(UnitPrice: 34.19m, LineAmount: 34.19m),
+        };
+        var root = XDocument.Parse(Sut.Serialize(
+            EcfDocument.Create(EcfType.CreditoFiscal, header, [line]).Value, EcfTestData.SignedAt)).Root!;
+        var enc = root.Element("Encabezado")!;
+
+        enc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["Version", "IdDoc", "Emisor", "Comprador", "Totales", "OtraMoneda"]);
+        var om = enc.Element("OtraMoneda")!;
+        om.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["TipoMoneda", "TipoCambio", "MontoGravadoTotalOtraMoneda", "MontoGravado1OtraMoneda",
+             "TotalITBISOtraMoneda", "TotalITBIS1OtraMoneda", "MontoTotalOtraMoneda"]);
+        om.Element("TipoMoneda")!.Value.ShouldBe("USD");
+        om.Element("TipoCambio")!.Value.ShouldBe("58.5");
+        om.Element("MontoTotalOtraMoneda")!.Value.ShouldBe("40.34");
+
+        var detalle = root.Element("DetallesItems")!.Element("Item")!.Element("OtraMonedaDetalle")!;
+        detalle.Element("PrecioOtraMoneda")!.Value.ShouldBe("34.19");
+    }
+
+    [Fact]
     public void Totales_reflect_the_fiscal_engine()
     {
         var totales = Serialize(EcfTestData.CreditoFiscal()).Element("Encabezado")!.Element("Totales")!;
