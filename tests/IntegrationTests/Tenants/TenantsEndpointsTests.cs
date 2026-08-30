@@ -34,6 +34,24 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
     }
 
     [RequiresDockerFact]
+    public async Task Timestamps_are_serialized_in_dominican_time()
+    {
+        var register = await Client.PostAsJsonAsync("/api/v1.0/tenants", new
+        {
+            rnc = "131234567",
+            legalName = "Zona SRL",
+            plan = "Business",
+        });
+        var id = (await LeerAsync<IdResponse>(register))!.Id;
+
+        var body = await (await Client.GetAsync($"/api/v1.0/tenants/{id}")).Content.ReadAsStringAsync();
+
+        body.ShouldContain("-04:00");
+        body.ShouldNotContain("+00:00");
+        body.ShouldNotContain("Z\""); // ninguna fecha en UTC
+    }
+
+    [RequiresDockerFact]
     public async Task Get_unknown_tenant_returns_404()
     {
         var get = await Client.GetAsync($"/api/v1.0/tenants/{Guid.NewGuid()}");

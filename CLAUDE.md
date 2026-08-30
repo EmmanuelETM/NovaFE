@@ -176,6 +176,13 @@ nunca va a base de datos.
 
 - Nunca `DateTime.UtcNow` ni `DateTime.Now`. Inyecta `TimeProvider` y usa
   `timeProvider.GetUtcNow()`; así las pruebas controlan el reloj.
+- **Almacenamiento y lógica interna: instantes UTC** (`DateTimeOffset`, columnas
+  `timestamptz`). No cambiar. La **hora dominicana** (`DominicanTimeZone`,
+  UTC-4 fijo) es solo para los bordes: lo que se serializa a la DGII, la RI, y
+  la API (un converter global la aplica a todo `DateTimeOffset` de salida). La
+  aritmética de fechas de calendario (vencimiento e-NCF, regla de 30 días de NC,
+  contingencia) se hace con `timeProvider.GetDominicanToday()`, no en UTC. Ver
+  `docs/time.md`.
 - Nunca leas `HttpContext` fuera de `Service`. Para el usuario actual, inyecta
   `ICurrentUser`.
 - La configuración se lee con el patrón Options (una clase en

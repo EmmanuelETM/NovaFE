@@ -25,7 +25,10 @@ public static class JsonSettings
         Converters =
         {
             // Convierte los Enums a texto legible en lugar de números enteros
-            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
+
+            // Serializa todas las fechas en hora dominicana (offset -04:00).
+            new DominicanDateTimeOffsetConverter(),
         }
     };
 }
