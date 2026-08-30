@@ -46,6 +46,60 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_credito_fiscal_with_shipping_and_transport_validates()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            Shipping = new EcfShippingInfo(
+                ShipmentDate: new DateOnly(2026, 3, 1), ContainerNumber: "MSKU7654321",
+                GrossWeight: 1250.50m, GrossWeightUnit: "43", PackageCount: 12m, PackageUnit: "43"),
+            Transport = new EcfTransport(Driver: "Juan Perez", Plate: "A123456", Route: "Ruta 4"),
+        };
+        var doc = EcfDocument.Create(EcfType.CreditoFiscal, header, [EcfTestData.Line()]).Value;
+
+        var result = Validator.Validate(SignedShapeXml(doc), EcfType.CreditoFiscal);
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
+    public void An_export_with_the_export_shipping_block_validates_against_the_type_46_xsd()
+    {
+        var header = EcfTestData.Header(46) with
+        {
+            Buyer = new EcfBuyer("Global Imports LLC", ForeignId: "US-4471203"),
+            Shipping = new EcfShippingInfo(
+                Export: new EcfExportDetails(
+                    LoadingPortName: "Puerto Haina", DeliveryTerms: "FOB",
+                    TotalFob: 15000m, Insurance: 300m, Freight: 1200m, OtherCharges: 0m, TotalCif: 16500m)),
+            Transport = new EcfTransport(Via: TransportVia.Sea, OriginCountry: "Republica Dominicana",
+                DestinationCountry: "Estados Unidos", CarrierName: "Maersk Line"),
+        };
+        var doc = EcfDocument.Create(
+            EcfType.Exportaciones, header,
+            [EcfTestData.Line(rate: NovaFE.Domain.Fiscal.ItbisRate.Zero, unitPrice: 15000m)]).Value;
+
+        var result = Validator.Validate(SignedShapeXml(doc), EcfType.Exportaciones);
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
+    public void A_pago_al_exterior_with_destination_country_validates()
+    {
+        var header = EcfTestData.Header(47) with
+        {
+            Buyer = new EcfBuyer("Consultancy Group Ltd.", ForeignId: "GB-882910"),
+            Transport = new EcfTransport(DestinationCountry: "Reino Unido"),
+        };
+        var built = EcfDocument.Create(
+            EcfType.PagosExterior, header,
+            [EcfTestData.Line(rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 50000m,
+                retention: new NovaFE.Domain.Ecf.EcfLineRetention(NovaFE.Domain.Ecf.RetentionAgent.Withholding, IsrWithheld: 13500m))]).Value;
+
+        Validator.Validate(SignedShapeXml(built), EcfType.PagosExterior)
+            .IsError.ShouldBeFalse();
+    }
+
+    [Fact]
     public void A_pago_al_exterior_validates_against_the_official_type_47_xsd()
     {
         var document = EcfTestData.PagosExterior(

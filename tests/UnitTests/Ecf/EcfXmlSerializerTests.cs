@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using NovaFE.Domain.Common;
 using NovaFE.Domain.Ecf;
 using NovaFE.Domain.Fiscal;
 using NovaFE.Infrastructure.Ecf;
@@ -274,6 +275,60 @@ public class EcfXmlSerializerTests
         reference.Element("NCFModificado")!.Value.ShouldBe("E310000000010");
         reference.Element("FechaNCFModificado")!.Value.ShouldBe("01-02-2026");
         reference.Element("CodigoModificacion")!.Value.ShouldBe("3");
+    }
+
+    [Fact]
+    public void Shipping_and_transport_blocks_sit_between_comprador_and_totales()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            Shipping = new EcfShippingInfo(
+                ShipmentDate: new DateOnly(2026, 3, 1),
+                ContainerNumber: "MSKU7654321",
+                GrossWeight: 1250.50m,
+                GrossWeightUnit: "43"),
+            Transport = new EcfTransport(Driver: "Juan Pérez", Plate: "A123456"),
+        };
+        var root = XDocument.Parse(Sut.Serialize(
+            EcfDocument.Create(EcfType.CreditoFiscal, header, [EcfTestData.Line()]).Value,
+            EcfTestData.SignedAt)).Root!;
+        var enc = root.Element("Encabezado")!;
+
+        enc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["Version", "IdDoc", "Emisor", "Comprador", "InformacionesAdicionales", "Transporte", "Totales"]);
+        var info = enc.Element("InformacionesAdicionales")!;
+        info.Element("FechaEmbarque")!.Value.ShouldBe("01-03-2026");
+        info.Element("PesoBruto")!.Value.ShouldBe("1250.5");
+        enc.Element("Transporte")!.Element("Placa")!.Value.ShouldBe("A123456");
+    }
+
+    [Fact]
+    public void Export_shipping_fields_are_emitted_only_for_type_46_in_the_xsd_order()
+    {
+        var header = EcfTestData.Header(46) with
+        {
+            Buyer = new EcfBuyer("Global Imports LLC", ForeignId: "US-4471203"),
+            Shipping = new EcfShippingInfo(
+                ReferenceNumber: "7788",
+                Export: new EcfExportDetails(
+                    DeliveryTerms: "FOB", TotalFob: 15000m, Insurance: 300m, Freight: 1200m,
+                    OtherCharges: 0m, TotalCif: 16500m),
+                GrossWeight: 900m),
+            Transport = new EcfTransport(Via: TransportVia.Sea, DestinationCountry: "Estados Unidos"),
+        };
+        var built = EcfDocument.Create(
+            EcfType.Exportaciones, header,
+            [EcfTestData.Line(rate: NovaFE.Domain.Fiscal.ItbisRate.Zero, unitPrice: 15000m)]).Value;
+        var info = XDocument.Parse(Sut.Serialize(built, EcfTestData.SignedAt)).Root!
+            .Element("Encabezado")!.Element("InformacionesAdicionales")!;
+
+        info.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["NumeroReferencia", "CondicionesEntrega", "TotalFob", "Seguro", "Flete", "TotalCif", "PesoBruto"]);
+        info.Element("TotalCif")!.Value.ShouldBe("16500");
+        var transporte = XDocument.Parse(Sut.Serialize(built, EcfTestData.SignedAt)).Root!
+            .Element("Encabezado")!.Element("Transporte")!;
+        transporte.Element("ViaTransporte")!.Value.ShouldBe("02");
+        transporte.Element("PaisDestino")!.Value.ShouldBe("Estados Unidos");
     }
 
     [Fact]

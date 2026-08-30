@@ -77,6 +77,18 @@ public static class EcfErrors
         code: "Ecf.ItbisRetentionNotApplicable",
         description: $"El tipo {documentType} solo retiene ISR; el área de retención no lleva monto de ITBIS.");
 
+    public static Error BlockNotApplicable(string block, int documentType) => Error.Validation(
+        code: "Ecf.BlockNotApplicable",
+        description: $"El tipo {documentType} no admite el bloque {block}.");
+
+    public static Error ExportFieldsOnlyForExports(string block) => Error.Validation(
+        code: "Ecf.ExportFieldsOnlyForExports",
+        description: $"Los campos de exportación del bloque {block} solo aplican al tipo 46 (Exportaciones).");
+
+    public static Error TransportForPagosExteriorIsDestinationOnly => Error.Validation(
+        code: "Ecf.TransportForPagosExteriorIsDestinationOnly",
+        description: "El tipo 47 (Pagos al Exterior) solo admite el país de destino en el bloque Transporte.");
+
     public static Error NonInvoiceableAmountNotApplicable(int documentType) => Error.Validation(
         code: "Ecf.NonInvoiceableAmountNotApplicable",
         description: $"El tipo {documentType} no admite monto no facturable.");

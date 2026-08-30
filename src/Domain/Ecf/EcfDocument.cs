@@ -147,9 +147,65 @@ public sealed class EcfDocument
 
         ValidateSimpleLineDocument(type, header, lines, errors);
         ValidateRetention(type, lines, errors);
+        ValidateTransversalBlocks(type, header, errors);
 
         return errors;
     }
+
+    /// <summary>
+    /// Obligatoriedad de los bloques transversales del encabezado:
+    /// <list type="bullet">
+    ///   <item><c>&lt;InformacionesAdicionales&gt;</c>: opcional en 31/32/33/34/44/45/46; no aplica a 41/43/47.</item>
+    ///   <item><c>&lt;Transporte&gt;</c>: opcional en 31/32/33/34/44/45/46/47; no aplica a 41/43. El 47 solo admite <c>PaisDestino</c>.</item>
+    ///   <item>Los campos de exportación (FOB/CIF, vía, país, transportista) son solo del tipo 46.</item>
+    /// </list>
+    /// </summary>
+    private static void ValidateTransversalBlocks(EcfType type, EcfHeader header, List<Error> errors)
+    {
+        var isExport = type == EcfType.Exportaciones;
+
+        if (header.Shipping is { } shipping)
+        {
+            if (type == EcfType.Compras || type == EcfType.GastosMenores || type == EcfType.PagosExterior)
+                errors.Add(EcfErrors.BlockNotApplicable("InformacionesAdicionales", type.Id));
+            else if (shipping.Export is not null && !isExport)
+                errors.Add(EcfErrors.ExportFieldsOnlyForExports("InformacionesAdicionales"));
+        }
+
+        if (header.Transport is { } transport)
+        {
+            if (type == EcfType.Compras || type == EcfType.GastosMenores)
+            {
+                errors.Add(EcfErrors.BlockNotApplicable("Transporte", type.Id));
+            }
+            else if (!isExport && HasExportTransportFields(transport))
+            {
+                errors.Add(EcfErrors.ExportFieldsOnlyForExports("Transporte"));
+            }
+            else if (type == EcfType.PagosExterior && HasNonDestinationTransportFields(transport))
+            {
+                errors.Add(EcfErrors.TransportForPagosExteriorIsDestinationOnly);
+            }
+        }
+    }
+
+    private static bool HasExportTransportFields(EcfTransport t) =>
+        t.Via is not null
+        || !string.IsNullOrWhiteSpace(t.OriginCountry)
+        || !string.IsNullOrWhiteSpace(t.DestinationAddress)
+        || !string.IsNullOrWhiteSpace(t.CarrierRnc)
+        || !string.IsNullOrWhiteSpace(t.CarrierName)
+        || !string.IsNullOrWhiteSpace(t.VoyageNumber);
+
+    private static bool HasNonDestinationTransportFields(EcfTransport t) =>
+        !string.IsNullOrWhiteSpace(t.Driver)
+        || !string.IsNullOrWhiteSpace(t.TransportDocument)
+        || !string.IsNullOrWhiteSpace(t.VehicleId)
+        || !string.IsNullOrWhiteSpace(t.Plate)
+        || !string.IsNullOrWhiteSpace(t.Route)
+        || !string.IsNullOrWhiteSpace(t.Zone)
+        || !string.IsNullOrWhiteSpace(t.DeliveryNote)
+        || HasExportTransportFields(t);
 
     /// <summary>
     /// Los tipos 43 (Gastos Menores) y 47 (Pagos al Exterior) son reducidos: sus

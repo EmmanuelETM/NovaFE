@@ -25,6 +25,8 @@ namespace NovaFE.Domain.Ecf;
 /// <param name="NonInvoiceableAmount"><c>&lt;MontoNoFacturable&gt;</c> — puede ser negativo.</param>
 /// <param name="Currency"><c>&lt;TipoMoneda&gt;</c> — ISO Tabla II. Null = DOP.</param>
 /// <param name="ExchangeRate"><c>&lt;TipoCambio&gt;</c> — obligatorio si hay moneda.</param>
+/// <param name="Shipping"><c>&lt;InformacionesAdicionales&gt;</c> — datos de embarque; opcional.</param>
+/// <param name="Transport"><c>&lt;Transporte&gt;</c> — datos de transporte; opcional.</param>
 public sealed record EcfHeader(
     Encf Encf,
     DateOnly? SequenceExpiresOn,
@@ -37,4 +39,6 @@ public sealed record EcfHeader(
     bool DeferredDelivery = false,
     decimal NonInvoiceableAmount = 0m,
     string? Currency = null,
-    decimal? ExchangeRate = null);
+    decimal? ExchangeRate = null,
+    EcfShippingInfo? Shipping = null,
+    EcfTransport? Transport = null);
