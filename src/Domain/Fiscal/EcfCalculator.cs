@@ -14,11 +14,14 @@ namespace NovaFE.Domain.Fiscal;
 /// <para>
 /// Alcance v1: ITBIS (tasas 18/16/0 y exento), ajustes de línea
 /// (<c>DescuentoMonto</c>/<c>RecargoMonto</c>), "otros impuestos adicionales" que
-/// el cliente ya trae calculados, y la <b>totalización</b> de las retenciones de
-/// ITBIS/ISR por línea (montos que también trae el cliente; tipo 41). <b>Fuera de
-/// v1</b> (slices aparte, ver <c>docs/fiscal.md</c>): ISC de alcoholes y cigarrillos
-/// que integra la base del ITBIS, descuentos/recargos globales de la Sección D, y
-/// el cálculo de las tasas de retención a partir de las normas de la DGII.
+/// el cliente ya trae calculados, la <b>totalización</b> de las retenciones de
+/// ITBIS/ISR por línea (tipos 41/47), y la <b>reconciliación mecánica</b> de los
+/// descuentos/recargos globales de la Sección D (se aplican al bucket que indica
+/// <c>IndicadorFacturacionDescuentooRecargo</c> y se recalcula su ITBIS; la
+/// Norma 10-07 solo baja el valor a pagar). <b>Fuera de v1</b> (slices aparte, ver
+/// <c>docs/fiscal.md</c>): ISC de alcoholes y cigarrillos que integra la base del
+/// ITBIS, la distribución proporcional de la Sección D a nivel de línea, y el
+/// cálculo de las tasas de retención a partir de las normas de la DGII.
 /// </para>
 /// </summary>
 public static class EcfCalculator
@@ -31,7 +34,8 @@ public static class EcfCalculator
     /// </summary>
     public static ErrorOr<EcfCalculationResult> Calculate(
         IReadOnlyList<EcfLineInput> lines,
-        decimal montoNoFacturable = 0m)
+        decimal montoNoFacturable = 0m,
+        IReadOnlyList<EcfGlobalAdjustmentInput>? globalAdjustments = null)
     {
         ArgumentNullException.ThrowIfNull(lines);
 
@@ -77,6 +81,43 @@ public static class EcfCalculator
             otrosImpuestos += result.AdditionalTaxes;
         }
 
+        // --- Sección D: descuentos/recargos globales -----------------------
+        decimal norma1007Discount = 0m;
+        decimal globalAdjustmentNet = 0m;   // firmado: + recargo, − descuento
+        var touched = new HashSet<int>();
+
+        foreach (var adj in globalAdjustments ?? [])
+        {
+            if (adj.Amount < 0m)
+                return FiscalErrors.NegativeGlobalAdjustment;
+
+            var signed = adj.IsDiscount ? -adj.Amount : adj.Amount;
+
+            // Norma 10-07: solo descuentos a la tasa 1 — no toca la base ni el ITBIS.
+            if (adj.Norma1007 && adj.IsDiscount && adj.AffectsRate == ItbisRate.Eighteen)
+            {
+                norma1007Discount += adj.Amount;
+                continue;
+            }
+
+            globalAdjustmentNet += signed;
+            switch (adj.AffectsRate.Id)
+            {
+                case 1: gravadoI1 += signed; touched.Add(1); break;
+                case 2: gravadoI2 += signed; touched.Add(2); break;
+                case 3: gravadoI3 += signed; touched.Add(3); break;
+                default: exento += signed; touched.Add(4); break;
+            }
+        }
+
+        if (gravadoI1 < 0m || gravadoI2 < 0m || gravadoI3 < 0m || exento < 0m)
+            return FiscalErrors.GlobalAdjustmentExceedsBucket;
+
+        // El ITBIS de los buckets tocados se recalcula sobre la nueva base.
+        if (touched.Contains(1)) itbis1 = gravadoI1 * ItbisRate.Eighteen.Rate;
+        if (touched.Contains(2)) itbis2 = gravadoI2 * ItbisRate.Sixteen.Rate;
+        // bucket 3 (0 %): el ITBIS es siempre 0.
+
         var gravadoTotal = EcfRounding.Money(gravadoI1 + gravadoI2 + gravadoI3);
         var totalItbis = EcfRounding.Money(itbis1 + itbis2 + itbis3);
         exento = EcfRounding.Money(exento);
@@ -107,7 +148,9 @@ public static class EcfCalculator
             MontoNoFacturable: noFacturable,
             MontoPeriodo: montoPeriodo,
             TotalItbisWithheld: EcfRounding.Money(itbisRetenido),
-            TotalIsrWithheld: EcfRounding.Money(isrRetenido));
+            TotalIsrWithheld: EcfRounding.Money(isrRetenido),
+            TotalGlobalAdjustment: EcfRounding.Money(globalAdjustmentNet),
+            Norma1007Discount: EcfRounding.Money(norma1007Discount));
 
         var tolerance = BuildToleranceReport(lines, results);
 

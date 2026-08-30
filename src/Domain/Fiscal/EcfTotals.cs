@@ -38,6 +38,8 @@ namespace NovaFE.Domain.Fiscal;
 /// <param name="MontoPeriodo"><see cref="MontoTotal"/> + <see cref="MontoNoFacturable"/>. Puede ser negativo.</param>
 /// <param name="TotalItbisWithheld"><c>&lt;TotalITBISRetenido&gt;</c> — suma de ITBIS retenido en las líneas (tipo 41).</param>
 /// <param name="TotalIsrWithheld"><c>&lt;TotalISRRetencion&gt;</c> — suma de ISR retenido en las líneas (tipo 41).</param>
+/// <param name="TotalGlobalAdjustment">Neto de la Sección D ya aplicado a los buckets (firmado: + recargo, − descuento). Informativo.</param>
+/// <param name="Norma1007Discount">Descuentos globales con Indicador Norma 10-07: no rebajan la base ni <c>MontoTotal</c>, solo el valor a pagar.</param>
 public sealed record EcfTotals(
     decimal MontoGravadoI1,
     decimal MontoGravadoI2,
@@ -55,4 +57,6 @@ public sealed record EcfTotals(
     decimal MontoNoFacturable,
     decimal MontoPeriodo,
     decimal TotalItbisWithheld = 0m,
-    decimal TotalIsrWithheld = 0m);
+    decimal TotalIsrWithheld = 0m,
+    decimal TotalGlobalAdjustment = 0m,
+    decimal Norma1007Discount = 0m);

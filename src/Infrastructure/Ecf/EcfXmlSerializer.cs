@@ -13,9 +13,9 @@ namespace NovaFE.Infrastructure.Ecf;
 /// <para>
 /// v1: los diez tipos (31–34, 41, 43–47) con IdDoc, Emisor, Comprador, Totales,
 /// DetallesItems, InformacionReferencia, Retencion, InformacionesAdicionales,
-/// Transporte y OtraMoneda (+ OtraMonedaDetalle). Faltan: Subtotales,
-/// DescuentosORecargos, Paginación, el desglose de ImpuestosAdicionales y el
-/// formato reducido RFCE (tipo 32 &lt; DOP 250 k). Ver <c>docs/ecf-xml.md</c>.
+/// Transporte, OtraMoneda (+ OtraMonedaDetalle) y DescuentosORecargos (Sección D).
+/// Faltan: Subtotales, Paginación, el desglose de ImpuestosAdicionales y el formato
+/// reducido RFCE (tipo 32 &lt; DOP 250 k). Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -38,6 +38,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             writer.WriteStartElement("ECF");
             WriteEncabezado(writer, document);
             WriteDetalles(writer, document);
+            WriteDescuentosORecargos(writer, document);
             WriteInformacionReferencia(writer, document.Reference);
             El(writer, "FechaHoraFirma", DominicanTimeZone.ToDateTimeString(signedAt));
             writer.WriteEndElement();
@@ -354,24 +355,21 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             El(w, "MontoPeriodo", EcfXmlFormat.Money(t.MontoPeriodo));
         }
 
-        // Retenciones: el valor neto a pagar y los totales retenidos.
+        // Valor a pagar = MontoTotal − retenciones − descuentos Norma 10-07.
+        var reductions = t.TotalItbisWithheld + t.TotalIsrWithheld + t.Norma1007Discount;
         if (doc.Type == EcfType.PagosExterior)
         {
             // El 47 siempre lleva retención de ISR (obligatoria por línea).
-            El(w, "ValorPagar", EcfXmlFormat.Money(t.MontoTotal - t.TotalIsrWithheld));
+            El(w, "ValorPagar", EcfXmlFormat.Money(t.MontoTotal - reductions));
             El(w, "TotalISRRetencion", EcfXmlFormat.Money(t.TotalIsrWithheld));
         }
-        else
+        else if (reductions > 0m)
         {
-            var retenido = t.TotalItbisWithheld + t.TotalIsrWithheld;
-            if (retenido > 0m)
-            {
-                El(w, "ValorPagar", EcfXmlFormat.Money(t.MontoTotal - retenido));
-                if (t.TotalItbisWithheld > 0m)
-                    El(w, "TotalITBISRetenido", EcfXmlFormat.Money(t.TotalItbisWithheld));
-                if (t.TotalIsrWithheld > 0m)
-                    El(w, "TotalISRRetencion", EcfXmlFormat.Money(t.TotalIsrWithheld));
-            }
+            El(w, "ValorPagar", EcfXmlFormat.Money(t.MontoTotal - reductions));
+            if (t.TotalItbisWithheld > 0m)
+                El(w, "TotalITBISRetenido", EcfXmlFormat.Money(t.TotalItbisWithheld));
+            if (t.TotalIsrWithheld > 0m)
+                El(w, "TotalISRRetencion", EcfXmlFormat.Money(t.TotalIsrWithheld));
         }
 
         w.WriteEndElement();
@@ -489,6 +487,45 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             El(w, "RNCOtroContribuyente", reference.OtherIssuerRnc.Trim());
         El(w, "FechaNCFModificado", EcfXmlFormat.Date(reference.ModifiedNcfDate));
         El(w, "CodigoModificacion", reference.Code.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        w.WriteEndElement();
+    }
+
+    // ---- DescuentosORecargos (Sección D) --------------------------------
+
+    /// <summary>
+    /// <c>&lt;DescuentosORecargos&gt;</c> — sección posterior a <c>&lt;DetallesItems&gt;</c>.
+    /// El motor fiscal ya aplicó los montos a los buckets; aquí solo se listan.
+    /// </summary>
+    private static void WriteDescuentosORecargos(XmlWriter w, EcfDocument doc)
+    {
+        if (doc.Header.GlobalAdjustments is not { Count: > 0 } adjustments)
+            return;
+
+        w.WriteStartElement("DescuentosORecargos");
+        foreach (var adj in adjustments.OrderBy(a => a.Line))
+        {
+            w.WriteStartElement("DescuentoORecargo");
+            El(w, "NumeroLinea", Int(adj.Line));
+            El(w, "TipoAjuste", adj.Kind.Code);
+            if (adj.Norma1007)
+                El(w, "IndicadorNorma1007", "1");
+            Text(w, "DescripcionDescuentooRecargo", adj.Description);
+            if (adj.Percentage is { } pct and > 0m)
+            {
+                El(w, "TipoValor", "%");
+                El(w, "ValorDescuentooRecargo", EcfXmlFormat.Percent(pct));
+            }
+            else
+            {
+                El(w, "TipoValor", "$");
+            }
+
+            El(w, "MontoDescuentooRecargo", EcfXmlFormat.Money(adj.Amount));
+            Amount(w, "MontoDescuentooRecargoOtraMoneda", adj.AmountOtherCurrency);
+            El(w, "IndicadorFacturacionDescuentooRecargo", Int(adj.AffectsRate.Id));
+            w.WriteEndElement();
+        }
+
         w.WriteEndElement();
     }
 

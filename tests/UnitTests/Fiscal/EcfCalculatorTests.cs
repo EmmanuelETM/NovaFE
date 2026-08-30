@@ -159,6 +159,62 @@ public class EcfCalculatorTests
     }
 
     [Fact]
+    public void A_global_discount_reduces_the_bucket_and_recomputes_its_itbis()
+    {
+        var result = EcfCalculator.Calculate(
+            [Line(1, ItbisRate.Eighteen, 1m, 10000m), Line(2, ItbisRate.Exempt, 1m, 2000m)],
+            globalAdjustments: [new EcfGlobalAdjustmentInput(IsDiscount: true, ItbisRate.Eighteen, 1000m)]);
+
+        var t = result.Value.Totals;
+        t.MontoGravadoI1.ShouldBe(9000.00m);
+        t.Itbis1.ShouldBe(1620.00m);           // 9000 * 0.18
+        t.MontoExento.ShouldBe(2000.00m);
+        t.MontoTotal.ShouldBe(12620.00m);      // 9000 + 2000 + 1620
+        t.TotalGlobalAdjustment.ShouldBe(-1000.00m);
+    }
+
+    [Fact]
+    public void A_global_surcharge_on_the_16_percent_bucket_adds_to_it()
+    {
+        var result = EcfCalculator.Calculate(
+            [Line(1, ItbisRate.Sixteen, 1m, 5000m)],
+            globalAdjustments: [new EcfGlobalAdjustmentInput(IsDiscount: false, ItbisRate.Sixteen, 500m)]);
+
+        var t = result.Value.Totals;
+        t.MontoGravadoI2.ShouldBe(5500.00m);
+        t.Itbis2.ShouldBe(880.00m);            // 5500 * 0.16
+        t.MontoTotal.ShouldBe(6380.00m);
+    }
+
+    [Fact]
+    public void A_norma_10_07_discount_keeps_the_18_percent_base_but_lowers_the_net()
+    {
+        var result = EcfCalculator.Calculate(
+            [Line(1, ItbisRate.Eighteen, 1m, 10000m)],
+            globalAdjustments: [new EcfGlobalAdjustmentInput(IsDiscount: true, ItbisRate.Eighteen, 1000m, Norma1007: true)]);
+
+        var t = result.Value.Totals;
+        t.MontoGravadoI1.ShouldBe(10000.00m);  // no se rebaja
+        t.Itbis1.ShouldBe(1800.00m);
+        t.MontoTotal.ShouldBe(11800.00m);      // total bruto
+        t.Norma1007Discount.ShouldBe(1000.00m);
+    }
+
+    [Fact]
+    public void A_global_discount_that_exceeds_its_bucket_is_rejected()
+        => EcfCalculator.Calculate(
+                [Line(1, ItbisRate.Eighteen, 1m, 500m)],
+                globalAdjustments: [new EcfGlobalAdjustmentInput(IsDiscount: true, ItbisRate.Eighteen, 900m)])
+            .FirstError.Code.ShouldBe("Fiscal.GlobalAdjustmentExceedsBucket");
+
+    [Fact]
+    public void A_negative_global_adjustment_is_rejected()
+        => EcfCalculator.Calculate(
+                [Line(1, ItbisRate.Eighteen, 1m, 500m)],
+                globalAdjustments: [new EcfGlobalAdjustmentInput(IsDiscount: true, ItbisRate.Eighteen, -5m)])
+            .FirstError.Code.ShouldBe("Fiscal.NegativeGlobalAdjustment");
+
+    [Fact]
     public void Retentions_are_totalized_and_do_not_touch_the_invoice_total()
     {
         var result = EcfCalculator.Calculate(
