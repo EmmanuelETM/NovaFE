@@ -40,9 +40,14 @@ public static class EcfErrors
         code: "Ecf.ReferenceNotApplicable",
         description: $"El tipo {documentType} no lleva sección de referencia.");
 
-    public static Error BuyerRncRequired(int documentType) => Error.Validation(
-        code: "Ecf.BuyerRncRequired",
-        description: $"El tipo {documentType} necesita el RNC o cédula del comprador.");
+    public static Error BuyerIdentificationRequired(int documentType) => Error.Validation(
+        code: "Ecf.BuyerIdentificationRequired",
+        description: documentType switch
+        {
+            32 => "La Factura de Consumo con monto total ≥ DOP 250,000 debe identificar al comprador (RNC/cédula, o Identificador Extranjero si es extranjero).",
+            33 or 34 => "La Nota de Crédito/Débito debe identificar al comprador porque su monto llega a DOP 250,000 o modifica un comprobante que lo identifica.",
+            _ => $"El tipo {documentType} necesita el RNC o cédula del comprador.",
+        });
 
     public static Error IncomeTypeRequired => Error.Validation(
         code: "Ecf.IncomeTypeRequired",

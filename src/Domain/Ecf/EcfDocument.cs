@@ -1,6 +1,7 @@
 using ErrorOr;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Fiscal;
+using NovaFE.Domain.Sequences;
 
 namespace NovaFE.Domain.Ecf;
 
@@ -18,6 +19,13 @@ public sealed class EcfDocument
 {
     /// <summary>Máximo de líneas de detalle (1000; 10 000 para el tipo 32 &lt; DOP 250 k).</summary>
     public const int MaxLines = 1000;
+
+    /// <summary>
+    /// Umbral de la DGII (DOP) que separa la Factura de Consumo de "bajo monto".
+    /// Manda la identificación del comprador (tipo 32 y las NC/ND que modifican un
+    /// 32 ≥ este monto) y el ruteo a RFCE.
+    /// </summary>
+    public const decimal ConsumerIdentificationThreshold = 250_000m;
 
     private EcfDocument(
         EcfType type,
@@ -71,6 +79,15 @@ public sealed class EcfDocument
         if (calculation.IsError)
             return calculation.Errors;
 
+        // La identificación del comprador depende del monto total (tipos 32/33/34),
+        // así que se valida después de calcular.
+        if (RequiresBuyerIdentification(type, reference, calculation.Value.Totals.MontoTotal)
+            && header.Buyer.Rnc is null
+            && string.IsNullOrWhiteSpace(header.Buyer.ForeignId))
+        {
+            return EcfErrors.BuyerIdentificationRequired(type.Id);
+        }
+
         int? creditNoteIndicator = null;
         if (type == EcfType.NotaCredito && reference is not null)
         {
@@ -111,9 +128,6 @@ public sealed class EcfDocument
         if (needsReference && reference is null)
             errors.Add(EcfErrors.ReferenceRequired(type.Id));
 
-        if (RequiresBuyerRnc(type) && header.Buyer.Rnc is null && header.Buyer.ForeignId is null)
-            errors.Add(EcfErrors.BuyerRncRequired(type.Id));
-
         if (RequiresIncomeType(type) && string.IsNullOrWhiteSpace(header.IncomeType))
             errors.Add(EcfErrors.IncomeTypeRequired);
 
@@ -133,15 +147,53 @@ public sealed class EcfDocument
         return true;
     }
 
-    // Obligatoriedad del RNC comprador — subconjunto para v1 (tipo 31). El resto
-    // se completa al agregar cada tipo.
-    private static bool RequiresBuyerRnc(EcfType type) =>
-        type == EcfType.CreditoFiscal
-        || type == EcfType.NotaDebito
-        || type == EcfType.NotaCredito
-        || type == EcfType.Compras
-        || type == EcfType.RegimenesEspeciales
-        || type == EcfType.Gubernamental;
+    /// <summary>
+    /// Si el comprobante debe identificar al comprador (RNC/cédula o Identificador
+    /// Extranjero). Reglas de la DGII:
+    /// <list type="bullet">
+    ///   <item>31, 41, 44, 45: siempre (estructural, <c>RNCComprador</c> es obligatorio en su XSD).</item>
+    ///   <item>32: solo si el monto total ≥ <see cref="ConsumerIdentificationThreshold"/>
+    ///   (si el comprador es extranjero, va por Identificador Extranjero).</item>
+    ///   <item>33/34: si su propio monto ya llega al umbral, o si modifican un e-CF de un
+    ///   tipo que identifica al comprador. Si modifican un 32 de monto desconocido, lo
+    ///   decide la capa de aplicación con el e-CF original a la vista.</item>
+    ///   <item>43, 46, 47: no lo valida el dominio todavía (se completa al agregar el tipo).</item>
+    /// </list>
+    /// </summary>
+    private static bool RequiresBuyerIdentification(EcfType type, EcfReference? reference, decimal montoTotal)
+    {
+        if (type == EcfType.CreditoFiscal
+            || type == EcfType.Compras
+            || type == EcfType.RegimenesEspeciales
+            || type == EcfType.Gubernamental)
+            return true;
+
+        if (type == EcfType.Consumo)
+            return montoTotal >= ConsumerIdentificationThreshold;
+
+        if (type == EcfType.NotaCredito || type == EcfType.NotaDebito)
+        {
+            if (montoTotal >= ConsumerIdentificationThreshold)
+                return true;
+
+            if (reference is not null
+                && Encf.Create(reference.ModifiedNcf) is { IsError: false } modified)
+                return IdentifiesBuyer(modified.Value.Type);
+
+            return false;
+        }
+
+        return false;
+    }
+
+    private static bool IdentifiesBuyer(EcfType modifiedType) =>
+        modifiedType == EcfType.CreditoFiscal
+        || modifiedType == EcfType.NotaDebito
+        || modifiedType == EcfType.NotaCredito
+        || modifiedType == EcfType.Compras
+        || modifiedType == EcfType.RegimenesEspeciales
+        || modifiedType == EcfType.Gubernamental
+        || modifiedType == EcfType.PagosExterior;
 
     private static bool RequiresIncomeType(EcfType type) =>
         type == EcfType.CreditoFiscal

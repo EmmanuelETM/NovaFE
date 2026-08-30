@@ -197,8 +197,8 @@ Grupos informativos para la RI. No afectan la base imponible.
 |---|---|
 | **31** Crédito Fiscal | `buyer.rnc`, `incomeType` |
 | **32** Consumo | `buyer` completo solo si `montoTotal ≥ 250 000`. < 250 k → se enruta a **RFCE** (NovaFE genera el resumen; el cliente igual manda un tipo 32 normal) |
-| **33** Nota de Débito | `buyer.rnc`, `reference`, `incomeType` |
-| **34** Nota de Crédito | `reference` (con `modifiedNcf`, `modifiedNcfDate`, `modificationCode`). `buyer.rnc` salvo `modificationCode = 2`. Sin `FechaVencimientoSecuencia` |
+| **33** Nota de Débito | `reference`, `incomeType`. Identificación del comprador: solo si el monto ≥ DOP 250 000 o si modifica un e-CF que identifica al comprador (31, 41, 44, 45…) |
+| **34** Nota de Crédito | `reference` (con `modifiedNcf`, `modifiedNcfDate`, `modificationCode`). Identificación del comprador con la misma regla que el 33. Sin `FechaVencimientoSecuencia` |
 | **41** Compras | `buyer.rnc` (proveedor informal), `incomeType` |
 | **43** Gastos Menores | mínimo |
 | **44** Regímenes Especiales | `buyer.rnc`, `incomeType` |
