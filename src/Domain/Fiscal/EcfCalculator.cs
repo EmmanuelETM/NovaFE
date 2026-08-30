@@ -1,0 +1,217 @@
+using ErrorOr;
+
+namespace NovaFE.Domain.Fiscal;
+
+/// <summary>
+/// Motor de cálculo fiscal del e-CF (Módulo 6). Función pura y determinística:
+/// dadas las líneas de detalle, devuelve <c>&lt;MontoItem&gt;</c> por línea, todos
+/// los totalizadores del Encabezado y el análisis de tolerancia de cuadratura.
+/// Sin dependencias externas, sin reloj, sin estado.
+/// <para>
+/// Todo se calcula en <see cref="decimal"/> y se redondea con
+/// <see cref="EcfRounding"/> (regla de la DGII, mitad hacia afuera del cero).
+/// </para>
+/// <para>
+/// Alcance v1: ITBIS (tasas 18/16/0 y exento), ajustes de línea
+/// (<c>DescuentoMonto</c>/<c>RecargoMonto</c>) y "otros impuestos adicionales" que
+/// el cliente ya trae calculados. <b>Fuera de v1</b> (slices aparte, ver
+/// <c>docs/fiscal.md</c>): ISC de alcoholes y cigarrillos que integra la base del
+/// ITBIS, descuentos/recargos globales de la Sección D, y retenciones.
+/// </para>
+/// </summary>
+public static class EcfCalculator
+{
+    /// <summary>
+    /// Calcula el e-CF. <paramref name="montoNoFacturable"/> son montos que no
+    /// forman parte de la factura (reembolsos, propina voluntaria); puede ser
+    /// negativo y solo afecta a <c>&lt;MontoPeriodo&gt;</c>, no a
+    /// <c>&lt;MontoTotal&gt;</c>.
+    /// </summary>
+    public static ErrorOr<EcfCalculationResult> Calculate(
+        IReadOnlyList<EcfLineInput> lines,
+        decimal montoNoFacturable = 0m)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+
+        var validation = Validate(lines);
+        if (validation.Count > 0)
+            return validation;
+
+        var results = new List<EcfLineResult>(lines.Count);
+
+        decimal gravadoI1 = 0m, gravadoI2 = 0m, gravadoI3 = 0m;
+        decimal itbis1 = 0m, itbis2 = 0m, itbis3 = 0m;
+        decimal exento = 0m;
+        decimal otrosImpuestos = 0m;
+
+        foreach (var line in lines)
+        {
+            var result = CalculateLine(line);
+            results.Add(result);
+
+            switch (line.Rate.Id)
+            {
+                case 1:
+                    gravadoI1 += result.TaxableBase;
+                    itbis1 += result.TaxAmount;
+                    break;
+                case 2:
+                    gravadoI2 += result.TaxableBase;
+                    itbis2 += result.TaxAmount;
+                    break;
+                case 3:
+                    gravadoI3 += result.TaxableBase;
+                    itbis3 += result.TaxAmount;
+                    break;
+                default: // 4 — Exento
+                    exento += result.ExemptAmount;
+                    break;
+            }
+
+            otrosImpuestos += result.AdditionalTaxes;
+        }
+
+        var gravadoTotal = EcfRounding.Money(gravadoI1 + gravadoI2 + gravadoI3);
+        var totalItbis = EcfRounding.Money(itbis1 + itbis2 + itbis3);
+        exento = EcfRounding.Money(exento);
+        otrosImpuestos = EcfRounding.Money(otrosImpuestos);
+
+        // v1: sin ISC de alcoholes/cigarrillos.
+        const decimal selectivoConsumo = 0m;
+        var impuestoAdicional = EcfRounding.Money(selectivoConsumo + otrosImpuestos);
+
+        var montoTotal = EcfRounding.Money(gravadoTotal + exento + totalItbis + impuestoAdicional);
+        var noFacturable = EcfRounding.Money(montoNoFacturable);
+        var montoPeriodo = EcfRounding.Money(montoTotal + noFacturable);
+
+        var totals = new EcfTotals(
+            MontoGravadoI1: EcfRounding.Money(gravadoI1),
+            MontoGravadoI2: EcfRounding.Money(gravadoI2),
+            MontoGravadoI3: EcfRounding.Money(gravadoI3),
+            MontoGravadoTotal: gravadoTotal,
+            Itbis1: EcfRounding.Money(itbis1),
+            Itbis2: EcfRounding.Money(itbis2),
+            Itbis3: EcfRounding.Money(itbis3),
+            TotalItbis: totalItbis,
+            MontoExento: exento,
+            TotalImpuestoSelectivoConsumo: selectivoConsumo,
+            TotalOtrosImpuestosAdicionales: otrosImpuestos,
+            MontoImpuestoAdicional: impuestoAdicional,
+            MontoTotal: montoTotal,
+            MontoNoFacturable: noFacturable,
+            MontoPeriodo: montoPeriodo);
+
+        var tolerance = BuildToleranceReport(lines, results);
+
+        return new EcfCalculationResult(results, totals, tolerance);
+    }
+
+    private static EcfLineResult CalculateLine(EcfLineInput line)
+    {
+        // Precisión completa hasta redondear MontoItem.
+        var raw = (line.UnitPrice * line.Quantity) - line.Discount + line.Surcharge;
+        var lineAmount = EcfRounding.Money(raw);
+
+        decimal taxableBase;
+        decimal taxAmount;
+        decimal exemptAmount;
+
+        if (line.Rate.IsExempt)
+        {
+            taxableBase = 0m;
+            taxAmount = 0m;
+            exemptAmount = lineAmount;
+        }
+        else if (line.PriceIncludesTax)
+        {
+            // El precio ya trae el ITBIS: se extrae la base y el impuesto es el
+            // resto, para que la línea cuadre exactamente.
+            taxableBase = EcfRounding.Money(lineAmount / (1m + line.Rate.Rate));
+            taxAmount = lineAmount - taxableBase;
+            exemptAmount = 0m;
+        }
+        else
+        {
+            taxableBase = lineAmount;
+            taxAmount = EcfRounding.Money(lineAmount * line.Rate.Rate);
+            exemptAmount = 0m;
+        }
+
+        return new EcfLineResult(
+            LineNumber: line.LineNumber,
+            BillingIndicator: line.Rate.Id,
+            LineAmount: lineAmount,
+            TaxableBase: taxableBase,
+            TaxAmount: taxAmount,
+            ExemptAmount: exemptAmount,
+            AdditionalTaxes: EcfRounding.Money(line.AdditionalTaxes));
+    }
+
+    private static EcfToleranceReport BuildToleranceReport(
+        IReadOnlyList<EcfLineInput> lines,
+        List<EcfLineResult> results)
+    {
+        var diffs = new List<EcfLineToleranceDiff>();
+        var totalDifference = 0m;
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].SuppliedLineAmount is not { } supplied)
+                continue;
+
+            var calculated = results[i].LineAmount;
+            var difference = Math.Abs(calculated - supplied);
+            totalDifference += difference;
+
+            diffs.Add(new EcfLineToleranceDiff(
+                LineNumber: lines[i].LineNumber,
+                Calculated: calculated,
+                Supplied: supplied,
+                Difference: difference,
+                WithinLineTolerance: difference <= 1m));
+        }
+
+        var globalTolerance = lines.Count;
+        var withinTolerance = totalDifference <= globalTolerance && diffs.TrueForAll(d => d.WithinLineTolerance);
+
+        return new EcfToleranceReport(diffs, totalDifference, globalTolerance, withinTolerance);
+    }
+
+    private static List<Error> Validate(IReadOnlyList<EcfLineInput> lines)
+    {
+        var errors = new List<Error>();
+
+        if (lines.Count == 0)
+        {
+            errors.Add(FiscalErrors.NoLines);
+            return errors;
+        }
+
+        var seen = new HashSet<int>();
+
+        foreach (var line in lines)
+        {
+            ArgumentNullException.ThrowIfNull(line.Rate);
+
+            if (line.LineNumber < 1)
+                errors.Add(FiscalErrors.InvalidLineNumber(line.LineNumber));
+            else if (!seen.Add(line.LineNumber))
+                errors.Add(FiscalErrors.DuplicateLineNumber(line.LineNumber));
+
+            if (line.Quantity < 0m)
+                errors.Add(FiscalErrors.NegativeQuantity(line.LineNumber));
+
+            if (line.UnitPrice < 0m)
+                errors.Add(FiscalErrors.NegativeUnitPrice(line.LineNumber));
+
+            if (line.Discount < 0m || line.Surcharge < 0m || line.AdditionalTaxes < 0m)
+                errors.Add(FiscalErrors.NegativeAdjustment(line.LineNumber));
+
+            var raw = (line.UnitPrice * line.Quantity) - line.Discount + line.Surcharge;
+            if (EcfRounding.Money(raw) < 0m)
+                errors.Add(FiscalErrors.NegativeLineAmount(line.LineNumber));
+        }
+
+        return errors;
+    }
+}
