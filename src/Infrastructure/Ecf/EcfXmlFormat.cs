@@ -8,9 +8,22 @@ namespace NovaFE.Infrastructure.Ecf;
 /// </summary>
 internal static class EcfXmlFormat
 {
-    /// <summary>Montos, ITBIS, impuestos, descuentos: hasta 2 decimales.</summary>
+    /// <summary>Montos, ITBIS, impuestos, descuentos en el <c>&lt;ECF&gt;</c>: hasta 2 decimales.</summary>
     public static string Money(decimal value) =>
         value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Montos en el <c>&lt;RFCE&gt;</c>: su XSD (<c>Decimal18D2…</c>) exige
+    /// <b>exactamente</b> 2 decimales cuando hay parte fraccionaria — no acepta
+    /// "191.3", sí "191.30".
+    /// </summary>
+    public static string Money2(decimal value)
+    {
+        var rounded = Math.Round(value, 2, MidpointRounding.AwayFromZero);
+        return rounded == Math.Truncate(rounded)
+            ? rounded.ToString("0", CultureInfo.InvariantCulture)
+            : rounded.ToString("0.00", CultureInfo.InvariantCulture);
+    }
 
     /// <summary><c>PrecioUnitarioItem</c>, <c>TipoCambio</c>: hasta 4 decimales.</summary>
     public static string UnitPrice(decimal value) =>

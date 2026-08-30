@@ -9,10 +9,17 @@ namespace NovaFE.Infrastructure.Ecf;
 /// (<see cref="Opt(string,string?)"/>), monto (<see cref="Money"/> /
 /// <see cref="MoneyOpt"/>) y ámbito de elemento (<see cref="Element"/>, con
 /// <c>using</c>). El código de serialización queda leyéndose como el árbol del XSD.
-/// <para>Formato numérico/fechas: <see cref="EcfXmlFormat"/>.</para>
+/// <para>
+/// El formateo de montos se inyecta (<paramref name="moneyFormat"/>): el
+/// <c>&lt;ECF&gt;</c> usa <see cref="EcfXmlFormat.Money"/> (1–2 decimales); el
+/// <c>&lt;RFCE&gt;</c>, <see cref="EcfXmlFormat.Money2"/> (exactamente 2). Fechas:
+/// <see cref="EcfXmlFormat.Date"/>.
+/// </para>
 /// </summary>
-internal readonly struct EcfElementWriter(XmlWriter writer)
+internal readonly struct EcfElementWriter(XmlWriter writer, Func<decimal, string>? moneyFormat = null)
 {
+    private readonly Func<decimal, string> _money = moneyFormat ?? EcfXmlFormat.Money;
+
     /// <summary>Abre un elemento; el <c>using</c> lo cierra.</summary>
     public Scope Element(string name)
     {
@@ -47,8 +54,8 @@ internal readonly struct EcfElementWriter(XmlWriter writer)
             El(name, EcfXmlFormat.Date(v));
     }
 
-    /// <summary>Monto obligatorio (formato dinero, hasta 2 decimales).</summary>
-    public void Money(string name, decimal value) => El(name, EcfXmlFormat.Money(value));
+    /// <summary>Monto obligatorio (formato inyectado en el constructor).</summary>
+    public void Money(string name, decimal value) => El(name, _money(value));
 
     /// <summary>
     /// Monto opcional: se omite si es null o ≤ 0. La mayoría de estos campos del XSD
@@ -57,7 +64,7 @@ internal readonly struct EcfElementWriter(XmlWriter writer)
     public void MoneyOpt(string name, decimal? value)
     {
         if (value is { } v and > 0m)
-            El(name, EcfXmlFormat.Money(v));
+            El(name, _money(v));
     }
 
     /// <summary>Ámbito de elemento — cierra el elemento al hacer <c>Dispose</c>.</summary>

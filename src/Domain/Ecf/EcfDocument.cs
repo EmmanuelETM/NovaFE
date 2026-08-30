@@ -68,6 +68,14 @@ public sealed class EcfDocument
 
     public EcfTotals Totals => Calculation.Totals;
 
+    /// <summary>
+    /// El tipo 32 con <c>MontoTotal &lt; DOP 250 000</c> se envía a la DGII como
+    /// <b>RFCE</b> (resumen), no como <c>&lt;ECF&gt;</c> completo (RF-02.6). El
+    /// <c>&lt;ECF&gt;</c> igual se genera y se guarda localmente.
+    /// </summary>
+    public bool QualifiesForRfce =>
+        Type == EcfType.Consumo && Totals.MontoTotal < ConsumerIdentificationThreshold;
+
     public static ErrorOr<EcfDocument> Create(
         EcfType type,
         EcfHeader header,

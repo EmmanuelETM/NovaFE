@@ -10,30 +10,41 @@ using NovaFE.Domain.Common;
 namespace NovaFE.Infrastructure.Ecf;
 
 /// <summary>
-/// Valida el XML de e-CF contra el XSD oficial de la DGII del tipo. Los XSD van
-/// embebidos en <c>Ecf/Xsd/</c>. Compilar el <see cref="XmlSchemaSet"/> es lo
-/// caro (decenas de ms) y se hace una sola vez por tipo (<see cref="Lazy{T}"/>
-/// para que aunque dos hilos lleguen juntos en el primer uso se compile una vez).
-/// Un <see cref="XmlSchemaSet"/> ya compilado es seguro de compartir entre hilos
-/// para validar; la validación en caliente de un e-CF normal ronda los 0,3–0,7 ms.
+/// Valida el XML de e-CF (o RFCE) contra el XSD oficial de la DGII. Los XSD van
+/// embebidos en <c>Ecf/Xsd/</c>. Compilar el <see cref="XmlSchemaSet"/> es lo caro
+/// (decenas de ms) y se hace una sola vez por XSD (<see cref="Lazy{T}"/> para que
+/// aunque dos hilos lleguen juntos en el primer uso se compile una vez). Un
+/// <see cref="XmlSchemaSet"/> ya compilado es seguro de compartir entre hilos para
+/// validar; la validación en caliente de un e-CF normal ronda los 0,3–0,7 ms.
 /// </summary>
 internal sealed class EcfXsdValidator : IEcfXsdValidator
 {
     private static readonly Assembly OwnAssembly = typeof(EcfXsdValidator).Assembly;
-    private static readonly ConcurrentDictionary<int, Lazy<XmlSchemaSet?>> SchemaCache = new();
+    private static readonly ConcurrentDictionary<string, Lazy<XmlSchemaSet?>> SchemaCache = new(StringComparer.Ordinal);
 
     public ErrorOr<Success> Validate(string xml, EcfType type)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(xml);
         ArgumentNullException.ThrowIfNull(type);
 
+        return Validate(xml, string.Create(CultureInfo.InvariantCulture, $"e-CF-{type.Id}-"));
+    }
+
+    public ErrorOr<Success> ValidateRfce(string xml)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(xml);
+        return Validate(xml, "RFCE-32-");
+    }
+
+    private static ErrorOr<Success> Validate(string xml, string xsdMarker)
+    {
         var schema = SchemaCache
-            .GetOrAdd(type.Id, id => new Lazy<XmlSchemaSet?>(() => LoadSchema(id)))
+            .GetOrAdd(xsdMarker, marker => new Lazy<XmlSchemaSet?>(() => LoadSchema(marker)))
             .Value;
         if (schema is null)
             return Error.Unexpected(
                 code: "Ecf.XsdMissing",
-                description: $"No hay XSD embebido para el tipo {type.Id}.");
+                description: $"No hay XSD embebido para '{xsdMarker}'.");
 
         var violations = new List<string>();
         var settings = new XmlReaderSettings
@@ -68,9 +79,8 @@ internal sealed class EcfXsdValidator : IEcfXsdValidator
             description: "El e-CF no cumple el XSD de la DGII: " + string.Join(" | ", violations));
     }
 
-    private static XmlSchemaSet? LoadSchema(int typeId)
+    private static XmlSchemaSet? LoadSchema(string marker)
     {
-        var marker = string.Create(CultureInfo.InvariantCulture, $"e-CF-{typeId}-");
         var resource = Array.Find(
             OwnAssembly.GetManifestResourceNames(),
             name => name.Contains(".Ecf.Xsd.", StringComparison.Ordinal)
