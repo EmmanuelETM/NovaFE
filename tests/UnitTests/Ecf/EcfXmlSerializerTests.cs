@@ -68,6 +68,40 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Pagos_exterior_has_a_reduced_buyer_isr_only_retention_and_the_isr_total()
+    {
+        var root = Serialize(EcfTestData.PagosExterior());
+
+        var idDoc = root.Element("Encabezado")!.Element("IdDoc")!;
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "FechaVencimientoSecuencia",
+            "TipoPago", "FechaLimitePago", "TablaFormasPago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("47");
+        idDoc.Element("TipoIngresos").ShouldBeNull();
+        idDoc.Element("IndicadorMontoGravado").ShouldBeNull();
+
+        var comprador = root.Element("Encabezado")!.Element("Comprador")!;
+        comprador.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["IdentificadorExtranjero", "RazonSocialComprador"]);
+
+        var retencion = root.Element("DetallesItems")!.Element("Item")!.Element("Retencion")!;
+        retencion.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["IndicadorAgenteRetencionoPercepcion", "MontoISRRetenido"]);
+        retencion.Element("MontoISRRetenido")!.Value.ShouldBe("13500");
+        retencion.Element("MontoITBISRetenido").ShouldBeNull();
+
+        var totales = root.Element("Encabezado")!.Element("Totales")!;
+        totales.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["MontoExento", "MontoTotal", "ValorPagar", "TotalISRRetencion"]);
+        totales.Element("MontoTotal")!.Value.ShouldBe("50000");
+        totales.Element("ValorPagar")!.Value.ShouldBe("36500");        // 50000 - 13500
+        totales.Element("TotalISRRetencion")!.Value.ShouldBe("13500");
+        totales.Element("TotalITBISRetenido").ShouldBeNull();
+    }
+
+    [Fact]
     public void Exportaciones_omits_the_taxed_indicator_and_totales_use_the_zero_rate_bucket()
     {
         var root = Serialize(EcfTestData.Exportaciones());

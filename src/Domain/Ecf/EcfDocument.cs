@@ -131,9 +131,12 @@ public sealed class EcfDocument
         if (RequiresIncomeType(type) && string.IsNullOrWhiteSpace(header.IncomeType))
             errors.Add(EcfErrors.IncomeTypeRequired);
 
-        // Regímenes Especiales (44) y Gastos Menores (43): sus XSD no tienen campos
-        // gravados ni de ITBIS en <Totales> — todo va a <MontoExento> (Formato nota 50).
-        if ((type == EcfType.RegimenesEspeciales || type == EcfType.GastosMenores)
+        // Regímenes Especiales (44), Gastos Menores (43) y Pagos al Exterior (47):
+        // sus XSD no tienen campos gravados ni de ITBIS en <Totales> — todo va a
+        // <MontoExento> (Formato nota 50).
+        if ((type == EcfType.RegimenesEspeciales
+                || type == EcfType.GastosMenores
+                || type == EcfType.PagosExterior)
             && lines.Any(line => !line.Rate.IsExempt))
             errors.Add(EcfErrors.OnlyExemptLinesAllowed(type.Id));
 
@@ -142,41 +145,45 @@ public sealed class EcfDocument
         if (type == EcfType.Exportaciones && lines.Any(line => line.Rate != ItbisRate.Zero))
             errors.Add(EcfErrors.OnlyZeroRatedLinesAllowed(type.Id));
 
-        ValidateGastosMenores(type, header, lines, errors);
+        ValidateSimpleLineDocument(type, header, lines, errors);
         ValidateRetention(type, lines, errors);
 
         return errors;
     }
 
     /// <summary>
-    /// El tipo 43 (Gastos Menores) es el más reducido: sus líneas no admiten
-    /// descuentos, recargos ni otros impuestos, y el encabezado no lleva monto no
-    /// facturable (nada de eso existe en su XSD).
+    /// Los tipos 43 (Gastos Menores) y 47 (Pagos al Exterior) son reducidos: sus
+    /// líneas no admiten descuentos, recargos ni otros impuestos, y el encabezado
+    /// no lleva monto no facturable (nada de eso existe en sus XSD).
     /// </summary>
-    private static void ValidateGastosMenores(
+    private static void ValidateSimpleLineDocument(
         EcfType type, EcfHeader header, IReadOnlyList<EcfLine> lines, List<Error> errors)
     {
-        if (type != EcfType.GastosMenores)
+        if (type != EcfType.GastosMenores && type != EcfType.PagosExterior)
             return;
 
         if (lines.Any(line => line.Discount > 0m || line.Surcharge > 0m || line.AdditionalTaxes > 0m))
-            errors.Add(EcfErrors.GastosMenoresLineTooComplex);
+            errors.Add(EcfErrors.LineAdjustmentsNotApplicable(type.Id));
 
         if (header.NonInvoiceableAmount != 0m)
             errors.Add(EcfErrors.NonInvoiceableAmountNotApplicable(type.Id));
     }
 
     /// <summary>
-    /// El tipo 41 (Compras) exige el área de retención en cada línea (el emisor es
-    /// agente de retención frente al proveedor). Los demás tipos soportados en v1
-    /// no la llevan.
+    /// Los tipos 41 (Compras) y 47 (Pagos al Exterior) exigen el área de retención
+    /// en cada línea; el 47 solo retiene ISR (su <c>&lt;Retencion&gt;</c> no tiene
+    /// campo de ITBIS). Los demás tipos soportados en v1 no la llevan.
     /// </summary>
     private static void ValidateRetention(EcfType type, IReadOnlyList<EcfLine> lines, List<Error> errors)
     {
-        if (type == EcfType.Compras)
+        if (type == EcfType.Compras || type == EcfType.PagosExterior)
         {
             foreach (var line in lines.Where(line => line.Retention is null))
                 errors.Add(EcfErrors.RetentionRequired(line.Number));
+
+            if (type == EcfType.PagosExterior
+                && lines.Any(line => line.Retention is { ItbisWithheld: > 0m }))
+                errors.Add(EcfErrors.ItbisRetentionNotApplicable(type.Id));
         }
         else if (lines.Any(line => line.Retention is not null))
         {
@@ -245,7 +252,8 @@ public sealed class EcfDocument
         || modifiedType == EcfType.Gubernamental
         || modifiedType == EcfType.PagosExterior;
 
-    // El tipo 41 (Compras) NO lleva <TipoIngresos> — su XSD ni siquiera lo admite.
+    // Los tipos 41 (Compras) y 47 (Pagos al Exterior) NO llevan <TipoIngresos> —
+    // sus XSD ni siquiera lo admiten.
     private static bool RequiresIncomeType(EcfType type) =>
         type == EcfType.CreditoFiscal
         || type == EcfType.Consumo
@@ -253,8 +261,7 @@ public sealed class EcfDocument
         || type == EcfType.NotaCredito
         || type == EcfType.RegimenesEspeciales
         || type == EcfType.Gubernamental
-        || type == EcfType.Exportaciones
-        || type == EcfType.PagosExterior;
+        || type == EcfType.Exportaciones;
 
     private static EcfLineInput ToLineInput(EcfLine line, bool headerPricesIncludeTax) =>
         new(

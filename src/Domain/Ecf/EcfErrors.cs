@@ -69,9 +69,13 @@ public static class EcfErrors
         code: "Ecf.OnlyZeroRatedLinesAllowed",
         description: $"El tipo {documentType} (Exportaciones) solo admite líneas con ITBIS a tasa cero (indicador de facturación 3).");
 
-    public static Error GastosMenoresLineTooComplex => Error.Validation(
-        code: "Ecf.GastosMenoresLineTooComplex",
-        description: "Las líneas del Comprobante de Gastos Menores (tipo 43) no admiten descuentos, recargos ni otros impuestos adicionales.");
+    public static Error LineAdjustmentsNotApplicable(int documentType) => Error.Validation(
+        code: "Ecf.LineAdjustmentsNotApplicable",
+        description: $"Las líneas del tipo {documentType} no admiten descuentos, recargos ni otros impuestos adicionales.");
+
+    public static Error ItbisRetentionNotApplicable(int documentType) => Error.Validation(
+        code: "Ecf.ItbisRetentionNotApplicable",
+        description: $"El tipo {documentType} solo retiene ISR; el área de retención no lleva monto de ITBIS.");
 
     public static Error NonInvoiceableAmountNotApplicable(int documentType) => Error.Validation(
         code: "Ecf.NonInvoiceableAmountNotApplicable",

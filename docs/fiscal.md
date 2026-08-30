@@ -78,8 +78,14 @@ llamador). Una NC con fecha anterior al original es un error.
 
 Aplican a los tipos **41** (Compras) y **47** (Pagos al Exterior): el emisor es
 agente de retención y descuenta ITBIS y/o ISR del pago al proveedor. Van en el
-área `<Retencion>` de cada línea (`MontoITBISRetenido`, `MontoISRRetenido`) y se
-suman en `<TotalITBISRetenido>` / `<TotalISRRetencion>` del encabezado.
+área `<Retencion>` de cada línea y se suman en `<TotalITBISRetenido>` /
+`<TotalISRRetencion>` del encabezado.
+
+- **Tipo 41** — `<Retencion>` obligatoria por línea; `MontoITBISRetenido` y
+  `MontoISRRetenido` son condicionales (se emiten si `> 0`).
+- **Tipo 47** — `<Retencion>` obligatoria por línea, **solo ISR**: su XSD no tiene
+  `MontoITBISRetenido`, y `MontoISRRetenido` es obligatorio (se emite aunque sea 0).
+  El dominio rechaza un monto de ITBIS en la retención del 47.
 
 **El monto retenido lo calcula y lo presenta el cliente, por línea.** El motor
 fiscal solo **suma** lo que recibe (`EcfLineInput.ItbisWithheld` / `IsrWithheld`
