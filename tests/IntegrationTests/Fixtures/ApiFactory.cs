@@ -10,7 +10,9 @@ namespace NovaFE.IntegrationTests.Fixtures;
 /// contenedor. Es la aplicación real: mismo pipeline, mismos middlewares,
 /// mismo contenedor de dependencias.
 /// </summary>
-public sealed class ApiFactory(string connectionString) : WebApplicationFactory<Program>
+public sealed class ApiFactory(
+    string connectionString,
+    IReadOnlyDictionary<string, string?>? overrides = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -20,7 +22,7 @@ public sealed class ApiFactory(string connectionString) : WebApplicationFactory<
 
         builder.ConfigureAppConfiguration((_, config) =>
         {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
+            var settings = new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Default"] = connectionString,
 
@@ -36,8 +38,16 @@ public sealed class ApiFactory(string connectionString) : WebApplicationFactory<
 
                 // Silencia el log de peticiones para que la salida de la suite
                 // sea legible.
-                ["Serilog:MinimumLevel:Default"] = "Warning"
-            });
+                ["Serilog:MinimumLevel:Default"] = "Warning",
+            };
+
+            if (overrides is not null)
+            {
+                foreach (var (key, value) in overrides)
+                    settings[key] = value;
+            }
+
+            config.AddInMemoryCollection(settings);
         });
     }
 }

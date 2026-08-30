@@ -1,8 +1,11 @@
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Dgii;
 using NovaFE.Application.Signing;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Infrastructure.Caching;
+using NovaFE.Infrastructure.Dgii;
+using NovaFE.Infrastructure.Http;
 using NovaFE.Infrastructure.Persistence;
 using NovaFE.Infrastructure.Persistence.EfCore;
 using NovaFE.Infrastructure.Persistence.EfCore.Repositories;
@@ -11,6 +14,7 @@ using NovaFE.Infrastructure.Persistence.Sql.Repositories;
 using NovaFE.Infrastructure.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace NovaFE.Infrastructure;
 
@@ -64,6 +68,28 @@ public static class InfrastructureService
 
         // Firma XMLDSig (parámetros exactos de la DGII). Sin estado → singleton.
         services.AddSingleton<IXmlSigner, XmlDsigSigner>();
+
+        // ==========================================
+        //        Autenticación con la DGII
+        // ==========================================
+        services.AddOptions<DgiiOptions>()
+            .Bind(configuration.GetSection(DgiiOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // La BaseAddress se resuelve al crear el cliente, no aquí: así los tests
+        // (y las variables de entorno) pueden sobreescribir Dgii:EcfBaseUrl.
+        services.AddResilientHttpClient<IDgiiAuthClient, DgiiAuthClient>(
+            sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<DgiiOptions>>().Value;
+                return new Uri(options.EcfBaseUrl.TrimEnd('/') + "/");
+            },
+            sp => TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<DgiiOptions>>().Value.AuthTimeoutSeconds));
+
+        services.AddSingleton<DgiiTokenGate>();
+        services.AddScoped<IDgiiTokenCache, DistributedCacheDgiiTokenCache>();
+        services.AddScoped<IDgiiTokenProvider, DgiiTokenProvider>();
 
         // ==========================================
         //             Repositorios

@@ -154,6 +154,12 @@ parámetros de la DGII (C14N **estándar** no exclusivo, SHA-256, `Reference URI
 `preserveWhitespace=false`, cert embebido) están fijos y afirmados en las pruebas.
 No cambiar sin leer `docs/signing.md`.
 
+**Autenticación DGII** (`src/Infrastructure/Dgii`): `IDgiiTokenProvider` da un
+token Bearer del tenant actual para un ambiente — caché → semilla → firma →
+validar → guardar, con renovación proactiva. `IDgiiAuthClient` (HTTP resiliente),
+`IDgiiTokenCache` (sobre `IDistributedCache`). Ver `docs/dgii-auth.md`. El token
+nunca va a base de datos.
+
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
 - Con EF Core, la auditoría y el borrado lógico los aplican interceptores y un

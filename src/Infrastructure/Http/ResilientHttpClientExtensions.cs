@@ -35,4 +35,28 @@ public static class ResilientHttpClientExtensions
 
         return builder;
     }
+
+    /// <summary>
+    /// Igual que el otro, pero la <c>BaseAddress</c> se resuelve al crear el
+    /// cliente (no al registrarlo), leyendo la configuración ya combinada. Úsalo
+    /// cuando la URL viene de opciones que otros orígenes (tests, variables de
+    /// entorno) pueden sobreescribir.
+    /// </summary>
+    public static IHttpClientBuilder AddResilientHttpClient<TClient, TImplementation>(
+        this IServiceCollection services,
+        Func<IServiceProvider, Uri> baseAddressFactory,
+        Func<IServiceProvider, TimeSpan>? timeoutFactory = null)
+        where TClient : class
+        where TImplementation : class, TClient
+    {
+        var builder = services.AddHttpClient<TClient, TImplementation>((sp, client) =>
+        {
+            client.BaseAddress = baseAddressFactory(sp);
+            client.Timeout = timeoutFactory?.Invoke(sp) ?? TimeSpan.FromSeconds(30);
+        });
+
+        builder.AddStandardResilienceHandler();
+
+        return builder;
+    }
 }
