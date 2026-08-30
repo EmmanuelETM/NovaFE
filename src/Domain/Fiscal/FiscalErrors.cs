@@ -32,6 +32,10 @@ public static class FiscalErrors
         code: "Fiscal.NegativeAdjustment",
         description: $"El descuento, el recargo y los impuestos adicionales de la línea {lineNumber} no pueden ser negativos.");
 
+    public static Error NegativeRetention(int lineNumber) => Error.Validation(
+        code: "Fiscal.NegativeRetention",
+        description: $"El ITBIS o el ISR retenido de la línea {lineNumber} no puede ser negativo.");
+
     public static Error NegativeLineAmount(int lineNumber) => Error.Validation(
         code: "Fiscal.NegativeLineAmount",
         description: $"El monto de la línea {lineNumber} da negativo: el descuento no puede superar al valor de la línea.");

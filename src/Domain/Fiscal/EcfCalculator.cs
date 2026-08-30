@@ -13,10 +13,12 @@ namespace NovaFE.Domain.Fiscal;
 /// </para>
 /// <para>
 /// Alcance v1: ITBIS (tasas 18/16/0 y exento), ajustes de línea
-/// (<c>DescuentoMonto</c>/<c>RecargoMonto</c>) y "otros impuestos adicionales" que
-/// el cliente ya trae calculados. <b>Fuera de v1</b> (slices aparte, ver
-/// <c>docs/fiscal.md</c>): ISC de alcoholes y cigarrillos que integra la base del
-/// ITBIS, descuentos/recargos globales de la Sección D, y retenciones.
+/// (<c>DescuentoMonto</c>/<c>RecargoMonto</c>), "otros impuestos adicionales" que
+/// el cliente ya trae calculados, y la <b>totalización</b> de las retenciones de
+/// ITBIS/ISR por línea (montos que también trae el cliente; tipo 41). <b>Fuera de
+/// v1</b> (slices aparte, ver <c>docs/fiscal.md</c>): ISC de alcoholes y cigarrillos
+/// que integra la base del ITBIS, descuentos/recargos globales de la Sección D, y
+/// el cálculo de las tasas de retención a partir de las normas de la DGII.
 /// </para>
 /// </summary>
 public static class EcfCalculator
@@ -43,11 +45,15 @@ public static class EcfCalculator
         decimal itbis1 = 0m, itbis2 = 0m, itbis3 = 0m;
         decimal exento = 0m;
         decimal otrosImpuestos = 0m;
+        decimal itbisRetenido = 0m, isrRetenido = 0m;
 
         foreach (var line in lines)
         {
             var result = CalculateLine(line);
             results.Add(result);
+
+            itbisRetenido += line.ItbisWithheld;
+            isrRetenido += line.IsrWithheld;
 
             switch (line.Rate.Id)
             {
@@ -99,7 +105,9 @@ public static class EcfCalculator
             MontoImpuestoAdicional: impuestoAdicional,
             MontoTotal: montoTotal,
             MontoNoFacturable: noFacturable,
-            MontoPeriodo: montoPeriodo);
+            MontoPeriodo: montoPeriodo,
+            TotalItbisWithheld: EcfRounding.Money(itbisRetenido),
+            TotalIsrWithheld: EcfRounding.Money(isrRetenido));
 
         var tolerance = BuildToleranceReport(lines, results);
 
@@ -206,6 +214,9 @@ public static class EcfCalculator
 
             if (line.Discount < 0m || line.Surcharge < 0m || line.AdditionalTaxes < 0m)
                 errors.Add(FiscalErrors.NegativeAdjustment(line.LineNumber));
+
+            if (line.ItbisWithheld < 0m || line.IsrWithheld < 0m)
+                errors.Add(FiscalErrors.NegativeRetention(line.LineNumber));
 
             var raw = (line.UnitPrice * line.Quantity) - line.Discount + line.Surcharge;
             if (EcfRounding.Money(raw) < 0m)

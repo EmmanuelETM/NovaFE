@@ -15,6 +15,11 @@ namespace NovaFE.Domain.Fiscal;
 /// MontoTotal             = MontoGravadoTotal + MontoExento + TotalItbis + MontoImpuestoAdicional
 /// MontoPeriodo           = MontoTotal + MontoNoFacturable      (MontoNoFacturable puede ser negativo)
 /// </code>
+/// <para>
+/// Las retenciones (<see cref="TotalItbisWithheld"/> / <see cref="TotalIsrWithheld"/>)
+/// <b>no</b> entran en <c>MontoTotal</c>: son lo que el emisor retiene al pagar
+/// (tipo 41). El valor neto a pagar es <c>MontoTotal − retenciones</c>.
+/// </para>
 /// </summary>
 /// <param name="MontoGravadoI1">Base gravada a 18 %.</param>
 /// <param name="MontoGravadoI2">Base gravada a 16 %.</param>
@@ -31,6 +36,8 @@ namespace NovaFE.Domain.Fiscal;
 /// <param name="MontoTotal">Total del comprobante.</param>
 /// <param name="MontoNoFacturable">Montos no facturables (reembolsos, propina voluntaria…). Puede ser negativo.</param>
 /// <param name="MontoPeriodo"><see cref="MontoTotal"/> + <see cref="MontoNoFacturable"/>. Puede ser negativo.</param>
+/// <param name="TotalItbisWithheld"><c>&lt;TotalITBISRetenido&gt;</c> — suma de ITBIS retenido en las líneas (tipo 41).</param>
+/// <param name="TotalIsrWithheld"><c>&lt;TotalISRRetencion&gt;</c> — suma de ISR retenido en las líneas (tipo 41).</param>
 public sealed record EcfTotals(
     decimal MontoGravadoI1,
     decimal MontoGravadoI2,
@@ -46,4 +53,6 @@ public sealed record EcfTotals(
     decimal MontoImpuestoAdicional,
     decimal MontoTotal,
     decimal MontoNoFacturable,
-    decimal MontoPeriodo);
+    decimal MontoPeriodo,
+    decimal TotalItbisWithheld = 0m,
+    decimal TotalIsrWithheld = 0m);

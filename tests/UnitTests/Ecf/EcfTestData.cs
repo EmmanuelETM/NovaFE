@@ -49,7 +49,8 @@ internal static class EcfTestData
         decimal quantity = 1m,
         decimal unitPrice = 2000.00m,
         string name = "Servicio de consultoría",
-        ItemKind? kind = null)
+        ItemKind? kind = null,
+        EcfLineRetention? retention = null)
         => new(
             Number: number,
             Rate: rate ?? ItbisRate.Eighteen,
@@ -57,7 +58,23 @@ internal static class EcfTestData
             Kind: kind ?? ItemKind.Service,
             Quantity: quantity,
             UnitPrice: unitPrice,
-            UnitOfMeasure: "43");
+            UnitOfMeasure: "43",
+            Retention: retention);
+
+    /// <summary>Retención típica de un servicio: 30 % del ITBIS y 10 % de honorarios de ISR.</summary>
+    public static EcfLineRetention Retention(decimal itbisWithheld = 108.00m, decimal isrWithheld = 200.00m)
+        => new(RetentionAgent.Withholding, itbisWithheld, isrWithheld);
+
+    /// <summary>
+    /// Comprobante de Compras (tipo 41): el emisor registra una compra a un
+    /// proveedor informal y actúa como agente de retención. Cada línea lleva
+    /// <c>&lt;Retencion&gt;</c>; el IdDoc no lleva <c>&lt;TipoIngresos&gt;</c>.
+    /// </summary>
+    public static EcfDocument Compras(params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.Compras,
+            Header(41),
+            lines.Length == 0 ? [Line(retention: Retention())] : lines).Value;
 
     public static EcfDocument CreditoFiscal(params EcfLine[] lines)
         => EcfDocument.Create(

@@ -46,6 +46,18 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_compras_with_retention_validates_against_the_official_type_41_xsd()
+    {
+        var document = EcfTestData.Compras(
+            EcfTestData.Line(number: 1, unitPrice: 1000m, retention: EcfTestData.Retention(itbisWithheld: 54m, isrWithheld: 100m)),
+            EcfTestData.Line(number: 2, unitPrice: 500m, retention: EcfTestData.Retention(itbisWithheld: 27m, isrWithheld: 50m)));
+
+        var result = Validator.Validate(SignedShapeXml(document), EcfType.Compras);
+
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void A_consumo_validates_against_the_official_type_32_xsd()
     {
         var result = Validator.Validate(SignedShapeXml(EcfTestData.Consumo()), EcfType.Consumo);

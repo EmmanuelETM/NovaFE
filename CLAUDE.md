@@ -199,9 +199,9 @@ son slices posteriores. No cambiar sin leer `docs/sequences.md`.
 produce el `<ECF>` con el orden exacto del XSD, sin tags vacíos, escape DGII (8
 caracteres), formato numérico y fechas `dd-MM-yyyy`; incluye `<FechaHoraFirma>`
 pero no `<Signature>`. `IEcfXsdValidator` valida contra los XSD oficiales
-**vendorizados y embebidos** en `src/Infrastructure/Ecf/Xsd/`. v1: solo tipo 31.
-No cambiar sin leer `docs/ecf-xml.md`. `EcfDocument` **no es** el payload de la API
-(ese es curado — `docs/api-ecf.md`).
+**vendorizados y embebidos** en `src/Infrastructure/Ecf/Xsd/`. v1: tipos 31–34 y 41
+(el 41 con área `<Retencion>` por línea). No cambiar sin leer `docs/ecf-xml.md`.
+`EcfDocument` **no es** el payload de la API (ese es curado — `docs/api-ecf.md`).
 
 **Motor de cálculo fiscal** (`src/Domain/Fiscal`): dominio puro, sin E/S ni reloj.
 `EcfCalculator.Calculate(lines)` da `<MontoItem>` por línea y todos los
@@ -209,9 +209,11 @@ totalizadores del Encabezado. `EcfRounding` (regla DGII: mitad hacia afuera del
 cero; 2 dec dinero, 4 dec precio unitario y tipo de cambio, 3 dec subcantidad).
 `ItbisRate` (indicadores 1–4). `CreditNoteIndicator` — regla de los 30 días para
 tipo 34, **valores 0/1** (el Plan Técnico dice 1/2: está mal). La tolerancia de
-cuadratura **nunca rechaza** (RF-06.6). ISC de alcoholes/cigarrillos, descuentos
-globales (Sección D) y retenciones son slices posteriores. No cambiar sin leer
-`docs/fiscal.md`.
+cuadratura **nunca rechaza** (RF-06.6). Las retenciones de ITBIS/ISR se
+**totalizan** (montos por línea que trae el cliente → `<TotalITBISRetenido>` /
+`<TotalISRRetencion>`; no tocan `<MontoTotal>`); el **cálculo** de las tasas, el
+ISC de alcoholes/cigarrillos y los descuentos globales (Sección D) son slices
+posteriores. No cambiar sin leer `docs/fiscal.md`.
 
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.

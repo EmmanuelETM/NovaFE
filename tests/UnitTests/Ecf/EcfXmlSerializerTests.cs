@@ -68,6 +68,41 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Compras_iddoc_omits_the_income_type_and_the_item_carries_the_retention()
+    {
+        var root = Serialize(EcfTestData.Compras(
+            EcfTestData.Line(unitPrice: 1000m, retention: EcfTestData.Retention(itbisWithheld: 54m, isrWithheld: 100m))));
+        var idDoc = root.Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "FechaVencimientoSecuencia", "IndicadorMontoGravado",
+            "TipoPago", "FechaLimitePago", "TablaFormasPago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("41");
+        idDoc.Element("TipoIngresos").ShouldBeNull();
+
+        var retencion = root.Element("DetallesItems")!.Element("Item")!.Element("Retencion")!;
+        retencion.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["IndicadorAgenteRetencionoPercepcion", "MontoITBISRetenido", "MontoISRRetenido"]);
+        retencion.Element("IndicadorAgenteRetencionoPercepcion")!.Value.ShouldBe("1");
+        retencion.Element("MontoITBISRetenido")!.Value.ShouldBe("54");
+    }
+
+    [Fact]
+    public void Compras_totales_carry_the_net_payable_and_the_withholding_totals()
+    {
+        var totales = Serialize(EcfTestData.Compras(
+                EcfTestData.Line(unitPrice: 1000m, retention: EcfTestData.Retention(itbisWithheld: 54m, isrWithheld: 100m))))
+            .Element("Encabezado")!.Element("Totales")!;
+
+        totales.Element("MontoTotal")!.Value.ShouldBe("1180");          // 1000 + 180 ITBIS
+        totales.Element("ValorPagar")!.Value.ShouldBe("1026");          // 1180 - 54 - 100
+        totales.Element("TotalITBISRetenido")!.Value.ShouldBe("54");
+        totales.Element("TotalISRRetencion")!.Value.ShouldBe("100");
+    }
+
+    [Fact]
     public void Nota_debito_keeps_the_type_31_iddoc_and_adds_the_mandatory_reference()
     {
         var root = Serialize(EcfTestData.NotaDebito());

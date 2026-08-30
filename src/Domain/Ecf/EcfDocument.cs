@@ -131,7 +131,27 @@ public sealed class EcfDocument
         if (RequiresIncomeType(type) && string.IsNullOrWhiteSpace(header.IncomeType))
             errors.Add(EcfErrors.IncomeTypeRequired);
 
+        ValidateRetention(type, lines, errors);
+
         return errors;
+    }
+
+    /// <summary>
+    /// El tipo 41 (Compras) exige el área de retención en cada línea (el emisor es
+    /// agente de retención frente al proveedor). Los demás tipos soportados en v1
+    /// no la llevan.
+    /// </summary>
+    private static void ValidateRetention(EcfType type, IReadOnlyList<EcfLine> lines, List<Error> errors)
+    {
+        if (type == EcfType.Compras)
+        {
+            foreach (var line in lines.Where(line => line.Retention is null))
+                errors.Add(EcfErrors.RetentionRequired(line.Number));
+        }
+        else if (lines.Any(line => line.Retention is not null))
+        {
+            errors.Add(EcfErrors.RetentionNotApplicable(type.Id));
+        }
     }
 
     private static bool AreContiguous(IReadOnlyList<EcfLine> lines)
@@ -195,12 +215,12 @@ public sealed class EcfDocument
         || modifiedType == EcfType.Gubernamental
         || modifiedType == EcfType.PagosExterior;
 
+    // El tipo 41 (Compras) NO lleva <TipoIngresos> — su XSD ni siquiera lo admite.
     private static bool RequiresIncomeType(EcfType type) =>
         type == EcfType.CreditoFiscal
         || type == EcfType.Consumo
         || type == EcfType.NotaDebito
         || type == EcfType.NotaCredito
-        || type == EcfType.Compras
         || type == EcfType.Gubernamental
         || type == EcfType.Exportaciones
         || type == EcfType.PagosExterior;
@@ -214,5 +234,7 @@ public sealed class EcfDocument
             Discount: line.Discount,
             Surcharge: line.Surcharge,
             PriceIncludesTax: line.PriceIncludesTax ?? headerPricesIncludeTax,
-            AdditionalTaxes: line.AdditionalTaxes);
+            AdditionalTaxes: line.AdditionalTaxes,
+            ItbisWithheld: line.Retention?.ItbisWithheld ?? 0m,
+            IsrWithheld: line.Retention?.IsrWithheld ?? 0m);
 }

@@ -79,7 +79,11 @@ llamador). Una NC con fecha anterior al original es un error.
 **Incluido:** ITBIS (18/16/0/exento), ajustes de línea, "otros impuestos
 adicionales" que el cliente ya trae calculados (Propina Legal, CDT…), regla de
 los 30 días, chequeo de tolerancia, `MontoNoFacturable`/`MontoPeriodo`,
-`FiscalRules.CreditNoteTotalWithinOriginal`.
+`FiscalRules.CreditNoteTotalWithinOriginal`, y la **totalización** de retenciones
+de ITBIS/ISR por línea (`EcfLineInput.ItbisWithheld`/`IsrWithheld` →
+`<TotalITBISRetenido>`/`<TotalISRRetencion>`; montos que trae el cliente).
+Las retenciones **no** entran en `MontoTotal` — son lo que el emisor retiene al
+pagar (tipo 41); el neto es `MontoTotal − retenciones` (`<ValorPagar>`).
 
 **Slices aparte** (marcados en el código):
 
@@ -91,6 +95,8 @@ los 30 días, chequeo de tolerancia, `MontoNoFacturable`/`MontoPeriodo`,
 - **Descuentos y recargos globales (Sección D)** — RF-06.8. Se distribuyen
   proporcionalmente por `MontoItem / ΣMontoItem` y afectan la base imponible;
   la excepción Norma 10-07 (solo tipo 31) no rebaja el gravado a tasa 1.
-- **Retenciones** de ITBIS e ISR (`<TotalITBISRetenido>`, `<TotalISRRetenido>`) —
-  las fórmulas no están especificadas aún en la documentación procesada.
+- **Cálculo** de las tasas de retención de ITBIS/ISR (30 %/100 % de ITBIS,
+  10 %/2 % de ISR según el servicio, Norma 07-2007 y otras) — las fórmulas no
+  están en la documentación procesada. Hoy el motor solo **suma** los montos
+  retenidos que trae el cliente por línea.
 - **Otra moneda** — RF-06.9: calcular en DOP y dividir por `TipoCambio`.

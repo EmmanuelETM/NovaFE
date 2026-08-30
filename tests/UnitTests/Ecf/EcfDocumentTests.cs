@@ -84,6 +84,33 @@ public class EcfDocumentTests
     }
 
     [Fact]
+    public void Compras_requires_the_retention_area_on_every_line()
+        => EcfDocument.Create(
+                EcfType.Compras,
+                EcfTestData.Header(41),
+                [EcfTestData.Line(retention: EcfTestData.Retention()), EcfTestData.Line(number: 2)])
+            .FirstError.Code.ShouldBe("Ecf.RetentionRequired");
+
+    [Fact]
+    public void Compras_does_not_carry_an_income_type()
+    {
+        var document = EcfDocument.Create(
+            EcfType.Compras,
+            EcfTestData.Header(41) with { IncomeType = "" },
+            [EcfTestData.Line(retention: EcfTestData.Retention())]);
+
+        document.IsError.ShouldBeFalse();   // el 41 no lleva TipoIngresos
+    }
+
+    [Fact]
+    public void A_credito_fiscal_with_a_retention_area_is_rejected()
+        => EcfDocument.Create(
+                EcfType.CreditoFiscal,
+                EcfTestData.Header(31),
+                [EcfTestData.Line(retention: EcfTestData.Retention())])
+            .FirstError.Code.ShouldBe("Ecf.RetentionNotApplicable");
+
+    [Fact]
     public void Credito_fiscal_always_requires_the_buyer_identification()
     {
         var header = EcfTestData.Header(31) with { Buyer = new EcfBuyer("Consumidor Final") };
