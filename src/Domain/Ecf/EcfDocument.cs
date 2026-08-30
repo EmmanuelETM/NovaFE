@@ -34,8 +34,7 @@ public sealed class EcfDocument
         EcfReference? reference,
         EcfCalculationResult calculation,
         int? creditNoteIndicator,
-        EcfForeignCurrencyCheck? foreignCurrencyCheck,
-        IReadOnlyList<EcfAdditionalTaxGroup> additionalTaxBreakdown)
+        EcfForeignCurrencyCheck? foreignCurrencyCheck)
     {
         Type = type;
         Header = header;
@@ -44,7 +43,6 @@ public sealed class EcfDocument
         Calculation = calculation;
         CreditNoteIndicator = creditNoteIndicator;
         ForeignCurrencyCheck = foreignCurrencyCheck;
-        AdditionalTaxBreakdown = additionalTaxBreakdown;
     }
 
     public EcfType Type { get; }
@@ -67,13 +65,6 @@ public sealed class EcfDocument
     /// Informativo — no bloquea la emisión.
     /// </summary>
     public EcfForeignCurrencyCheck? ForeignCurrencyCheck { get; }
-
-    /// <summary>
-    /// <c>&lt;ImpuestosAdicionales&gt;</c> de <c>&lt;Totales&gt;</c> — el desglose de
-    /// <see cref="EcfLine.AdditionalTaxDetail"/> agrupado por código. Vacío si
-    /// ninguna línea trae desglose.
-    /// </summary>
-    public IReadOnlyList<EcfAdditionalTaxGroup> AdditionalTaxBreakdown { get; }
 
     public EcfTotals Totals => Calculation.Totals;
 
@@ -120,35 +111,9 @@ public sealed class EcfDocument
         }
 
         var fxCheck = CheckForeignCurrency(header.ForeignCurrency, calculation.Value.Totals.MontoTotal, lines.Count);
-        var breakdown = BuildAdditionalTaxBreakdown(lines);
 
         return new EcfDocument(
-            type, header, lines, reference, calculation.Value, creditNoteIndicator, fxCheck, breakdown);
-    }
-
-    /// <summary>Agrupa el desglose de impuestos adicionales de todas las líneas por código.</summary>
-    private static IReadOnlyList<EcfAdditionalTaxGroup> BuildAdditionalTaxBreakdown(IReadOnlyList<EcfLine> lines)
-    {
-        var detail = lines
-            .Where(line => line.AdditionalTaxDetail is { Count: > 0 })
-            .SelectMany(line => line.AdditionalTaxDetail!)
-            .ToList();
-
-        if (detail.Count == 0)
-            return [];
-
-        return
-        [
-            .. detail
-                .GroupBy(tax => tax.Code)
-                .OrderBy(group => group.Key, StringComparer.Ordinal)
-                .Select(group => new EcfAdditionalTaxGroup(
-                    Code: group.Key,
-                    Rate: group.Max(tax => tax.Rate),
-                    IscEspecifico: group.Sum(tax => tax.IscEspecifico),
-                    IscAdvalorem: group.Sum(tax => tax.IscAdvalorem),
-                    Otros: group.Sum(tax => tax.Otros))),
-        ];
+            type, header, lines, reference, calculation.Value, creditNoteIndicator, fxCheck);
     }
 
     /// <summary>

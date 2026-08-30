@@ -35,17 +35,6 @@ public sealed record EcfAdditionalTax(
 }
 
 /// <summary>
-/// Un código de impuesto adicional agregado a lo largo de todas las líneas — una
-/// fila de <c>&lt;ImpuestosAdicionales&gt;</c> en <c>&lt;Totales&gt;</c>.
-/// </summary>
-public sealed record EcfAdditionalTaxGroup(
-    string Code,
-    decimal Rate,
-    decimal IscEspecifico,
-    decimal IscAdvalorem,
-    decimal Otros);
-
-/// <summary>
 /// <c>&lt;GradosAlcohol&gt;</c>, <c>&lt;CantidadReferencia&gt;</c>, <c>&lt;Mineria&gt;</c> y demás
 /// campos opcionales del <c>&lt;Item&gt;</c> que hoy son passthrough puro. Se
 /// intercalan en el orden del XSD entre <c>UnidadMedida</c> y <c>PrecioUnitarioItem</c>.

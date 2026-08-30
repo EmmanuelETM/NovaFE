@@ -16,6 +16,31 @@ tiene errores, el XSD no**.
 modelo interno que mapea 1:1 al XML: enums en vez de strings mágicos, `decimal` en
 vez de strings formateados, `DateOnly` en vez de `"dd-MM-yyyy"`.
 
+## Organización del serializador
+
+`EcfXmlSerializer` es una `partial class` interna, sin estado, detrás de
+`IEcfXmlSerializer`. Está partida por región del XSD:
+
+| Archivo | Contenido |
+|---|---|
+| `EcfXmlSerializer.cs` | `Serialize` (orquestación) + `EscapeDgii` |
+| `.Encabezado.cs` | IdDoc, Emisor, Comprador, InformacionesAdicionales, Transporte |
+| `.Totales.cs` | Totales, desglose ImpuestosAdicionales, ValorPagar/retenciones, OtraMoneda |
+| `.Detalles.cs` | DetallesItems y todo lo de un `<Item>` |
+| `.Secciones.cs` | Subtotales, DescuentosORecargos, Paginacion, InformacionReferencia |
+
+- **`EcfXmlProfile`** (`EcfXmlProfile.cs`) — una tabla de 10 filas que describe
+  "qué bloques/campos admite el XSD de cada tipo" (`Comprador`, `TotalsShape`,
+  `Transport`, `Retention`, `MinimalIdDoc`, `IncomeType`, `Mining`…). El
+  serializador lee `profile.X`; **no hay** condicionales `doc.Type == …` sueltos.
+  Agregar un tipo (p. ej. el RFCE) = una fila. Es una preocupación de Infrastructure
+  (deriva de los XSD), no del dominio — por eso no vive en `EcfType`.
+- **`EcfElementWriter`** (`EcfElementWriter.cs`) — `readonly struct` fina sobre
+  `XmlWriter` con los verbos `El` / `Opt` / `Money` / `MoneyOpt` / `Element(...)`
+  (ámbito con `using`). El código de emisión se lee como el árbol del XSD.
+- El desglose de `<ImpuestosAdicionales>` se agrupa **en el serializador**
+  (proyección para el XML, sin regla de negocio) — no en `EcfDocument`.
+
 ## Reglas del serializador
 
 - **Orden de elementos**: exacto del XSD del tipo. Los opcionales sin valor se
