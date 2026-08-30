@@ -171,6 +171,37 @@ public class EcfDocumentTests
             .FirstError.Code.ShouldBe("Ecf.NonContiguousGlobalAdjustmentLines");
 
     [Fact]
+    public void An_invalid_additional_tax_code_is_rejected()
+        => EcfDocument.Create(
+                EcfType.CreditoFiscal,
+                EcfTestData.Header(31),
+                [EcfTestData.Line() with { AdditionalTaxDetail = [new EcfAdditionalTax("099", Otros: 10m)] }])
+            .FirstError.Code.ShouldBe("Ecf.InvalidAdditionalTaxCode");
+
+    [Fact]
+    public void An_additional_tax_breakdown_that_does_not_match_the_aggregate_is_rejected()
+        => EcfDocument.Create(
+                EcfType.CreditoFiscal,
+                EcfTestData.Header(31),
+                [EcfTestData.Line() with
+                {
+                    AdditionalTaxes = 100m,
+                    AdditionalTaxDetail = [new EcfAdditionalTax("001", Rate: 10m, Otros: 10m)],
+                }])
+            .FirstError.Code.ShouldBe("Ecf.AdditionalTaxDetailMismatch");
+
+    [Fact]
+    public void Compras_rejects_the_impuestos_adicionales_breakdown()
+        => EcfDocument.Create(
+                EcfType.Compras,
+                EcfTestData.Header(41),
+                [EcfTestData.Line(retention: EcfTestData.Retention()) with
+                {
+                    AdditionalTaxDetail = [new EcfAdditionalTax("001", Otros: 10m)],
+                }])
+            .FirstError.Code.ShouldBe("Ecf.BlockNotApplicable");
+
+    [Fact]
     public void Compras_rejects_the_shipping_block()
         => EcfDocument.Create(
                 EcfType.Compras,

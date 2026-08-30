@@ -109,6 +109,22 @@ public static class EcfErrors
         code: "Ecf.Norma1007NotApplicable",
         description: $"El Indicador Norma 10-07 solo aplica en el tipo {documentType} para descuentos globales sobre la tasa 1 (18 %) — y solo en los tipos 31/32/33/34/45.");
 
+    public static Error InvalidAdditionalTaxCode(int lineNumber) => Error.Validation(
+        code: "Ecf.InvalidAdditionalTaxCode",
+        description: $"La línea {lineNumber} trae un impuesto adicional con código fuera de la Tabla I (001–039) o con tasa ≤ 0.");
+
+    public static Error AdditionalTaxDetailMismatch(int lineNumber) => Error.Validation(
+        code: "Ecf.AdditionalTaxDetailMismatch",
+        description: $"El desglose de impuestos adicionales de la línea {lineNumber} no coincide con el monto agregado.");
+
+    public static Error TooManySubtotals => Error.Validation(
+        code: "Ecf.TooManySubtotals",
+        description: "La sección Subtotales admite hasta 20 filas.");
+
+    public static Error TooManyPages => Error.Validation(
+        code: "Ecf.TooManyPages",
+        description: "La sección Paginación admite hasta 1000 páginas.");
+
     public static Error NonInvoiceableAmountNotApplicable(int documentType) => Error.Validation(
         code: "Ecf.NonInvoiceableAmountNotApplicable",
         description: $"El tipo {documentType} no admite monto no facturable.");

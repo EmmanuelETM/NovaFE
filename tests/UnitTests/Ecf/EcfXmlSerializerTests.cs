@@ -413,6 +413,54 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Impuestos_adicionales_breakdown_and_line_extras_land_in_the_right_places()
+    {
+        var line = EcfTestData.Line(name: "Ron añejo", unitPrice: 1000m) with
+        {
+            AdditionalTaxes = 236.30m,
+            AdditionalTaxDetail =
+            [
+                new EcfAdditionalTax("014", Rate: 10m, IscEspecifico: 191.30m),
+                new EcfAdditionalTax("002", Rate: 2m, Otros: 45.00m),
+            ],
+            Details = new EcfLineDetails(AlcoholDegrees: 40m, ReferenceQuantity: 0.75m, ReferenceUnit: "43"),
+        };
+        var root = XDocument.Parse(Sut.Serialize(
+            EcfDocument.Create(EcfType.CreditoFiscal, EcfTestData.Header(31), [line]).Value,
+            EcfTestData.SignedAt)).Root!;
+
+        var totales = root.Element("Encabezado")!.Element("Totales")!;
+        var impuestos = totales.Element("ImpuestosAdicionales")!.Elements("ImpuestoAdicional").ToList();
+        impuestos[0].Element("TipoImpuesto")!.Value.ShouldBe("002");   // ordenado por código
+        impuestos[1].Element("TipoImpuesto")!.Value.ShouldBe("014");
+        impuestos[1].Element("MontoImpuestoSelectivoConsumoEspecifico")!.Value.ShouldBe("191.3");
+
+        var item = root.Element("DetallesItems")!.Element("Item")!;
+        item.Element("GradosAlcohol")!.Value.ShouldBe("40");
+        item.Element("CantidadReferencia")!.Value.ShouldBe("0.75");
+        item.Element("TablaImpuestoAdicional")!.Elements("ImpuestoAdicional").Select(e => e.Element("TipoImpuesto")!.Value)
+            .ShouldBe(["014", "002"]);
+    }
+
+    [Fact]
+    public void Subtotales_and_paginacion_are_emitted_after_detalles_in_xsd_order()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            Subtotals = [new EcfSubtotal(Number: 1, Description: "Bebidas", MontoGravadoTotal: 1000m, Amount: 1180m, Lines: 1)],
+            Pagination = [new EcfPage(Number: 1, LineFrom: 1, LineTo: 1, Amount: 1180m)],
+        };
+        var root = XDocument.Parse(Sut.Serialize(
+            EcfDocument.Create(EcfType.CreditoFiscal, header, [EcfTestData.Line(unitPrice: 1000m)]).Value,
+            EcfTestData.SignedAt)).Root!;
+
+        root.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["Encabezado", "DetallesItems", "Subtotales", "Paginacion", "FechaHoraFirma"]);
+        root.Element("Subtotales")!.Element("Subtotal")!.Element("DescripcionSubtotal")!.Value.ShouldBe("Bebidas");
+        root.Element("Paginacion")!.Element("Pagina")!.Element("NoLineaHasta")!.Value.ShouldBe("1");
+    }
+
+    [Fact]
     public void Totales_reflect_the_fiscal_engine()
     {
         var totales = Serialize(EcfTestData.CreditoFiscal()).Element("Encabezado")!.Element("Totales")!;

@@ -27,6 +27,8 @@ namespace NovaFE.Domain.Ecf;
 /// <param name="Shipping"><c>&lt;InformacionesAdicionales&gt;</c> — datos de embarque; opcional.</param>
 /// <param name="Transport"><c>&lt;Transporte&gt;</c> — datos de transporte; opcional.</param>
 /// <param name="GlobalAdjustments"><c>&lt;DescuentosORecargos&gt;</c> — Sección D; null = ninguno.</param>
+/// <param name="Subtotals"><c>&lt;Subtotales&gt;</c> — subtotales informativos para la RI; hasta 20.</param>
+/// <param name="Pagination"><c>&lt;Paginacion&gt;</c> — qué líneas van en cada página de la RI.</param>
 public sealed record EcfHeader(
     Encf Encf,
     DateOnly? SequenceExpiresOn,
@@ -41,4 +43,6 @@ public sealed record EcfHeader(
     EcfForeignCurrency? ForeignCurrency = null,
     EcfShippingInfo? Shipping = null,
     EcfTransport? Transport = null,
-    IReadOnlyList<EcfGlobalAdjustment>? GlobalAdjustments = null);
+    IReadOnlyList<EcfGlobalAdjustment>? GlobalAdjustments = null,
+    IReadOnlyList<EcfSubtotal>? Subtotals = null,
+    IReadOnlyList<EcfPage>? Pagination = null);

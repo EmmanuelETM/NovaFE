@@ -25,6 +25,8 @@ public sealed record EcfItemCode(string Type, string Value);
 /// <param name="Codes"><c>&lt;TablaCodigosItem&gt;</c> — hasta 5.</param>
 /// <param name="Retention"><c>&lt;Retencion&gt;</c> — área de retención de la línea; obligatoria en el tipo 41.</param>
 /// <param name="ForeignCurrency"><c>&lt;OtraMonedaDetalle&gt;</c> — precio y montos de la línea en divisa.</param>
+/// <param name="AdditionalTaxDetail">Desglose de <see cref="AdditionalTaxes"/> por código (Tabla I); alimenta <c>&lt;ImpuestosAdicionales&gt;</c>.</param>
+/// <param name="Details">Campos opcionales del <c>&lt;Item&gt;</c> (GradosAlcohol, CantidadReferencia, Mineria…).</param>
 public sealed record EcfLine(
     int Number,
     ItbisRate Rate,
@@ -40,4 +42,6 @@ public sealed record EcfLine(
     decimal AdditionalTaxes = 0m,
     IReadOnlyList<EcfItemCode>? Codes = null,
     EcfLineRetention? Retention = null,
-    EcfLineForeignCurrency? ForeignCurrency = null);
+    EcfLineForeignCurrency? ForeignCurrency = null,
+    IReadOnlyList<EcfAdditionalTax>? AdditionalTaxDetail = null,
+    EcfLineDetails? Details = null);

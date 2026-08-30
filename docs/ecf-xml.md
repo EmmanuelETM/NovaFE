@@ -51,11 +51,13 @@ relleno.
 
 ## Alcance v1
 
-**Incluido:** **los diez tipos** (31–34, 41, 43–47) con IdDoc, Emisor, Comprador,
-Totales, DetallesItems, InformacionReferencia, Retencion, **InformacionesAdicionales**,
-**Transporte**, **OtraMoneda** y **DescuentosORecargos** (Sección D). Descuentos/
-recargos de línea (`DescuentoMonto`/`RecargoMonto` directos), múltiples tasas de
-ITBIS, tipos de item (bien/servicio), formas de pago.
+**Incluido:** **los diez tipos** (31–34, 41, 43–47) con **todos los bloques del
+formato**: IdDoc, Emisor, Comprador, InformacionesAdicionales, Transporte, Totales
+(+ desglose ImpuestosAdicionales), OtraMoneda, DetallesItems (+ TablaSubcantidad,
+Mineria, TablaImpuestoAdicional, OtraMonedaDetalle, GradosAlcohol,
+CantidadReferencia, fechas de elaboración/vencimiento), Subtotales,
+DescuentosORecargos (Sección D), Paginacion, InformacionReferencia, Retencion.
+**Solo falta el formato reducido RFCE** (tipo 32 &lt; DOP 250 k).
 
 **Bloques transversales** (decisión: passthrough — el cliente trae los datos, el
 motor fiscal no los usa; ver plan):
@@ -84,6 +86,22 @@ motor fiscal no los usa; ver plan):
 - **`<OtraMoneda>` — derivación pendiente de debatir:** hoy el cliente provee los
   montos en divisa; una alternativa es derivarlos (`Money(dop / TipoCambio)`) para
   garantizar consistencia con `<Totales>`.
+- **`ImpuestosAdicionales`** (desglose ISC, `EcfLine.AdditionalTaxDetail` →
+  `EcfAdditionalTax`) — el cliente trae el monto por código de la Tabla I
+  (001–039); `EcfDocument.AdditionalTaxBreakdown` los agrupa para el
+  `<ImpuestosAdicionales>` de `<Totales>` (solo 31/32/33/34/44/45; el 44 sin los
+  montos de ISC específico/ad valorem). La línea emite `<TablaImpuestoAdicional>`
+  con los códigos. Valida código válido + tasa > 0 (`Ecf.InvalidAdditionalTaxCode`)
+  y que el desglose cuadre con `AdditionalTaxes` (`Ecf.AdditionalTaxDetailMismatch`).
+- **`Subtotales`** / **`Paginacion`** (`EcfHeader.Subtotals` / `.Pagination` →
+  `EcfSubtotal` / `EcfPage`) — passthrough **puro** para la RI; el Formato es
+  explícito en que no tocan ningún total. Cada tipo emite el subconjunto de campos
+  que corresponde a su `<Totales>`. Van tras `</DetallesItems>` en el orden
+  `Subtotales → DescuentosORecargos → Paginacion → InformacionReferencia`.
+- **Extras de línea** (`EcfLine.Details` → `EcfLineDetails`) — `GradosAlcohol`,
+  `CantidadReferencia`/`UnidadReferencia`, `PrecioUnitarioReferencia`,
+  `TablaSubcantidad`, `FechaElaboracion`/`FechaVencimientoItem`, `Mineria` (solo
+  32/33/34/46). Passthrough, se intercalan entre `UnidadMedida` y `PrecioUnitarioItem`.
 - **`DescuentosORecargos`** (Sección D, `EcfHeader.GlobalAdjustments` →
   `EcfGlobalAdjustment`) — descuentos/recargos globales; sección **condicional**
   (obligatoriedad 2) en todos menos 43/47 (`Ecf.BlockNotApplicable`). Va tras
@@ -197,11 +215,11 @@ original a la vista.
 **Falta (slices posteriores):**
 
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
-- Bloques transversales restantes (ver plan): `Subtotales` + `Paginacion` +
-  desglose de `ImpuestosAdicionales` + `Mineria` + `TablaSubcantidad` (PR4).
-- El bloque anidado `ImpuestosAdicionalesOtraMoneda` (dentro de `OtraMoneda`) —
-  pareado con el desglose ISC de PR4.
+- El bloque anidado `ImpuestosAdicionalesOtraMoneda` (dentro de `OtraMoneda`).
 - La distribución proporcional de la Sección D a nivel de línea (Formato notas 28/29).
+- `TablaSubDescuento`/`TablaSubRecargo` a nivel de línea.
+- Derivar el ISC específico desde `GradosAlcohol`/`CantidadReferencia` (hoy el
+  cliente trae el monto; ver `docs/fiscal.md`).
 - Sub-tablas de descuento/recargo de línea (`TablaSubDescuento`/`TablaSubRecargo`).
 - El **cálculo** de las tasas de retención (hoy los montos los trae el cliente).
 - Habilitar `<Retencion>` opcional en los tipos que su XSD lo permite (31/33/34).

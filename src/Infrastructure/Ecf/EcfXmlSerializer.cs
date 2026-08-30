@@ -11,11 +11,12 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: los diez tipos (31–34, 41, 43–47) con IdDoc, Emisor, Comprador, Totales,
-/// DetallesItems, InformacionReferencia, Retencion, InformacionesAdicionales,
-/// Transporte, OtraMoneda (+ OtraMonedaDetalle) y DescuentosORecargos (Sección D).
-/// Faltan: Subtotales, Paginación, el desglose de ImpuestosAdicionales y el formato
-/// reducido RFCE (tipo 32 &lt; DOP 250 k). Ver <c>docs/ecf-xml.md</c>.
+/// v1: los diez tipos (31–34, 41, 43–47) con **todos los bloques del formato** —
+/// IdDoc, Emisor, Comprador, InformacionesAdicionales, Transporte, Totales
+/// (+ ImpuestosAdicionales), OtraMoneda, DetallesItems (+ TablaSubcantidad, Mineria,
+/// TablaImpuestoAdicional, OtraMonedaDetalle), Subtotales, DescuentosORecargos,
+/// Paginacion, InformacionReferencia, Retencion. Falta solo el formato reducido
+/// RFCE (tipo 32 &lt; DOP 250 k). Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -38,7 +39,9 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             writer.WriteStartElement("ECF");
             WriteEncabezado(writer, document);
             WriteDetalles(writer, document);
+            WriteSubtotales(writer, document);
             WriteDescuentosORecargos(writer, document);
+            WritePaginacion(writer, document);
             WriteInformacionReferencia(writer, document.Reference);
             El(writer, "FechaHoraFirma", DominicanTimeZone.ToDateTimeString(signedAt));
             writer.WriteEndElement();
@@ -346,6 +349,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
 
         if (t.MontoImpuestoAdicional > 0m)
             El(w, "MontoImpuestoAdicional", EcfXmlFormat.Money(t.MontoImpuestoAdicional));
+        WriteImpuestosAdicionales(w, doc);
 
         El(w, "MontoTotal", EcfXmlFormat.Money(t.MontoTotal));
 
@@ -401,13 +405,76 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
             Text(w, "DescripcionItem", line.Description);
             El(w, "CantidadItem", EcfXmlFormat.Money(line.Quantity));
             Text(w, "UnidadMedida", line.UnitOfMeasure);
+            WriteLineDetails(w, doc.Type, line.Details);
             El(w, "PrecioUnitarioItem", EcfXmlFormat.UnitPrice(line.UnitPrice));
             if (line.Discount > 0m)
                 El(w, "DescuentoMonto", EcfXmlFormat.Money(line.Discount));
             if (line.Surcharge > 0m)
                 El(w, "RecargoMonto", EcfXmlFormat.Money(line.Surcharge));
+            WriteTablaImpuestoAdicional(w, line.AdditionalTaxDetail);
             WriteOtraMonedaDetalle(w, line.ForeignCurrency);
             El(w, "MontoItem", EcfXmlFormat.Money(amounts[line.Number].LineAmount));
+            w.WriteEndElement();
+        }
+
+        w.WriteEndElement();
+    }
+
+    /// <summary>
+    /// Campos opcionales del <c>&lt;Item&gt;</c> entre <c>UnidadMedida</c> y
+    /// <c>PrecioUnitarioItem</c> (CantidadReferencia, Subcantidad, GradosAlcohol,
+    /// fechas, Minería). El bloque <c>&lt;Mineria&gt;</c> solo aplica a 32/33/34/46.
+    /// </summary>
+    private static void WriteLineDetails(XmlWriter w, EcfType type, EcfLineDetails? d)
+    {
+        if (d is null)
+            return;
+
+        Amount(w, "CantidadReferencia", d.ReferenceQuantity);
+        Opt(w, "UnidadReferencia", d.ReferenceUnit);
+        if (d.Subquantities is { Count: > 0 } subs)
+        {
+            w.WriteStartElement("TablaSubcantidad");
+            foreach (var s in subs.Take(5))
+            {
+                w.WriteStartElement("SubcantidadItem");
+                El(w, "Subcantidad", EcfXmlFormat.Subquantity(s.Quantity));
+                Opt(w, "CodigoSubcantidad", s.UnitCode);
+                w.WriteEndElement();
+            }
+
+            w.WriteEndElement();
+        }
+
+        Amount(w, "GradosAlcohol", d.AlcoholDegrees);
+        Amount(w, "PrecioUnitarioReferencia", d.ReferenceUnitPrice);
+        Opt(w, "FechaElaboracion", d.Elaboration is { } el ? EcfXmlFormat.Date(el) : null);
+        Opt(w, "FechaVencimientoItem", d.ItemExpiry is { } ex ? EcfXmlFormat.Date(ex) : null);
+
+        var miningTypes = type == EcfType.Consumo || type == EcfType.NotaDebito
+            || type == EcfType.NotaCredito || type == EcfType.Exportaciones;
+        if (miningTypes && d.Mining is { } m)
+        {
+            w.WriteStartElement("Mineria");
+            Amount(w, "PesoNetoKilogramo", m.NetWeightKilogram);
+            Amount(w, "PesoNetoMineria", m.NetWeightMining);
+            if (m.AffiliationType is { } af) El(w, "TipoAfiliacion", Int(af));
+            if (m.Settlement is { } se) El(w, "Liquidacion", Int(se));
+            w.WriteEndElement();
+        }
+    }
+
+    /// <summary><c>&lt;TablaImpuestoAdicional&gt;</c> de la línea — solo los códigos.</summary>
+    private static void WriteTablaImpuestoAdicional(XmlWriter w, IReadOnlyList<EcfAdditionalTax>? detail)
+    {
+        if (detail is not { Count: > 0 })
+            return;
+
+        w.WriteStartElement("TablaImpuestoAdicional");
+        foreach (var tax in detail.Take(2))
+        {
+            w.WriteStartElement("ImpuestoAdicional");
+            El(w, "TipoImpuesto", tax.Code);
             w.WriteEndElement();
         }
 
@@ -528,6 +595,149 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
 
         w.WriteEndElement();
     }
+
+    // ---- ImpuestosAdicionales / Subtotales / Paginacion -----------------
+
+    /// <summary>
+    /// <c>&lt;ImpuestosAdicionales&gt;</c> dentro de <c>&lt;Totales&gt;</c> — el desglose
+    /// por código (Tabla I). Solo tipos 31/32/33/34/44/45; el 44 no lleva los montos
+    /// de ISC específico/ad valorem.
+    /// </summary>
+    private static void WriteImpuestosAdicionales(XmlWriter w, EcfDocument doc)
+    {
+        if (doc.AdditionalTaxBreakdown.Count == 0)
+            return;
+
+        var withIsc = doc.Type != EcfType.RegimenesEspeciales;
+
+        w.WriteStartElement("ImpuestosAdicionales");
+        foreach (var g in doc.AdditionalTaxBreakdown)
+        {
+            w.WriteStartElement("ImpuestoAdicional");
+            El(w, "TipoImpuesto", g.Code);
+            El(w, "TasaImpuestoAdicional", EcfXmlFormat.Percent(g.Rate));
+            if (withIsc)
+            {
+                Amount(w, "MontoImpuestoSelectivoConsumoEspecifico", g.IscEspecifico);
+                Amount(w, "MontoImpuestoSelectivoConsumoAdvalorem", g.IscAdvalorem);
+            }
+
+            Amount(w, "OtrosImpuestosAdicionales", g.Otros);
+            w.WriteEndElement();
+        }
+
+        w.WriteEndElement();
+    }
+
+    /// <summary><c>&lt;Subtotales&gt;</c> — passthrough informativo. Subconjunto por tipo.</summary>
+    private static void WriteSubtotales(XmlWriter w, EcfDocument doc)
+    {
+        if (doc.Header.Subtotals is not { Count: > 0 } subtotals)
+            return;
+
+        var shape = TotalsShapeOf(doc.Type);
+
+        w.WriteStartElement("Subtotales");
+        foreach (var s in subtotals)
+        {
+            w.WriteStartElement("Subtotal");
+            if (s.Number is { } n) El(w, "NumeroSubTotal", Int(n));
+            Text(w, "DescripcionSubtotal", s.Description);
+            if (s.Order is { } o) El(w, "Orden", Int(o));
+
+            if (shape == TotalsShape.Full)
+            {
+                Amount(w, "SubTotalMontoGravadoTotal", s.MontoGravadoTotal);
+                Amount(w, "SubTotalMontoGravadoI1", s.MontoGravadoI1);
+                Amount(w, "SubTotalMontoGravadoI2", s.MontoGravadoI2);
+                Amount(w, "SubTotalMontoGravadoI3", s.MontoGravadoI3);
+                Amount(w, "SubTotaITBIS", s.TotalItbis);
+                Amount(w, "SubTotaITBIS1", s.Itbis1);
+                Amount(w, "SubTotaITBIS2", s.Itbis2);
+                Amount(w, "SubTotaITBIS3", s.Itbis3);
+            }
+            else if (shape == TotalsShape.ZeroRate)
+            {
+                Amount(w, "SubTotalMontoGravadoTotal", s.MontoGravadoTotal);
+                Amount(w, "SubTotalMontoGravadoI3", s.MontoGravadoI3);
+                Amount(w, "SubTotaITBIS", s.TotalItbis);
+                Amount(w, "SubTotaITBIS3", s.Itbis3);
+            }
+
+            Amount(w, "SubTotalImpuestoAdicional", s.MontoImpuestoAdicional);
+            Amount(w, "SubTotalExento", s.MontoExento);
+            Amount(w, "MontoSubTotal", s.Amount);
+            if (s.Lines is { } l) El(w, "Lineas", Int(l));
+            w.WriteEndElement();
+        }
+
+        w.WriteEndElement();
+    }
+
+    /// <summary><c>&lt;Paginacion&gt;</c> — passthrough presentacional. Subconjunto por tipo.</summary>
+    private static void WritePaginacion(XmlWriter w, EcfDocument doc)
+    {
+        if (doc.Header.Pagination is not { Count: > 0 } pages)
+            return;
+
+        var shape = TotalsShapeOf(doc.Type);
+
+        w.WriteStartElement("Paginacion");
+        foreach (var p in pages)
+        {
+            w.WriteStartElement("Pagina");
+            if (p.Number is { } n) El(w, "PaginaNo", Int(n));
+            if (p.LineFrom is { } from) El(w, "NoLineaDesde", Int(from));
+            if (p.LineTo is { } to) El(w, "NoLineaHasta", Int(to));
+
+            if (shape == TotalsShape.Full)
+            {
+                Amount(w, "SubtotalMontoGravadoPagina", p.MontoGravadoTotal);
+                Amount(w, "SubtotalMontoGravado1Pagina", p.MontoGravadoI1);
+                Amount(w, "SubtotalMontoGravado2Pagina", p.MontoGravadoI2);
+                Amount(w, "SubtotalMontoGravado3Pagina", p.MontoGravadoI3);
+                Amount(w, "SubtotalExentoPagina", p.MontoExento);
+                Amount(w, "SubtotalItbisPagina", p.TotalItbis);
+                Amount(w, "SubtotalItbis1Pagina", p.Itbis1);
+                Amount(w, "SubtotalItbis2Pagina", p.Itbis2);
+                Amount(w, "SubtotalItbis3Pagina", p.Itbis3);
+            }
+            else if (shape == TotalsShape.ZeroRate)
+            {
+                Amount(w, "SubtotalMontoGravadoPagina", p.MontoGravadoTotal);
+                Amount(w, "SubtotalMontoGravado3Pagina", p.MontoGravadoI3);
+                Amount(w, "SubtotalItbisPagina", p.TotalItbis);
+                Amount(w, "SubtotalItbis3Pagina", p.Itbis3);
+            }
+            else
+            {
+                Amount(w, "SubtotalExentoPagina", p.MontoExento);
+            }
+
+            Amount(w, "SubtotalImpuestoAdicionalPagina", p.MontoImpuestoAdicional);
+            if (p.IscEspecifico is not null || p.OtrosImpuestos is not null)
+            {
+                w.WriteStartElement("SubtotalImpuestoAdicional");
+                Amount(w, "SubtotalImpuestoSelectivoConsumoEspecificoPagina", p.IscEspecifico);
+                Amount(w, "SubtotalOtrosImpuesto", p.OtrosImpuestos);
+                w.WriteEndElement();
+            }
+
+            Amount(w, "MontoSubtotalPagina", p.Amount);
+            Amount(w, "SubtotalMontoNoFacturablePagina", p.NonInvoiceableAmount);
+            w.WriteEndElement();
+        }
+
+        w.WriteEndElement();
+    }
+
+    private enum TotalsShape { Full, ZeroRate, ExemptOnly }
+
+    private static TotalsShape TotalsShapeOf(EcfType type) =>
+        type == EcfType.Exportaciones ? TotalsShape.ZeroRate
+        : type == EcfType.GastosMenores || type == EcfType.RegimenesEspeciales || type == EcfType.PagosExterior
+            ? TotalsShape.ExemptOnly
+            : TotalsShape.Full;
 
     // ---- helpers --------------------------------------------------------
 
