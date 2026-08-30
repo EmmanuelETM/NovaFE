@@ -98,6 +98,14 @@ public class EcfDocumentTests
         EcfTestData.Header(32) with { SequenceExpiresOn = null, Buyer = buyer };
 
     [Fact]
+    public void Consumo_requires_the_income_type()
+        => EcfDocument.Create(
+                EcfType.Consumo,
+                Consumo(new EcfBuyer("Consumidor Final")) with { IncomeType = "" },
+                [EcfTestData.Line(unitPrice: 1000m)])
+            .FirstError.Code.ShouldBe("Ecf.IncomeTypeRequired");
+
+    [Fact]
     public void Consumo_below_the_threshold_does_not_need_a_buyer()
         => EcfDocument.Create(
                 EcfType.Consumo,

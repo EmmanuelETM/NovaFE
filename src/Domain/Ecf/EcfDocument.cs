@@ -197,6 +197,7 @@ public sealed class EcfDocument
 
     private static bool RequiresIncomeType(EcfType type) =>
         type == EcfType.CreditoFiscal
+        || type == EcfType.Consumo
         || type == EcfType.NotaDebito
         || type == EcfType.NotaCredito
         || type == EcfType.Compras

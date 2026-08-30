@@ -51,10 +51,17 @@ relleno.
 
 ## Alcance v1
 
-**Incluido:** tipos **31**, **33** y **34** con IdDoc, Emisor, Comprador, Totales,
-DetallesItems, InformacionReferencia. Descuentos/recargos de línea (`DescuentoMonto`/
-`RecargoMonto` directos), múltiples tasas de ITBIS, tipos de item (bien/servicio),
-formas de pago.
+**Incluido:** tipos **31**, **32**, **33** y **34** con IdDoc, Emisor, Comprador,
+Totales, DetallesItems, InformacionReferencia. Descuentos/recargos de línea
+(`DescuentoMonto`/`RecargoMonto` directos), múltiples tasas de ITBIS, tipos de item
+(bien/servicio), formas de pago.
+
+**Tipo 32 (Factura de Consumo)** — `<IdDoc>` como el 31 pero **sin
+`<FechaVencimientoSecuencia>`** (`EcfType.HasSequenceExpiry` = false, igual que el
+34); mantiene `<TablaFormasPago>`. `TipoIngresos` es obligatorio (XSD
+`minOccurs="1"`; el dominio lo exige). El comprador solo se identifica si
+`MontoTotal ≥ DOP 250 000` (ver `EcfDocument.RequiresBuyerIdentification`). No hace
+la bifurcación al formato reducido RFCE — sigue pendiente.
 
 **Tipo 33 (Nota de Débito)** — `<IdDoc>` idéntico al 31 (mantiene
 `<FechaVencimientoSecuencia>` y `<TablaFormasPago>`); lo propio es que
@@ -82,8 +89,8 @@ original a la vista.
 
 **Falta (slices posteriores):**
 
-- Tipos 32 (con bifurcación RFCE &lt; DOP 250 k), 41, 43–47 — cada uno con
-  su XSD embebido y sus reglas de obligatoriedad.
+- El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
+- Tipos 41, 43–47 — cada uno con su XSD embebido y sus reglas de obligatoriedad.
 - Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `OtraMoneda`,
   `Subtotales`, `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
   `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo, retenciones.

@@ -66,6 +66,16 @@ internal static class EcfTestData
             lines.Length == 0 ? [Line()] : lines).Value;
 
     /// <summary>
+    /// Factura de Consumo (tipo 32). Sin vencimiento de secuencia; el comprador
+    /// solo se identifica si el monto llega a DOP 250 000 (aquí no).
+    /// </summary>
+    public static EcfDocument Consumo(params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.Consumo,
+            Header(32) with { SequenceExpiresOn = null, Buyer = new EcfBuyer("Consumidor Final") },
+            lines.Length == 0 ? [Line()] : lines).Value;
+
+    /// <summary>
     /// Nota de Débito (tipo 33) que modifica un e-CF de crédito fiscal. Mantiene
     /// el vencimiento de secuencia y las formas de pago (igual que el 31); lo
     /// propio es la <c>InformacionReferencia</c> obligatoria.
