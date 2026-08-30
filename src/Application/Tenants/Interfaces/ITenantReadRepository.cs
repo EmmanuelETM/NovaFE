@@ -1,3 +1,4 @@
+using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Domain.Common;
 
 namespace NovaFE.Application.Tenants.Interfaces;
@@ -7,9 +8,9 @@ namespace NovaFE.Application.Tenants.Interfaces;
 /// </summary>
 public interface ITenantReadRepository
 {
-    Task<TenantDetail?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<TenantDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
-    Task<PagedResult<TenantSummary>> ListAsync(
+    Task<PagedResult<TenantSummaryDto>> ListAsync(
         int page,
         int pageSize,
         string? search,

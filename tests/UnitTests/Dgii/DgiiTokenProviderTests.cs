@@ -1,8 +1,9 @@
 using ErrorOr;
 using NSubstitute;
 using NovaFE.Application.Common.Interfaces;
-using NovaFE.Application.Dgii;
-using NovaFE.Application.Signing;
+using NovaFE.Application.Dgii.Interfaces;
+using NovaFE.Application.Signing.Contracts;
+using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Dgii;
 using NovaFE.Infrastructure.Dgii;

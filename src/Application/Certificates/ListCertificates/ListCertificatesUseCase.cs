@@ -1,4 +1,5 @@
 using ErrorOr;
+using NovaFE.Application.Certificates.Contracts;
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common;
 using NovaFE.Application.Common.Interfaces;
@@ -11,9 +12,9 @@ public sealed class ListCertificatesUseCase(
     ILoggerFactory loggerFactory,
     ICurrentTenant currentTenant,
     ICertificateReadRepository certificates)
-    : ParameterlessQueryUseCase<IReadOnlyList<CertificateView>>(loggerFactory)
+    : ParameterlessQueryUseCase<IReadOnlyList<CertificateDto>>(loggerFactory)
 {
-    protected override async Task<ErrorOr<IReadOnlyList<CertificateView>>> ExecuteCore(
+    protected override async Task<ErrorOr<IReadOnlyList<CertificateDto>>> ExecuteCore(
         NoRequest request,
         CancellationToken ct)
     {

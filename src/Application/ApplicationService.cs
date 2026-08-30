@@ -1,5 +1,6 @@
 ﻿using NovaFE.Application.Common;
 using NovaFE.Application.Signing;
+using NovaFE.Application.Signing.Interfaces;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 

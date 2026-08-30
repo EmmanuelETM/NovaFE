@@ -1,8 +1,8 @@
 using ErrorOr;
 using NovaFE.Application.Common;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Sequences.Contracts;
 using NovaFE.Application.Sequences.Interfaces;
-using NovaFE.Application.Sequences.ReadModels;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Sequences;
 using Microsoft.Extensions.Logging;
@@ -13,9 +13,9 @@ public sealed class GetSequenceUseCase(
     ILoggerFactory loggerFactory,
     ICurrentTenant currentTenant,
     INcfSequenceReadRepository sequences)
-    : QueryUseCase<GetSequenceQuery, NcfSequenceView>(loggerFactory)
+    : QueryUseCase<GetSequenceQuery, NcfSequenceDto>(loggerFactory)
 {
-    protected override async Task<ErrorOr<NcfSequenceView>> ExecuteCore(
+    protected override async Task<ErrorOr<NcfSequenceDto>> ExecuteCore(
         GetSequenceQuery request,
         CancellationToken ct)
     {

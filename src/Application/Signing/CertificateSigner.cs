@@ -2,6 +2,8 @@ using System.Security.Cryptography.X509Certificates;
 using ErrorOr;
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Signing.Contracts;
+using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Domain.Certificates;
 using NovaFE.Domain.Common;
 

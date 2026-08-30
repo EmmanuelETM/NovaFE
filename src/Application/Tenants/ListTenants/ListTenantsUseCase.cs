@@ -1,5 +1,6 @@
 using ErrorOr;
 using NovaFE.Application.Common;
+using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Domain.Common;
 using Microsoft.Extensions.Logging;
@@ -9,9 +10,9 @@ namespace NovaFE.Application.Tenants.ListTenants;
 public sealed class ListTenantsUseCase(
     ILoggerFactory loggerFactory,
     ITenantReadRepository tenants)
-    : QueryUseCase<ListTenantsQuery, PagedResult<TenantSummary>>(loggerFactory)
+    : QueryUseCase<ListTenantsQuery, PagedResult<TenantSummaryDto>>(loggerFactory)
 {
-    protected override async Task<ErrorOr<PagedResult<TenantSummary>>> ExecuteCore(
+    protected override async Task<ErrorOr<PagedResult<TenantSummaryDto>>> ExecuteCore(
         ListTenantsQuery request,
         CancellationToken ct)
     {

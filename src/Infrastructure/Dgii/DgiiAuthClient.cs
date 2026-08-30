@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using NovaFE.Application.Dgii;
+using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Common.Json;
 using NovaFE.Domain.Dgii;

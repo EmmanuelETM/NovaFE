@@ -1,5 +1,5 @@
 using System.Text.Json;
-using NovaFE.Application.Dgii;
+using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Dgii;
 using Microsoft.Extensions.Caching.Distributed;

@@ -1,7 +1,7 @@
 using ErrorOr;
 using NovaFE.Application.Common.Interfaces;
-using NovaFE.Application.Dgii;
-using NovaFE.Application.Signing;
+using NovaFE.Application.Dgii.Interfaces;
+using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Dgii;
 using Microsoft.Extensions.Logging;
