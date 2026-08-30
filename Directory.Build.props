@@ -31,6 +31,12 @@
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!--
+      xUnit1051 pide propagar TestContext.Current.CancellationToken a toda llamada
+      que acepte un CancellationToken. En estas pruebas (rápidas, sin I/O largo)
+      no aporta y ensucia cada línea; se silencia solo en los proyectos de test.
+    -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
   </PropertyGroup>
 
 </Project>

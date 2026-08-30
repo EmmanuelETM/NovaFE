@@ -34,16 +34,48 @@ Infrastructure┘   (implementa las interfaces que declara Application)
 
 ## Cómo se agrega una funcionalidad
 
-Siempre en este orden, un archivo por concepto:
+Siempre en este orden, un archivo por concepto. El módulo **`Tenants`** es el
+vertical slice de referencia — cópialo.
 
-1. `src/Domain/<Modulo>/<Entidad>.cs` y `<Entidad>Errors.cs`
-2. `src/Application/<Modulo>/Interfaces/I<Entidad>Repository.cs`
-3. `src/Application/<Modulo>/<Accion>/<Accion>Command.cs` (o `Query.cs`)
-4. `src/Application/<Modulo>/<Accion>/<Accion>CommandValidator.cs`
-5. `src/Application/<Modulo>/<Accion>/<Accion>UseCase.cs`
-6. `src/Infrastructure/<Modulo>/.../<Entidad>Repository.cs`
-7. Registrar **solo el repositorio** en `src/Infrastructure/InfrastructureService.cs`
-8. `src/Service/Controllers/<Modulo>Controller.cs`
+1. `src/Domain/<Module>/<Entity>.cs` y `<Entity>Errors.cs`
+2. `src/Application/<Module>/Interfaces/I<Entity>Repository.cs` (escritura, EF) e
+   `I<Entity>ReadRepository.cs` (lectura, Dapper)
+3. `src/Application/<Module>/<Action>/<Action>Command.cs` (o `Query.cs`) y sus
+   read models si es query
+4. `src/Application/<Module>/<Action>/<Action>CommandValidator.cs`
+5. `src/Application/<Module>/<Action>/<Action>UseCase.cs`
+6. `src/Infrastructure/Persistence/EfCore/Configurations/<Entity>Configuration.cs`
+7. `src/Infrastructure/Persistence/EfCore/Repositories/<Entity>Repository.cs` y
+   `.../Sql/Repositories/<Entity>ReadRepository.cs`
+8. Registrar **solo los repositorios** en `src/Infrastructure/InfrastructureService.cs`
+9. Migración: `dotnet dotnet-ef migrations add <Name> --project src/Infrastructure
+   --startup-project src/Service` (necesita `ASPNETCORE_ENVIRONMENT=Development`
+   para el connection string). Si la entidad es `ITenantOwned`, llamar a
+   `RowLevelSecurity.Enable(migrationBuilder, "<table>")` en el `Up`.
+10. `src/Service/Controllers/<Module>Controller.cs`
+11. Pruebas: unitarias del dominio y del caso de uso; integración del endpoint.
+
+Nombres en **inglés** (identificadores, columnas, tests); español solo en
+comentarios y en lo que sale de la API. Ver la regla de idioma más abajo.
+
+---
+
+## Idioma
+
+Regla global del servicio. Todo lo **interno** va en **inglés**: nombres de
+clases, métodos, variables, parámetros, namespaces, archivos, entidades y
+propiedades de EF, nombres de tests, columnas y tablas (snake_case en inglés),
+los `code` de los `Error`, las plantillas de log.
+
+El **español** es solo para lo que mira hacia afuera:
+
+- **comentarios** y documentación XML;
+- todo lo que la API **emite**: descripciones de `Error`, títulos y detalles de
+  ProblemDetails, mensajes de validación, texto de webhooks y respuestas, texto de
+  la Representación Impresa.
+
+El scaffold todavía tiene identificadores en español (`Aplicar`, `conexion`,
+`EscribirRespuesta`…); se dejan salvo que se toque ese código.
 
 ---
 
@@ -77,10 +109,31 @@ uso nunca menciona un status code. Los errores de cada módulo se declaran en
 
 ### Persistencia
 
-La base de datos es **PostgreSQL** (proveedor Npgsql). Conviven los dos accesos:
+La base de datos es **PostgreSQL** (proveedor Npgsql), esquema **snake_case**
+(`UseSnakeCaseNamingConvention`). Conviven los dos accesos:
 `src/Infrastructure/Persistence/EfCore` (EF Core) y `src/Infrastructure/Persistence/Sql`
 (Dapper). La convención es **EF Core para escrituras, Dapper para lecturas**, con
-interfaces separadas (`I<Entidad>Repository` e `I<Entidad>ReadRepository`).
+interfaces separadas (`I<Entity>Repository` e `I<Entity>ReadRepository`).
+
+- **Migraciones EF Core**, no `schema.sql`. `dotnet-ef` está en el manifiesto de
+  herramientas (`dotnet tool restore`). Las pruebas de integración corren las
+  migraciones sobre el contenedor.
+- **Lecturas Dapper**: aliasear las columnas al nombre del parámetro del record
+  (`legal_name AS "LegalName"`); si no, Dapper busca un constructor con parámetros
+  snake_case. Hay un `DateTimeOffsetHandler` para leer `timestamptz`.
+
+### Multi-tenant (esquema compartido + RLS)
+
+La mayoría de las tablas son de un tenant. Ver `docs/multi-tenancy.md`. En corto:
+
+- Entidad con datos de cliente → implementa `ITenantOwned` (`Guid TenantId { get; private set; }`).
+  `Tenant` **no** lo es: es la raíz.
+- `ICurrentTenant` (Application) da el tenant de la petición; lo llena
+  `TenantResolutionMiddleware` (hoy del header `X-Tenant-Id`).
+- Aislamiento en 3 capas: filtro global de EF (`"Tenant"`, siempre), interceptor
+  de escritura (`TenantStampingInterceptor`), y RLS en Postgres (producción; un
+  superusuario la ignora, por eso el filtro de EF es la garantía en local/tests).
+- Migración de tabla `ITenantOwned`: `RowLevelSecurity.Enable(migrationBuilder, "<table>")`.
 
 **Caché** (`src/Infrastructure/Caching`): `AddCache()` registra `IDistributedCache`
 **en memoria**. No hay Redis a propósito — a la escala de arranque es superficie
@@ -137,9 +190,10 @@ pasa hasta la consulta. Nada de `.Result`, `.Wait()` ni `async void`.
 - **Integración** (`tests/IntegrationTests`): la API completa contra PostgreSQL
   real en Testcontainers. Hereda de `IntegrationTestBase` y marca las pruebas con
   `[RequiresDockerFact]`, no con `[Fact]`, para que se omitan si no hay Docker.
-- Las aserciones son con **Shouldly** (`resultado.ShouldBe(...)`).
-- Si agregas una tabla, agrégala también a
-  `tests/IntegrationTests/Fixtures/schema.sql`.
+- Las aserciones son con **Shouldly** (`result.ShouldBe(...)`).
+- El esquema de las pruebas de integración sale de las migraciones de EF Core
+  (`DatabaseFixture` corre `Database.MigrateAsync` sobre el contenedor). Al
+  agregar una entidad, genera su migración; no hay `schema.sql`.
 
 ---
 
