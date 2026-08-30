@@ -84,11 +84,82 @@ public class EcfDocumentTests
     }
 
     [Fact]
-    public void Credito_fiscal_requires_the_buyer_rnc()
+    public void Credito_fiscal_always_requires_the_buyer_identification()
     {
         var header = EcfTestData.Header(31) with { Buyer = new EcfBuyer("Consumidor Final") };
 
         EcfDocument.Create(EcfType.CreditoFiscal, header, [EcfTestData.Line()])
-            .FirstError.Code.ShouldBe("Ecf.BuyerRncRequired");
+            .FirstError.Code.ShouldBe("Ecf.BuyerIdentificationRequired");
+    }
+
+    // --- identificación del comprador condicional (tipos 32/33/34) --------
+
+    private static EcfHeader Consumo(EcfBuyer buyer) =>
+        EcfTestData.Header(32) with { SequenceExpiresOn = null, Buyer = buyer };
+
+    [Fact]
+    public void Consumo_below_the_threshold_does_not_need_a_buyer()
+        => EcfDocument.Create(
+                EcfType.Consumo,
+                Consumo(new EcfBuyer("Consumidor Final")),
+                [EcfTestData.Line(unitPrice: 1000m)])
+            .IsError.ShouldBeFalse();
+
+    [Fact]
+    public void Consumo_at_or_above_the_threshold_needs_the_buyer_identified()
+        => EcfDocument.Create(
+                EcfType.Consumo,
+                Consumo(new EcfBuyer("Cliente Grande")),
+                [EcfTestData.Line(unitPrice: 300_000m)])
+            .FirstError.Code.ShouldBe("Ecf.BuyerIdentificationRequired");
+
+    [Fact]
+    public void Consumo_high_value_with_a_foreign_id_is_accepted()
+        => EcfDocument.Create(
+                EcfType.Consumo,
+                Consumo(new EcfBuyer("Foreign Buyer LLC", ForeignId: "US-99887766")),
+                [EcfTestData.Line(unitPrice: 300_000m)])
+            .IsError.ShouldBeFalse();
+
+    [Fact]
+    public void Nota_credito_that_modifies_a_credito_fiscal_needs_the_buyer()
+    {
+        var header = EcfTestData.Header(34) with
+        {
+            SequenceExpiresOn = null,
+            Buyer = new EcfBuyer("Sin identificar"),
+        };
+        var reference = new EcfReference("E310000000010", EcfTestData.IssueDate.AddDays(-5), ModificationCode.CorrectsAmounts);
+
+        EcfDocument.Create(EcfType.NotaCredito, header, [EcfTestData.Line()], reference)
+            .FirstError.Code.ShouldBe("Ecf.BuyerIdentificationRequired");
+    }
+
+    [Fact]
+    public void Nota_credito_that_modifies_a_small_consumo_does_not_need_the_buyer()
+    {
+        var header = EcfTestData.Header(34) with
+        {
+            SequenceExpiresOn = null,
+            Buyer = new EcfBuyer("Consumidor Final"),
+        };
+        var reference = new EcfReference("E320000000010", EcfTestData.IssueDate.AddDays(-5), ModificationCode.CorrectsAmounts);
+
+        EcfDocument.Create(EcfType.NotaCredito, header, [EcfTestData.Line(unitPrice: 1000m)], reference)
+            .IsError.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Nota_credito_over_the_threshold_needs_the_buyer_regardless_of_what_it_modifies()
+    {
+        var header = EcfTestData.Header(34) with
+        {
+            SequenceExpiresOn = null,
+            Buyer = new EcfBuyer("Consumidor Final"),
+        };
+        var reference = new EcfReference("E320000000010", EcfTestData.IssueDate.AddDays(-5), ModificationCode.CorrectsAmounts);
+
+        EcfDocument.Create(EcfType.NotaCredito, header, [EcfTestData.Line(unitPrice: 300_000m)], reference)
+            .FirstError.Code.ShouldBe("Ecf.BuyerIdentificationRequired");
     }
 }

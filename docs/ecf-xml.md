@@ -56,9 +56,18 @@ InformacionReferencia. Descuentos/recargos de línea (`DescuentoMonto`/
 `RecargoMonto` directos), múltiples tasas de ITBIS, tipos de item (bien/servicio),
 formas de pago.
 
-**Verificado contra el XSD** (`e-CF-31-v1.0.xsd`): `IndicadorBienoServicio` es
-**1 = Bien, 2 = Servicio** (el contexto viejo decía B/S). `RNCValidationType` son
-9 u 11 dígitos (no 10). `IndicadorFacturacion` admite `0` ("No Facturable").
+**Verificado contra el XSD**: `IndicadorBienoServicio` es **1 = Bien, 2 = Servicio**
+(el contexto viejo decía B/S). `RNCValidationType` son 9 u 11 dígitos (no 10).
+`IndicadorFacturacion` admite `0` ("No Facturable"). En los tipos 32/33/34
+`RNCComprador` y `RazonSocialComprador` son `minOccurs="0"` (no estructural).
+
+**Identificación del comprador** (`EcfDocument.RequiresBuyerIdentification`):
+31/41/44/45 siempre; 32 solo si `MontoTotal ≥ ConsumerIdentificationThreshold`
+(DOP 250 000) o comprador extranjero (Identificador Extranjero); 33/34 si su
+propio monto llega al umbral o si modifican un e-CF de un tipo que identifica al
+comprador (el `NCFModificado` se parsea para saber el tipo). Si una NC/ND modifica
+un tipo 32 de monto desconocido, la capa de aplicación lo resuelve con el e-CF
+original a la vista.
 
 **Falta (slices posteriores):**
 
