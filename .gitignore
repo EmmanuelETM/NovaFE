@@ -32,3 +32,6 @@ appsettings.Local.json
 
 # Claude Code — overrides locales (los hooks y permisos del equipo van en .claude/settings.json)
 .claude/settings.local.json
+
+# Galería de XML de ejemplo (se regenera con EcfXmlGallery)
+samples/

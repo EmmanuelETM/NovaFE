@@ -17,6 +17,22 @@ tiene errores, el XSD no**.
 modelo interno que mapea 1:1 al XML: enums en vez de strings mágicos, `decimal` en
 vez de strings formateados, `DateOnly` en vez de `"dd-MM-yyyy"`.
 
+## Ver el XML — galería de ejemplos
+
+`EcfXmlGallery` (`tests/UnitTests/Ecf/EcfXmlGallery.cs`) genera un XML por
+tipo/combinación en `samples/ecf/` (gitignored) y valida cada uno contra su XSD:
+
+```bash
+dotnet test tests/UnitTests/NovaFE.UnitTests.csproj --filter "FullyQualifiedName~EcfXmlGallery"
+```
+
+Abrí `samples/ecf/_README.md` para el índice con el estado de validación. Cubre
+los 10 tipos + combinaciones (OtraMoneda, Sección D, desglose ISC, embarque,
+Subtotales/Paginacion, multi-tasa, precios con ITBIS) + el RFCE. **Para probar una
+combinación propia:** agregá una entrada a `Documents()` en ese archivo.
+
+También es una prueba de humo: si un serializador tira o genera XML inválido, falla.
+
 ## Organización del serializador
 
 `EcfXmlSerializer` es una `partial class` interna, sin estado, detrás de
