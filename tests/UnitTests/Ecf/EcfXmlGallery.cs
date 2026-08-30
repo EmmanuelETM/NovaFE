@@ -2,10 +2,13 @@ using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 using ErrorOr;
+using Microsoft.Extensions.Time.Testing;
+using NovaFE.Application.Ecf;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Ecf;
 using NovaFE.Domain.Fiscal;
 using NovaFE.Infrastructure.Ecf;
+using NovaFE.UnitTests.Signing;
 
 namespace NovaFE.UnitTests.Ecf;
 
@@ -27,6 +30,16 @@ public class EcfXmlGallery(ITestOutputHelper output)
     private static readonly EcfXmlSerializer Serializer = new();
     private static readonly RfceSerializer Rfce = new();
     private static readonly EcfXsdValidator Validator = new();
+
+    /// <summary>
+    /// <see cref="EcfSigner"/> real, con una firma autofirmada efímera en lugar del
+    /// certificado del vault. Reloj fijo para que <c>&lt;FechaHoraFirma&gt;</c> no
+    /// cambie entre corridas.
+    /// </summary>
+    private static readonly EcfSigner Signer = new(
+        Serializer, Rfce, Validator,
+        new SelfSignedCertificateSigner(),
+        new FakeTimeProvider(EcfTestData.SignedAt));
 
     [Fact]
     public void Generate()
@@ -74,6 +87,31 @@ public class EcfXmlGallery(ITestOutputHelper output)
         var rfceXml = Rfce.Serialize(rfceDoc, "aB3xZ9");
         yield return ("19-rfce", "Resumen (RFCE) de un tipo 32 < DOP 250 000",
             rfceXml, Validator.ValidateRfce(SignedShapeRfce(rfceXml)));
+
+        // Variantes firmadas: el e-CF con <Signature> real (XMLDSig, C14N estándar)
+        // pasado por EcfSigner. La validación XSD ya corre dentro del signer.
+        foreach (var (name, description, doc) in SignedShowcase())
+        {
+            var signed = Signer.SignAsync(doc, DgiiEnvironment.TestEcf).GetAwaiter().GetResult();
+
+            ErrorOr<Success> validation = Result.Success;
+            if (signed.IsError)
+                validation = signed.FirstError;
+
+            yield return ($"{name}-firmado", $"{description} — firmado (XMLDSig)",
+                signed.IsError ? "<error/>" : signed.Value.EcfXml, validation);
+
+            if (!signed.IsError && signed.Value.RfceXml is { } signedRfce)
+                yield return ($"{name}-rfce-firmado", $"{description} — RFCE firmado",
+                    signedRfce, Result.Success);
+        }
+    }
+
+    private static IEnumerable<(string Name, string Description, EcfDocument Doc)> SignedShowcase()
+    {
+        yield return ("20-credito-fiscal", "Crédito fiscal (31)", EcfTestData.CreditoFiscal());
+        yield return ("21-consumo", "Factura de consumo (32) < DOP 250 000", EcfTestData.Consumo());
+        yield return ("22-exportacion", "Exportaciones (46)", EcfTestData.Exportaciones());
     }
 
     private static IEnumerable<(string Name, string Description, EcfDocument Doc)> Documents()

@@ -7,6 +7,7 @@ using NovaFE.Infrastructure;
 using NovaFE.Infrastructure.Persistence;
 using NovaFE.Service.Common;
 using NovaFE.Service.Configuration;
+using NovaFE.Service.DevTools;
 using NovaFE.Service.Extensions;
 using NovaFE.Service.Middlewares;
 using Microsoft.IO;
@@ -125,6 +126,11 @@ try
     // ==========================================
     //   8. Controllers, Versionado & OpenAPI
     // ==========================================
+
+    // Herramientas solo-Development (las consume EcfPreviewController, que fuera de
+    // Development tampoco existe).
+    if (builder.Environment.IsDevelopment())
+        builder.Services.AddScoped<DevEcfSigner>();
 
     builder.Services.AddControllers(options =>
         {
