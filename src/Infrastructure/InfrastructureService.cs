@@ -1,5 +1,6 @@
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Signing;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Infrastructure.Caching;
 using NovaFE.Infrastructure.Persistence;
@@ -60,6 +61,9 @@ public static class InfrastructureService
 
         services.AddSingleton<IKeyProtector, LocalKeyProtector>();
         services.AddScoped<ICertificateVault, EnvelopeCertificateVault>();
+
+        // Firma XMLDSig (parámetros exactos de la DGII). Sin estado → singleton.
+        services.AddSingleton<IXmlSigner, XmlDsigSigner>();
 
         // ==========================================
         //             Repositorios

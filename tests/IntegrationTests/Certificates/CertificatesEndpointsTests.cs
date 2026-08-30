@@ -1,6 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.IntegrationTests.Fixtures;
 using NovaFE.Service.Common;
@@ -14,10 +12,10 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
     public async Task Upload_then_get_returns_the_certificate_metadata()
     {
         const string rnc = "130862346";
-        await ActAsTenantAsync(rnc);
+        await RegisterAndActAsTenantAsync(rnc);
 
         var upload = await Client.PostAsync("/api/v1.0/certificates",
-            UploadForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
 
         upload.StatusCode.ShouldBe(HttpStatusCode.Created);
         var id = (await LeerAsync<IdResponse>(upload))!.Id;
@@ -35,10 +33,10 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
     [RequiresDockerFact]
     public async Task Upload_rejects_a_certificate_whose_holder_is_not_the_tenant_rnc()
     {
-        await ActAsTenantAsync("130000001");
+        await RegisterAndActAsTenantAsync("130000001");
 
         var response = await Client.PostAsync("/api/v1.0/certificates",
-            UploadForm(TestPkcs12.Generate(holderIdentifier: "999999999"), TestPkcs12.DefaultPassword, "TestEcf"));
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: "999999999"), TestPkcs12.DefaultPassword, "TestEcf"));
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -47,14 +45,14 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
     public async Task Upload_rejects_a_second_active_certificate_for_the_same_environment()
     {
         const string rnc = "130000002";
-        await ActAsTenantAsync(rnc);
+        await RegisterAndActAsTenantAsync(rnc);
 
         (await Client.PostAsync("/api/v1.0/certificates",
-            UploadForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf")))
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf")))
             .EnsureSuccessStatusCode();
 
         var second = await Client.PostAsync("/api/v1.0/certificates",
-            UploadForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
 
         second.StatusCode.ShouldBe(HttpStatusCode.Conflict);
     }
@@ -63,10 +61,10 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
     public async Task Revoke_then_upload_a_replacement_for_the_same_environment_succeeds()
     {
         const string rnc = "130000003";
-        await ActAsTenantAsync(rnc);
+        await RegisterAndActAsTenantAsync(rnc);
 
         var first = await Client.PostAsync("/api/v1.0/certificates",
-            UploadForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
         first.EnsureSuccessStatusCode();
         var firstId = (await LeerAsync<IdResponse>(first))!.Id;
 
@@ -74,7 +72,7 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
         revoke.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         var replacement = await Client.PostAsync("/api/v1.0/certificates",
-            UploadForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
 
         replacement.StatusCode.ShouldBe(HttpStatusCode.Created);
     }
@@ -85,13 +83,13 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
         var tenantA = await RegisterTenantAsync("130000010");
         var tenantB = await RegisterTenantAsync("130000011");
 
-        UseTenant(tenantA);
+        ActAs(tenantA);
         var upload = await Client.PostAsync("/api/v1.0/certificates",
-            UploadForm(TestPkcs12.Generate(holderIdentifier: "130000010"), TestPkcs12.DefaultPassword, "TestEcf"));
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: "130000010"), TestPkcs12.DefaultPassword, "TestEcf"));
         upload.EnsureSuccessStatusCode();
         var certificateId = (await LeerAsync<IdResponse>(upload))!.Id;
 
-        UseTenant(tenantB);
+        ActAs(tenantB);
 
         var listB = await Client.GetAsync("/api/v1.0/certificates");
         listB.EnsureSuccessStatusCode();
@@ -125,46 +123,6 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
-
-    // --- helpers --------------------------------------------------------------
-
-    private async Task ActAsTenantAsync(string rnc) => UseTenant(await RegisterTenantAsync(rnc));
-
-    private void UseTenant(Guid tenantId)
-    {
-        Client.DefaultRequestHeaders.Remove("X-Tenant-Id");
-        Client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
-    }
-
-    private async Task<Guid> RegisterTenantAsync(string rnc)
-    {
-        Client.DefaultRequestHeaders.Remove("X-Tenant-Id");
-
-        var response = await Client.PostAsJsonAsync("/api/v1.0/tenants", new
-        {
-            rnc,
-            legalName = $"Contribuyente {rnc}",
-            plan = "Business",
-        });
-
-        response.EnsureSuccessStatusCode();
-        return (await LeerAsync<IdResponse>(response))!.Id;
-    }
-
-    private static MultipartFormDataContent UploadForm(byte[] pkcs12, string password, string environment)
-    {
-        var file = new ByteArrayContent(pkcs12);
-        file.Headers.ContentType = new MediaTypeHeaderValue("application/x-pkcs12");
-
-        return new MultipartFormDataContent
-        {
-            { file, "file", "certificate.p12" },
-            { new StringContent(password), "password" },
-            { new StringContent(environment), "environment" },
-        };
-    }
-
-    private sealed record IdResponse(Guid Id);
 
     private sealed record CertificateResponse(
         Guid Id, string Environment, string HolderIdentifier, string Subject, string Issuer,

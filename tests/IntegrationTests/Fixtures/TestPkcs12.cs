@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace NovaFE.IntegrationTests.Certificates;
+namespace NovaFE.IntegrationTests.Fixtures;
 
 /// <summary>Genera archivos PKCS#12 autofirmados para las pruebas.</summary>
 internal static class TestPkcs12

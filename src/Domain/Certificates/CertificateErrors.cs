@@ -39,4 +39,12 @@ public static class CertificateErrors
     public static Error AlreadyRevoked => Error.Conflict(
         code: "Certificate.AlreadyRevoked",
         description: "El certificado ya está revocado.");
+
+    public static Error NoActiveCertificate(string environment) => Error.Failure(
+        code: "Certificate.NoActiveCertificate",
+        description: $"El contribuyente no tiene un certificado activo para el ambiente {environment}.");
+
+    public static Error NotUsable(string environment) => Error.Failure(
+        code: "Certificate.NotUsable",
+        description: $"El certificado del ambiente {environment} no se puede usar: está revocado o fuera de su período de validez.");
 }

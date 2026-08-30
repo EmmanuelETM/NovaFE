@@ -94,8 +94,6 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         page.Items.ShouldAllBe(t => t.LegalName.StartsWith("Contoso"));
     }
 
-    private sealed record IdResponse(Guid Id);
-
     private sealed record TenantDetailResponse(
         Guid Id, string Rnc, string LegalName, string? TradeName, string Plan, string Status, DateTimeOffset CreatedAt);
 

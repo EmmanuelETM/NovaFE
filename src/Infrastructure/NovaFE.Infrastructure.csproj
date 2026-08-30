@@ -29,6 +29,10 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" />
   </ItemGroup>
 
+  <ItemGroup Label="Firma XMLDSig">
+    <PackageReference Include="System.Security.Cryptography.Xml" />
+  </ItemGroup>
+
   <ItemGroup Label="Options validadas al arrancar">
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
