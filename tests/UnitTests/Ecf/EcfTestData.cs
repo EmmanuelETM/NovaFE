@@ -61,6 +61,26 @@ internal static class EcfTestData
             UnitOfMeasure: "43",
             Retention: retention);
 
+    /// <summary>
+    /// Comprobante de Regímenes Especiales (tipo 44): zona franca / regímenes de
+    /// incentivo. Todo exento — su XSD no tiene campos gravados en <c>&lt;Totales&gt;</c>.
+    /// </summary>
+    public static EcfDocument RegimenesEspeciales(params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.RegimenesEspeciales,
+            Header(44),
+            lines.Length == 0 ? [Line(rate: ItbisRate.Exempt)] : lines).Value;
+
+    /// <summary>
+    /// Comprobante Gubernamental (tipo 45): venta a una entidad del Estado. El XSD
+    /// es igual al del 31 (IdDoc, Totales, Comprador con RNC obligatorio).
+    /// </summary>
+    public static EcfDocument Gubernamental(params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.Gubernamental,
+            Header(45),
+            lines.Length == 0 ? [Line()] : lines).Value;
+
     /// <summary>Retención típica de un servicio: 30 % del ITBIS y 10 % de honorarios de ISR.</summary>
     public static EcfLineRetention Retention(decimal itbisWithheld = 108.00m, decimal isrWithheld = 200.00m)
         => new(RetentionAgent.Withholding, itbisWithheld, isrWithheld);

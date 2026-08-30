@@ -84,6 +84,30 @@ public class EcfDocumentTests
     }
 
     [Fact]
+    public void Regimenes_especiales_rejects_a_taxed_line()
+        => EcfDocument.Create(
+                EcfType.RegimenesEspeciales,
+                EcfTestData.Header(44),
+                [EcfTestData.Line(rate: ItbisRate.Eighteen)])
+            .FirstError.Code.ShouldBe("Ecf.OnlyExemptLinesAllowed");
+
+    [Fact]
+    public void Regimenes_especiales_requires_the_income_type()
+        => EcfDocument.Create(
+                EcfType.RegimenesEspeciales,
+                EcfTestData.Header(44) with { IncomeType = "" },
+                [EcfTestData.Line(rate: ItbisRate.Exempt)])
+            .FirstError.Code.ShouldBe("Ecf.IncomeTypeRequired");
+
+    [Fact]
+    public void Gubernamental_requires_the_buyer_rnc()
+        => EcfDocument.Create(
+                EcfType.Gubernamental,
+                EcfTestData.Header(45) with { Buyer = new EcfBuyer("Ministerio de Hacienda") },
+                [EcfTestData.Line()])
+            .FirstError.Code.ShouldBe("Ecf.BuyerIdentificationRequired");
+
+    [Fact]
     public void Compras_requires_the_retention_area_on_every_line()
         => EcfDocument.Create(
                 EcfType.Compras,

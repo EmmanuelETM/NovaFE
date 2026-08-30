@@ -11,11 +11,11 @@ namespace NovaFE.Infrastructure.Ecf;
 /// Serializador del <c>&lt;ECF&gt;</c> (Módulo 2). El orden de los elementos sale
 /// del XSD oficial de cada tipo; los opcionales sin valor se omiten (RF-02.5).
 /// <para>
-/// v1: tipos 31–34 y 41 con los bloques de uso común (IdDoc, Emisor, Comprador,
-/// Totales, DetallesItems, InformacionReferencia, Retencion). Faltan:
+/// v1: tipos 31–34, 41, 44 y 45 con los bloques de uso común (IdDoc, Emisor,
+/// Comprador, Totales, DetallesItems, InformacionReferencia, Retencion). Faltan:
 /// InformacionesAdicionales, Transporte, OtraMoneda, Subtotales, DescuentosORecargos,
 /// Paginación, el desglose de ImpuestosAdicionales, el formato reducido RFCE y los
-/// tipos 43–47. Ver <c>docs/ecf-xml.md</c>.
+/// tipos 43, 46 y 47. Ver <c>docs/ecf-xml.md</c>.
 /// </para>
 /// </summary>
 internal sealed class EcfXmlSerializer : IEcfXmlSerializer
@@ -97,6 +97,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
     ///   <item>34 (Nota de Crédito): <c>&lt;IndicadorNotaCredito&gt;</c> (0/1, obligatorio)
     ///   en vez de <c>&lt;FechaVencimientoSecuencia&gt;</c>; su XSD no admite <c>&lt;TablaFormasPago&gt;</c>.</item>
     ///   <item>41 (Compras): su XSD no admite <c>&lt;TipoIngresos&gt;</c> ni <c>&lt;IndicadorEnvioDiferido&gt;</c>.</item>
+    ///   <item>44 (Regímenes Especiales): su XSD no admite <c>&lt;IndicadorMontoGravado&gt;</c> (todo es exento).</item>
     /// </list>
     /// </summary>
     private static void WriteIdDoc(XmlWriter w, EcfDocument doc)
@@ -104,6 +105,7 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
         var h = doc.Header;
         var isCreditNote = doc.Type == EcfType.NotaCredito;
         var isCompras = doc.Type == EcfType.Compras;
+        var isRegimenesEspeciales = doc.Type == EcfType.RegimenesEspeciales;
 
         w.WriteStartElement("IdDoc");
         El(w, "TipoeCF", Int(doc.Type.Id));
@@ -116,7 +118,8 @@ internal sealed class EcfXmlSerializer : IEcfXmlSerializer
 
         if (h.DeferredDelivery && !isCompras)
             El(w, "IndicadorEnvioDiferido", "1");
-        El(w, "IndicadorMontoGravado", h.PricesIncludeTax ? "1" : "0");
+        if (!isRegimenesEspeciales)
+            El(w, "IndicadorMontoGravado", h.PricesIncludeTax ? "1" : "0");
         if (!isCompras)
             El(w, "TipoIngresos", h.IncomeType);
         El(w, "TipoPago", Int(h.Payment.Condition.Id));

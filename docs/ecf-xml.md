@@ -51,8 +51,8 @@ relleno.
 
 ## Alcance v1
 
-**Incluido:** tipos **31**, **32**, **33**, **34** y **41** con IdDoc, Emisor,
-Comprador, Totales, DetallesItems, InformacionReferencia, Retencion.
+**Incluido:** tipos **31**, **32**, **33**, **34**, **41**, **44** y **45** con
+IdDoc, Emisor, Comprador, Totales, DetallesItems, InformacionReferencia, Retencion.
 Descuentos/recargos de línea (`DescuentoMonto`/`RecargoMonto` directos), múltiples
 tasas de ITBIS, tipos de item (bien/servicio), formas de pago.
 
@@ -87,13 +87,31 @@ retenciones`). Las retenciones **no** tocan `MontoTotal`. El resto de tipos v1
 rechaza `<Retencion>` en las líneas (`Ecf.RetentionNotApplicable`); el tipo 47
 (pendiente) reusa este mismo modelo.
 
+**Tipo 44 (Regímenes Especiales)** — zona franca / regímenes de incentivo: **todo
+es exento**. Su `<Totales>` **no tiene campos gravados ni de ITBIS** (solo
+`<MontoExento>`, `<MontoImpuestoAdicional>`, `<MontoTotal>`…) y su `<IdDoc>` no
+lleva `<IndicadorMontoGravado>`. El dominio rechaza cualquier línea no exenta
+(`Ecf.OnlyExemptLinesAllowed`); `<TipoIngresos>` es obligatorio (XSD `minOccurs=1`).
+El serializador omite los totales gravados por sí solo (guardas `> 0`), solo hace
+falta la rama que salta `<IndicadorMontoGravado>`.
+
+**Tipo 45 (Gubernamental)** — venta a una entidad del Estado. El XSD es
+**idéntico al del 31** (IdDoc, Totales completos con ITBIS, `<InformacionReferencia>`
+opcional). `RNCComprador` es `minOccurs="1"` (siempre); el 45 **no** tiene
+`<IdentificadorExtranjero>`. Sin rama propia en el serializador.
+
 **Verificado contra el XSD**: `IndicadorBienoServicio` es **1 = Bien, 2 = Servicio**
 (el contexto viejo decía B/S). `RNCValidationType` son 9 u 11 dígitos (no 10).
 `IndicadorFacturacion` admite `0` ("No Facturable"). En los tipos 32/33/34
-`RNCComprador` y `RazonSocialComprador` son `minOccurs="0"` (no estructural).
+`RNCComprador` y `RazonSocialComprador` son `minOccurs="0"` (no estructural). El
+tipo 44 no tiene campos gravados en `<Totales>` ni `<IndicadorMontoGravado>`; el
+tipo 45 es estructuralmente el 31 pero sin `<IdentificadorExtranjero>` en el
+comprador.
 
 **Identificación del comprador** (`EcfDocument.RequiresBuyerIdentification`):
-31/41/44/45 siempre; 32 solo si `MontoTotal ≥ ConsumerIdentificationThreshold`
+31/41/44/45 siempre (el 45 lo exige el XSD con `minOccurs="1"`; el 44 lo exige la
+regla de negocio —el 44 se envía al receptor electrónico— aunque su XSD lo deje
+opcional); 32 solo si `MontoTotal ≥ ConsumerIdentificationThreshold`
 (DOP 250 000) o comprador extranjero (Identificador Extranjero); 33/34 si su
 propio monto llega al umbral o si modifican un e-CF de un tipo que identifica al
 comprador (el `NCFModificado` se parsea para saber el tipo). Si una NC/ND modifica
@@ -103,8 +121,9 @@ original a la vista.
 **Falta (slices posteriores):**
 
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
-- Tipos 43–47 — cada uno con su XSD embebido y sus reglas de obligatoriedad. El 47
-  (Pagos al Exterior) también lleva retención de ISR.
+- Tipos 43, 46 y 47 — cada uno con su XSD embebido y sus reglas de obligatoriedad.
+  El 47 (Pagos al Exterior) también lleva retención de ISR; el 46 (Exportaciones)
+  va en moneda extranjera.
 - Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `OtraMoneda`,
   `Subtotales`, `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
   `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo.
