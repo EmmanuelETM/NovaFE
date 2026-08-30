@@ -175,7 +175,11 @@ a propósito — ver `docs/certificates.md`. Un `Certificate` solo guarda una
 (cripto pura) e `ICertificateSigner` (orquesta vault + vigencia + firma). Los
 parámetros de la DGII (C14N **estándar** no exclusivo, SHA-256, `Reference URI=""`,
 `preserveWhitespace=false`, cert embebido) están fijos y afirmados en las pruebas.
-No cambiar sin leer `docs/signing.md`.
+`IEcfSigner`/`EcfSigner` (`src/Application/Ecf/`) es el puente Módulo 2→3→4: toma un
+`EcfDocument`, serializa, firma, valida el XML **firmado** contra el XSD (RF-03.3),
+hashea post-firma (RF-03.4) y, si el tipo 32 va como RFCE, firma también ese
+resumen. Devuelve `SignedEcf`; no envía ni persiste (eso es Módulo 4). No cambiar
+sin leer `docs/signing.md`.
 
 **Autenticación DGII** (`src/Infrastructure/Dgii`): `IDgiiTokenProvider` da un
 token Bearer del tenant actual para un ambiente — caché → semilla → firma →

@@ -132,4 +132,14 @@ public static class EcfErrors
     public static Error CreditNoteDueDateInThePast => Error.Validation(
         code: "Ecf.CreditNoteDueDateInThePast",
         description: "La fecha del comprobante modificado no puede ser posterior a la emisión de la nota.");
+
+    /// <summary>
+    /// El XML ya firmado no valida contra el XSD oficial (RF-03.3). Un
+    /// <see cref="EcfDocument"/> construido siempre está cuadrado y el serializador
+    /// respeta el XSD, así que esto solo puede pasar por un defecto interno del
+    /// serializador o del firmante — nunca por datos del cliente.
+    /// </summary>
+    public static Error SignedDocumentFailedXsd(int documentType, string detail) => Error.Unexpected(
+        code: "Ecf.SignedDocumentFailedXsd",
+        description: $"El XML firmado del tipo {documentType} no valida contra el XSD oficial de la DGII: {detail}");
 }

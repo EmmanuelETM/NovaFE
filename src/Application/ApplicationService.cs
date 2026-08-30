@@ -1,4 +1,6 @@
 ﻿using NovaFE.Application.Common;
+using NovaFE.Application.Ecf;
+using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Signing;
 using NovaFE.Application.Signing.Interfaces;
 using FluentValidation;
@@ -17,6 +19,7 @@ public static class ApplicationService
 
         // Servicios de aplicación (orquestación que no es un caso de uso de cara al usuario).
         services.AddScoped<ICertificateSigner, CertificateSigner>();
+        services.AddScoped<IEcfSigner, EcfSigner>();
 
         // Auto-register all use cases that implement IUseCase<,>
         var useCaseTypes = assembly.GetTypes()

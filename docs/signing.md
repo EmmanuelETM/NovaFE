@@ -14,9 +14,38 @@ Fuente: `C:\workplace\FE_DGII\` — "Firmado de e-CF.pdf" y
 |---|---|---|
 | `IXmlSigner` (Application) | `XmlDsigSigner` (Infrastructure) | Cripto pura: firma / verifica un XML dado un `X509Certificate2`. Sin DGII, sin base de datos. Singleton. |
 | `ICertificateSigner` (Application) | `CertificateSigner` (Application) | Orquesta: certificado activo del tenant → PKCS#12 del vault → valida vigencia → `IXmlSigner` → limpia el material. Devuelve `ErrorOr`. |
+| `IEcfSigner` (Application) | `EcfSigner` (Application) | Puente Módulo 2 → 3 → 4: serializa un `EcfDocument`, lo firma, valida el XML **firmado** contra el XSD (RF-03.3), calcula su hash post-firma (RF-03.4) y, si el tipo 32 va como RFCE, produce ese resumen firmado. Devuelve `SignedEcf`. |
 
 `SignedXmlResult`: `Xml` (firmado), `SignatureValue` (Base64), `SecurityCode`
 (primeros 6 chars del `SignatureValue` — es el `CodigoSeguridad` del QR / la RI).
+
+## `EcfSigner` — de `EcfDocument` a documento listo para la DGII
+
+`ICertificateSigner` firma un `string`; no sabe de e-CF. `EcfSigner` es la
+orquestación de e-CF que consume Módulo 4:
+
+```
+signedAt = timeProvider.GetUtcNow()          // el mismo que va en <FechaHoraFirma>
+ecfXml   = IEcfXmlSerializer.Serialize(doc, signedAt)
+signed   = ICertificateSigner.SignAsync(ecfXml, environment)
+           → valida signed.Xml contra el XSD del tipo (RF-03.3.3)   ← la validación real es post-firma
+if doc.QualifiesForRfce (tipo 32 < DOP 250 000):
+    rfce   = IRfceSerializer.Serialize(doc, signed.SecurityCode)    // <CodigoSeguridadeCF> ata el resumen al e-CF
+    rfceS  = ICertificateSigner.SignAsync(rfce, environment)        // el RFCE también se firma (Formato RFCE §B)
+           → valida contra RFCE-32-v1.0.xsd
+```
+
+`SignedEcf`: `SignedAt`, `EcfXml` (firmado, se guarda **siempre**),
+`RfceXml` (firmado; `null` salvo tipo 32 < 250 k), `SignatureValue`, `SecurityCode`,
+`DocumentHash` (SHA-256 hex del `EcfXml`, RF-03.4), `SubmitsRfce`.
+
+- **La validación XSD corre post-firma a propósito**: tanto el XSD del e-CF como el
+  del RFCE exigen el bloque `<Signature>` (`xs:any minOccurs="1"`), así que el XML
+  pre-firma no valida solo (ver `docs/ecf-xml.md`).
+- **No envía nada ni persiste** — eso es Módulo 4. Tampoco decide el endpoint
+  (`/api/facturaselectronicas` vs `/api/rfce`); solo expone `SubmitsRfce`.
+- RF-03.3.2 (el `SN` del certificado = RNC del tenant) ya se garantiza al **subir**
+  el certificado (`Certificate.Issue` → `HolderMatchesRnc`), no en cada firma.
 
 ## Parámetros que NO se tocan
 
