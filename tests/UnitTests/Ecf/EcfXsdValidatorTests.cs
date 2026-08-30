@@ -83,6 +83,47 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_credito_fiscal_in_usd_validates_with_the_otra_moneda_block()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            ForeignCurrency = new EcfForeignCurrency(
+                CurrencyCode.USD, 58.50m,
+                new EcfForeignCurrencyTotals(
+                    MontoGravadoTotal: 34.19m, MontoGravadoI1: 34.19m,
+                    TotalItbis: 6.15m, TotalItbis1: 6.15m, MontoTotal: 40.34m)),
+        };
+        var line = EcfTestData.Line() with
+        {
+            ForeignCurrency = new EcfLineForeignCurrency(UnitPrice: 34.19m, LineAmount: 34.19m),
+        };
+        var doc = EcfDocument.Create(EcfType.CreditoFiscal, header, [line]).Value;
+
+        var result = Validator.Validate(SignedShapeXml(doc), EcfType.CreditoFiscal);
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
+    public void An_export_in_eur_validates_with_the_reduced_otra_moneda_subset()
+    {
+        var header = EcfTestData.Header(46) with
+        {
+            Buyer = new EcfBuyer("Global Imports LLC", ForeignId: "US-4471203"),
+            ForeignCurrency = new EcfForeignCurrency(
+                CurrencyCode.EUR, 63.10m,
+                new EcfForeignCurrencyTotals(
+                    MontoGravadoTotal: 237.72m, MontoGravadoI3: 237.72m,
+                    TotalItbis: 0m, TotalItbis3: 0m, MontoTotal: 237.72m)),
+        };
+        var doc = EcfDocument.Create(
+            EcfType.Exportaciones, header,
+            [EcfTestData.Line(rate: NovaFE.Domain.Fiscal.ItbisRate.Zero, unitPrice: 15000m)]).Value;
+
+        var result = Validator.Validate(SignedShapeXml(doc), EcfType.Exportaciones);
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void A_pago_al_exterior_with_destination_country_validates()
     {
         var header = EcfTestData.Header(47) with

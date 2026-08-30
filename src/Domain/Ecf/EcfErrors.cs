@@ -89,6 +89,14 @@ public static class EcfErrors
         code: "Ecf.TransportForPagosExteriorIsDestinationOnly",
         description: "El tipo 47 (Pagos al Exterior) solo admite el país de destino en el bloque Transporte.");
 
+    public static Error InvalidExchangeRate => Error.Validation(
+        code: "Ecf.InvalidExchangeRate",
+        description: "El tipo de cambio debe ser mayor que cero.");
+
+    public static Error LineForeignCurrencyWithoutHeader => Error.Validation(
+        code: "Ecf.LineForeignCurrencyWithoutHeader",
+        description: "Una línea trae montos en otra moneda pero el encabezado no declara el bloque OtraMoneda.");
+
     public static Error NonInvoiceableAmountNotApplicable(int documentType) => Error.Validation(
         code: "Ecf.NonInvoiceableAmountNotApplicable",
         description: $"El tipo {documentType} no admite monto no facturable.");

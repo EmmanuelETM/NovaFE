@@ -84,6 +84,53 @@ public class EcfDocumentTests
     }
 
     [Fact]
+    public void Foreign_currency_cross_check_flags_a_mismatch_without_rejecting()
+    {
+        // MontoTotal DOP = 2360; / 58.50 ≈ 40.34. Declaramos 40.34 → dentro de tolerancia.
+        var ok = EcfDocument.Create(
+            EcfType.CreditoFiscal,
+            EcfTestData.Header(31) with
+            {
+                ForeignCurrency = new EcfForeignCurrency(CurrencyCode.USD, 58.50m,
+                    new EcfForeignCurrencyTotals(MontoTotal: 40.34m)),
+            },
+            [EcfTestData.Line()]);
+        ok.IsError.ShouldBeFalse();
+        ok.Value.ForeignCurrencyCheck!.WithinTolerance.ShouldBeTrue();
+
+        // Declaramos 999 → fuera de tolerancia pero el documento SIGUE siendo válido.
+        var off = EcfDocument.Create(
+            EcfType.CreditoFiscal,
+            EcfTestData.Header(31) with
+            {
+                ForeignCurrency = new EcfForeignCurrency(CurrencyCode.USD, 58.50m,
+                    new EcfForeignCurrencyTotals(MontoTotal: 999m)),
+            },
+            [EcfTestData.Line()]);
+        off.IsError.ShouldBeFalse();
+        off.Value.ForeignCurrencyCheck!.WithinTolerance.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_line_in_foreign_currency_without_the_header_block_is_rejected()
+        => EcfDocument.Create(
+                EcfType.CreditoFiscal,
+                EcfTestData.Header(31),
+                [EcfTestData.Line() with { ForeignCurrency = new EcfLineForeignCurrency(UnitPrice: 10m) }])
+            .FirstError.Code.ShouldBe("Ecf.LineForeignCurrencyWithoutHeader");
+
+    [Fact]
+    public void A_non_positive_exchange_rate_is_rejected()
+        => EcfDocument.Create(
+                EcfType.CreditoFiscal,
+                EcfTestData.Header(31) with
+                {
+                    ForeignCurrency = new EcfForeignCurrency(CurrencyCode.USD, 0m, new EcfForeignCurrencyTotals()),
+                },
+                [EcfTestData.Line()])
+            .FirstError.Code.ShouldBe("Ecf.InvalidExchangeRate");
+
+    [Fact]
     public void Compras_rejects_the_shipping_block()
         => EcfDocument.Create(
                 EcfType.Compras,

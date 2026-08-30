@@ -52,9 +52,10 @@ relleno.
 ## Alcance v1
 
 **Incluido:** **los diez tipos** (31–34, 41, 43–47) con IdDoc, Emisor, Comprador,
-Totales, DetallesItems, InformacionReferencia, Retencion, **InformacionesAdicionales**
-y **Transporte**. Descuentos/recargos de línea (`DescuentoMonto`/`RecargoMonto`
-directos), múltiples tasas de ITBIS, tipos de item (bien/servicio), formas de pago.
+Totales, DetallesItems, InformacionReferencia, Retencion, **InformacionesAdicionales**,
+**Transporte** y **OtraMoneda**. Descuentos/recargos de línea (`DescuentoMonto`/
+`RecargoMonto` directos), múltiples tasas de ITBIS, tipos de item (bien/servicio),
+formas de pago.
 
 **Bloques transversales** (decisión: passthrough — el cliente trae los datos, el
 motor fiscal no los usa; ver plan):
@@ -68,6 +69,21 @@ motor fiscal no los usa; ver plan):
   menos 41/43. El tipo 46 antepone vía/país/compañía transportista; el tipo 47 solo
   admite `<PaisDestino>` (`Ecf.TransportForPagosExteriorIsDestinationOnly`).
   `TransportVia` es smart enum (01 terrestre / 02 marítimo / 03 aérea, solo 46).
+- **`OtraMoneda`** (`EcfHeader.ForeignCurrency` → `EcfForeignCurrency`) — facturación
+  en divisa; condicional (obligatoriedad 2, todos los tipos). **Passthrough:** el
+  cliente trae `TipoCambio` + los `*OtraMoneda` ya convertidos (subconjunto según el
+  `<Totales>` del tipo: full ITBIS en 31/32/33/34/41/45; solo exento+total en
+  43/44/47; solo bucket 0 % en 46). El almacenamiento sigue en DOP. `EcfDocument`
+  hace un **cross-check** `MontoTotal_DOP / TipoCambio` vs. el declarado
+  (`ForeignCurrencyCheck`, tolerancia 1 divisa/línea) — **nunca rechaza**. Solo se
+  rechaza tipo de cambio ≤ 0 (`Ecf.InvalidExchangeRate`) o una línea en divisa sin
+  el bloque de encabezado (`Ecf.LineForeignCurrencyWithoutHeader`). `OtraMonedaDetalle`
+  (nivel línea, `EcfLine.ForeignCurrency`) es igual en los diez tipos. `CurrencyCode`
+  smart enum = Tabla II (USD, EUR, …). *(Los campos `Currency`/`ExchangeRate` sueltos
+  de `EcfHeader` se reemplazaron por este record.)*
+- **`<OtraMoneda>` — derivación pendiente de debatir:** hoy el cliente provee los
+  montos en divisa; una alternativa es derivarlos (`Money(dop / TipoCambio)`) para
+  garantizar consistencia con `<Totales>`.
 
 **Tipo 32 (Factura de Consumo)** — `<IdDoc>` como el 31 pero **sin
 `<FechaVencimientoSecuencia>`** (`EcfType.HasSequenceExpiry` = false, igual que el
@@ -171,10 +187,11 @@ original a la vista.
 **Falta (slices posteriores):**
 
 - El formato reducido **RFCE** para el tipo 32 &lt; DOP 250 k (`<RFCE>`, XSD aparte).
-- Bloques transversales restantes (ver plan): `OtraMoneda` + `OtraMonedaDetalle`
-  (PR2), `DescuentosORecargos`/Sección D con reconciliación mecánica en el motor
-  (PR3), `Subtotales` + `Paginacion` + desglose de `ImpuestosAdicionales` + `Mineria`
-  + `TablaSubcantidad` (PR4).
+- Bloques transversales restantes (ver plan): `DescuentosORecargos`/Sección D con
+  reconciliación mecánica en el motor (PR3), `Subtotales` + `Paginacion` + desglose
+  de `ImpuestosAdicionales` + `Mineria` + `TablaSubcantidad` (PR4).
+- El bloque anidado `ImpuestosAdicionalesOtraMoneda` (dentro de `OtraMoneda`) —
+  pareado con el desglose ISC de PR4.
 - Sub-tablas de descuento/recargo de línea (`TablaSubDescuento`/`TablaSubRecargo`).
 - El **cálculo** de las tasas de retención (hoy los montos los trae el cliente).
 - Habilitar `<Retencion>` opcional en los tipos que su XSD lo permite (31/33/34).
