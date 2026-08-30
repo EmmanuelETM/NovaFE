@@ -34,7 +34,8 @@ public sealed class EcfDocument
         EcfReference? reference,
         EcfCalculationResult calculation,
         int? creditNoteIndicator,
-        EcfForeignCurrencyCheck? foreignCurrencyCheck)
+        EcfForeignCurrencyCheck? foreignCurrencyCheck,
+        IReadOnlyList<EcfAdditionalTaxGroup> additionalTaxBreakdown)
     {
         Type = type;
         Header = header;
@@ -43,6 +44,7 @@ public sealed class EcfDocument
         Calculation = calculation;
         CreditNoteIndicator = creditNoteIndicator;
         ForeignCurrencyCheck = foreignCurrencyCheck;
+        AdditionalTaxBreakdown = additionalTaxBreakdown;
     }
 
     public EcfType Type { get; }
@@ -65,6 +67,13 @@ public sealed class EcfDocument
     /// Informativo — no bloquea la emisión.
     /// </summary>
     public EcfForeignCurrencyCheck? ForeignCurrencyCheck { get; }
+
+    /// <summary>
+    /// <c>&lt;ImpuestosAdicionales&gt;</c> de <c>&lt;Totales&gt;</c> — el desglose de
+    /// <see cref="EcfLine.AdditionalTaxDetail"/> agrupado por código. Vacío si
+    /// ninguna línea trae desglose.
+    /// </summary>
+    public IReadOnlyList<EcfAdditionalTaxGroup> AdditionalTaxBreakdown { get; }
 
     public EcfTotals Totals => Calculation.Totals;
 
@@ -111,8 +120,35 @@ public sealed class EcfDocument
         }
 
         var fxCheck = CheckForeignCurrency(header.ForeignCurrency, calculation.Value.Totals.MontoTotal, lines.Count);
+        var breakdown = BuildAdditionalTaxBreakdown(lines);
 
-        return new EcfDocument(type, header, lines, reference, calculation.Value, creditNoteIndicator, fxCheck);
+        return new EcfDocument(
+            type, header, lines, reference, calculation.Value, creditNoteIndicator, fxCheck, breakdown);
+    }
+
+    /// <summary>Agrupa el desglose de impuestos adicionales de todas las líneas por código.</summary>
+    private static IReadOnlyList<EcfAdditionalTaxGroup> BuildAdditionalTaxBreakdown(IReadOnlyList<EcfLine> lines)
+    {
+        var detail = lines
+            .Where(line => line.AdditionalTaxDetail is { Count: > 0 })
+            .SelectMany(line => line.AdditionalTaxDetail!)
+            .ToList();
+
+        if (detail.Count == 0)
+            return [];
+
+        return
+        [
+            .. detail
+                .GroupBy(tax => tax.Code)
+                .OrderBy(group => group.Key, StringComparer.Ordinal)
+                .Select(group => new EcfAdditionalTaxGroup(
+                    Code: group.Key,
+                    Rate: group.Max(tax => tax.Rate),
+                    IscEspecifico: group.Sum(tax => tax.IscEspecifico),
+                    IscAdvalorem: group.Sum(tax => tax.IscAdvalorem),
+                    Otros: group.Sum(tax => tax.Otros))),
+        ];
     }
 
     /// <summary>
@@ -208,6 +244,13 @@ public sealed class EcfDocument
         if (header.GlobalAdjustments is { Count: > 0 } adjustments)
             ValidateGlobalAdjustments(type, adjustments, errors);
 
+        ValidateAdditionalTaxDetail(type, lines, errors);
+
+        if (header.Subtotals is { Count: > 20 })
+            errors.Add(EcfErrors.TooManySubtotals);
+        if (header.Pagination is { Count: > 1000 })
+            errors.Add(EcfErrors.TooManyPages);
+
         if (header.Shipping is { } shipping)
         {
             if (type == EcfType.Compras || type == EcfType.GastosMenores || type == EcfType.PagosExterior)
@@ -275,6 +318,42 @@ public sealed class EcfDocument
                 errors.Add(EcfErrors.Norma1007NotApplicable(type.Id));
                 break;
             }
+        }
+    }
+
+    /// <summary>
+    /// El desglose <c>&lt;ImpuestosAdicionales&gt;</c> solo existe en el XSD de
+    /// 31/32/33/34/44/45. Los códigos deben ser de la Tabla I y el desglose debe
+    /// cuadrar con el <c>AdditionalTaxes</c> agregado de la línea.
+    /// </summary>
+    private static void ValidateAdditionalTaxDetail(
+        EcfType type, IReadOnlyList<EcfLine> lines, List<Error> errors)
+    {
+        var anyDetail = lines.Any(line => line.AdditionalTaxDetail is { Count: > 0 });
+        if (!anyDetail)
+            return;
+
+        var supported = type == EcfType.CreditoFiscal
+            || type == EcfType.Consumo
+            || type == EcfType.NotaDebito
+            || type == EcfType.NotaCredito
+            || type == EcfType.RegimenesEspeciales
+            || type == EcfType.Gubernamental;
+
+        if (!supported)
+        {
+            errors.Add(EcfErrors.BlockNotApplicable("ImpuestosAdicionales", type.Id));
+            return;
+        }
+
+        foreach (var line in lines.Where(l => l.AdditionalTaxDetail is { Count: > 0 }))
+        {
+            if (line.AdditionalTaxDetail!.Any(tax => !EcfAdditionalTax.IsValidCode(tax.Code) || tax.Rate <= 0m))
+                errors.Add(EcfErrors.InvalidAdditionalTaxCode(line.Number));
+
+            var detailSum = line.AdditionalTaxDetail!.Sum(tax => tax.Amount);
+            if (line.AdditionalTaxes > 0m && Math.Abs(line.AdditionalTaxes - detailSum) > 1m)
+                errors.Add(EcfErrors.AdditionalTaxDetailMismatch(line.Number));
         }
     }
 
@@ -424,7 +503,10 @@ public sealed class EcfDocument
             Discount: line.Discount,
             Surcharge: line.Surcharge,
             PriceIncludesTax: line.PriceIncludesTax ?? headerPricesIncludeTax,
-            AdditionalTaxes: line.AdditionalTaxes,
+            // Si viene el desglose por código, es la fuente de verdad del monto.
+            AdditionalTaxes: line.AdditionalTaxDetail is { Count: > 0 } detail
+                ? detail.Sum(tax => tax.Amount)
+                : line.AdditionalTaxes,
             ItbisWithheld: line.Retention?.ItbisWithheld ?? 0m,
             IsrWithheld: line.Retention?.IsrWithheld ?? 0m);
 }

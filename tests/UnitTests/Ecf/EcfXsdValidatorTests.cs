@@ -161,6 +161,47 @@ public class EcfXsdValidatorTests
     }
 
     [Fact]
+    public void A_credito_fiscal_with_isc_breakdown_subtotales_and_paginacion_validates()
+    {
+        var line = EcfTestData.Line(name: "Ron", unitPrice: 1000m) with
+        {
+            AdditionalTaxes = 236.30m,
+            AdditionalTaxDetail =
+            [
+                new EcfAdditionalTax("014", Rate: 10m, IscEspecifico: 191.30m),
+                new EcfAdditionalTax("001", Rate: 10m, Otros: 45.00m),
+            ],
+            Details = new EcfLineDetails(AlcoholDegrees: 40m, Elaboration: new DateOnly(2024, 1, 1)),
+        };
+        var header = EcfTestData.Header(31) with
+        {
+            Subtotals = [new EcfSubtotal(Number: 1, Description: "Total", MontoGravadoTotal: 1000m, TotalItbis: 180m, Amount: 1416.30m, Lines: 1)],
+            Pagination = [new EcfPage(Number: 1, LineFrom: 1, LineTo: 1, MontoGravadoTotal: 1000m, Amount: 1416.30m)],
+        };
+        var doc = EcfDocument.Create(EcfType.CreditoFiscal, header, [line]).Value;
+
+        var result = Validator.Validate(SignedShapeXml(doc), EcfType.CreditoFiscal);
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
+    public void A_regimenes_especiales_isc_breakdown_omits_the_isc_specific_amounts()
+    {
+        var line = EcfTestData.Line(rate: NovaFE.Domain.Fiscal.ItbisRate.Exempt, unitPrice: 5000m) with
+        {
+            AdditionalTaxes = 100m,
+            AdditionalTaxDetail = [new EcfAdditionalTax("001", Rate: 2m, Otros: 100m)],
+        };
+        var doc = EcfDocument.Create(
+            EcfType.RegimenesEspeciales,
+            EcfTestData.Header(44) with { SequenceExpiresOn = new DateOnly(2027, 12, 31) },
+            [line]).Value;
+
+        var result = Validator.Validate(SignedShapeXml(doc), EcfType.RegimenesEspeciales);
+        result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
+    }
+
+    [Fact]
     public void A_pago_al_exterior_with_destination_country_validates()
     {
         var header = EcfTestData.Header(47) with
