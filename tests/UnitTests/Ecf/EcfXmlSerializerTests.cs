@@ -40,6 +40,25 @@ public class EcfXmlSerializerTests
     }
 
     [Fact]
+    public void Nota_debito_keeps_the_type_31_iddoc_and_adds_the_mandatory_reference()
+    {
+        var root = Serialize(EcfTestData.NotaDebito());
+        var idDoc = root.Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "FechaVencimientoSecuencia", "IndicadorMontoGravado",
+            "TipoIngresos", "TipoPago", "FechaLimitePago", "TablaFormasPago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("33");
+        idDoc.Element("IndicadorNotaCredito").ShouldBeNull();
+
+        root.Elements().Select(e => e.Name.LocalName).ShouldBe(
+            ["Encabezado", "DetallesItems", "InformacionReferencia", "FechaHoraFirma"]);
+        root.Element("InformacionReferencia")!.Element("NCFModificado")!.Value.ShouldBe("E310000000010");
+    }
+
+    [Fact]
     public void Nota_credito_iddoc_swaps_the_sequence_expiry_for_the_credit_note_indicator()
     {
         var idDoc = Serialize(EcfTestData.NotaCredito()).Element("Encabezado")!.Element("IdDoc")!;

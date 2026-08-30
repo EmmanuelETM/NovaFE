@@ -66,6 +66,23 @@ internal static class EcfTestData
             lines.Length == 0 ? [Line()] : lines).Value;
 
     /// <summary>
+    /// Nota de Débito (tipo 33) que modifica un e-CF de crédito fiscal. Mantiene
+    /// el vencimiento de secuencia y las formas de pago (igual que el 31); lo
+    /// propio es la <c>InformacionReferencia</c> obligatoria.
+    /// </summary>
+    public static EcfDocument NotaDebito(
+        EcfReference? reference = null,
+        params EcfLine[] lines)
+        => EcfDocument.Create(
+            EcfType.NotaDebito,
+            Header(33),
+            lines.Length == 0 ? [Line()] : lines,
+            reference ?? new EcfReference(
+                "E310000000010",
+                IssueDate.AddDays(-10),
+                ModificationCode.CorrectsAmounts)).Value;
+
+    /// <summary>
     /// Nota de Crédito (tipo 34) que modifica un e-CF de crédito fiscal 20 días
     /// antes (indicador dentro de 30 días → 0). Sin vencimiento de secuencia.
     /// </summary>
