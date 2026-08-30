@@ -6,6 +6,17 @@
     <File Path=".editorconfig" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/docs/">
+    <File Path="docs/certificates.md" />
+    <File Path="docs/dgii-auth.md" />
+    <File Path="docs/fiscal.md" />
+    <File Path="docs/multi-tenancy.md" />
+    <File Path="docs/pricing.md" />
+    <File Path="docs/redis.md" />
+    <File Path="docs/sequences.md" />
+    <File Path="docs/signing.md" />
+    <File Path="docs/time.md" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Application/NovaFE.Application.csproj" />
     <Project Path="src/Domain/NovaFE.Domain.csproj" />
