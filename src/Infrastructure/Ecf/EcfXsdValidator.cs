@@ -11,20 +11,25 @@ namespace NovaFE.Infrastructure.Ecf;
 
 /// <summary>
 /// Valida el XML de e-CF contra el XSD oficial de la DGII del tipo. Los XSD van
-/// embebidos en <c>Ecf/Xsd/</c>. Los <see cref="XmlSchemaSet"/> se compilan una
-/// sola vez por tipo.
+/// embebidos en <c>Ecf/Xsd/</c>. Compilar el <see cref="XmlSchemaSet"/> es lo
+/// caro (decenas de ms) y se hace una sola vez por tipo (<see cref="Lazy{T}"/>
+/// para que aunque dos hilos lleguen juntos en el primer uso se compile una vez).
+/// Un <see cref="XmlSchemaSet"/> ya compilado es seguro de compartir entre hilos
+/// para validar; la validación en caliente de un e-CF normal ronda los 0,3–0,7 ms.
 /// </summary>
 internal sealed class EcfXsdValidator : IEcfXsdValidator
 {
     private static readonly Assembly OwnAssembly = typeof(EcfXsdValidator).Assembly;
-    private static readonly ConcurrentDictionary<int, XmlSchemaSet?> SchemaCache = new();
+    private static readonly ConcurrentDictionary<int, Lazy<XmlSchemaSet?>> SchemaCache = new();
 
     public ErrorOr<Success> Validate(string xml, EcfType type)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(xml);
         ArgumentNullException.ThrowIfNull(type);
 
-        var schema = SchemaCache.GetOrAdd(type.Id, LoadSchema);
+        var schema = SchemaCache
+            .GetOrAdd(type.Id, id => new Lazy<XmlSchemaSet?>(() => LoadSchema(id)))
+            .Value;
         if (schema is null)
             return Error.Unexpected(
                 code: "Ecf.XsdMissing",
