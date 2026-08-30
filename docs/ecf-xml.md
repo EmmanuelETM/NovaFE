@@ -1,0 +1,72 @@
+# Generación y validación del XML del e-CF (Módulo 2)
+
+Convierte los datos fiscales en el `<ECF>` XML conforme a los XSD oficiales de la
+DGII. Fuente de verdad: los XSD en `C:\workplace\FE_DGII\XSD\` — **el Plan Técnico
+tiene errores, el XSD no**.
+
+## Piezas
+
+| Interfaz (Application) | Impl (Infrastructure) | Rol |
+|---|---|---|
+| — | `EcfDocument` (Domain, `src/Domain/Ecf`) | Modelo fiscal validado. `Create(...)` valida estructura y calcula todos los totales con Módulo 6 (`EcfCalculator`). Un documento construido siempre está cuadrado. |
+| `IEcfXmlSerializer` | `EcfXmlSerializer` | Serializa a `<ECF>` con el orden del XSD, sin tags vacíos, escape DGII, formato numérico/fechas. Incluye `<FechaHoraFirma>`, **no** `<Signature>`. |
+| `IEcfXsdValidator` | `EcfXsdValidator` | Valida contra el XSD embebido del tipo. |
+
+`EcfDocument` **no es** el payload de la API (`docs/api-ecf.md`, curado). Es el
+modelo interno que mapea 1:1 al XML: enums en vez de strings mágicos, `decimal` en
+vez de strings formateados, `DateOnly` en vez de `"dd-MM-yyyy"`.
+
+## Reglas del serializador
+
+- **Orden de elementos**: exacto del XSD del tipo. Los opcionales sin valor se
+  omiten (RF-02.5) — nunca `<Campo/>` ni `<Campo></Campo>`.
+- **Escape (RF-02.3, 8 caracteres)**: `< > &` los hace `XmlWriter`; `" ' © ® €`
+  los completa un post-proceso sobre el cuerpo (el e-CF no tiene atributos, así
+  que es seguro). `© ® €` van como referencias numéricas (`&#169;` etc.).
+  - ⚠️ El round-trip por `XmlDocument` de Módulo 3 (firma) normaliza `" ' © ® €` de
+    vuelta a su forma literal en el XML firmado. Por C14N eso es idénticamente
+    equivalente y la DGII valida la forma canonicalizada. Si TesteCF muestra que
+    rechaza los literales, se agrega un pase de escape final en Módulo 3.
+- **Números** (`EcfXmlFormat`): punto decimal, sin separador de miles, sin
+  notación científica, sin ceros de más. 2 decimales para dinero, 4 para
+  `PrecioUnitarioItem`/`TipoCambio`, 3 para `Subcantidad`. `<ITBIS1/2/3>` es la
+  tasa como **entero** (18, 16, 0).
+- **Fechas**: `dd-MM-yyyy` (campos de documento), `dd-MM-yyyy HH:mm:ss` GMT-4
+  (`FechaHoraFirma`, vía `DominicanTimeZone`).
+- Raíz `<ECF>` **sin namespace** (el XSD no tiene `targetNamespace`).
+- Salida: `Indent=false`, sin BOM, con declaración `<?xml … UTF-8?>` — igual que
+  lo que reserializa Módulo 3.
+
+## Validación XSD
+
+Los XSD oficiales van **vendorizados y embebidos** en
+`src/Infrastructure/Ecf/Xsd/*.xsd` (`<EmbeddedResource>`). `EcfXsdValidator`
+compila un `XmlSchemaSet` por tipo (cacheado) y recorre el XML con
+`ValidationType.Schema`.
+
+El e-CF **pre-firma no valida solo**: el XSD exige `<xs:any minOccurs="1">`
+después de `<FechaHoraFirma>` (el hueco de la firma). La validación real corre
+después de firmar (Módulo 3/4). Las pruebas le agregan una `<Signature>` de
+relleno.
+
+## Alcance v1
+
+**Incluido:** tipo **31** con IdDoc, Emisor, Comprador, Totales, DetallesItems,
+InformacionReferencia. Descuentos/recargos de línea (`DescuentoMonto`/
+`RecargoMonto` directos), múltiples tasas de ITBIS, tipos de item (bien/servicio),
+formas de pago.
+
+**Verificado contra el XSD** (`e-CF-31-v1.0.xsd`): `IndicadorBienoServicio` es
+**1 = Bien, 2 = Servicio** (el contexto viejo decía B/S). `RNCValidationType` son
+9 u 11 dígitos (no 10). `IndicadorFacturacion` admite `0` ("No Facturable").
+
+**Falta (slices posteriores):**
+
+- Tipos 32 (con bifurcación RFCE &lt; DOP 250 k), 33, 34, 41, 43–47 — cada uno con
+  su XSD embebido y sus reglas de obligatoriedad.
+- Bloques: `InformacionesAdicionales` (exportación), `Transporte`, `OtraMoneda`,
+  `Subtotales`, `DescuentosORecargos` (Sección D), `Paginacion`, el desglose de
+  `ImpuestosAdicionales` (ISC), sub-tablas de descuento/recargo, retenciones.
+- La matriz completa de obligatoriedad 0/1/2/3 por tipo en los validadores por
+  tipo (Módulo 12).
+- El agregado persistido `Ecf` + tabla `comprobantes_ecf` — llega con Módulo 4.

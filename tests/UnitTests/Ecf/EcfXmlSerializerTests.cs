@@ -1,0 +1,109 @@
+using System.Xml.Linq;
+using NovaFE.Domain.Ecf;
+using NovaFE.Domain.Fiscal;
+using NovaFE.Infrastructure.Ecf;
+
+namespace NovaFE.UnitTests.Ecf;
+
+public class EcfXmlSerializerTests
+{
+    private static readonly EcfXmlSerializer Sut = new();
+
+    private static XElement Serialize(EcfDocument document)
+        => XDocument.Parse(Sut.Serialize(document, EcfTestData.SignedAt)).Root!;
+
+    [Fact]
+    public void Root_is_ECF_with_no_namespace()
+    {
+        var root = Serialize(EcfTestData.CreditoFiscal());
+
+        root.Name.LocalName.ShouldBe("ECF");
+        root.Name.NamespaceName.ShouldBe("");
+    }
+
+    [Fact]
+    public void IdDoc_carries_the_expected_values_in_order()
+    {
+        var idDoc = Serialize(EcfTestData.CreditoFiscal()).Element("Encabezado")!.Element("IdDoc")!;
+
+        idDoc.Elements().Select(e => e.Name.LocalName).ShouldBe(
+        [
+            "TipoeCF", "eNCF", "FechaVencimientoSecuencia", "IndicadorMontoGravado",
+            "TipoIngresos", "TipoPago", "FechaLimitePago", "TablaFormasPago",
+        ]);
+        idDoc.Element("TipoeCF")!.Value.ShouldBe("31");
+        idDoc.Element("eNCF")!.Value.ShouldBe("E310000000042");
+        idDoc.Element("FechaVencimientoSecuencia")!.Value.ShouldBe("31-12-2027");
+        idDoc.Element("IndicadorMontoGravado")!.Value.ShouldBe("0");
+        idDoc.Element("TipoPago")!.Value.ShouldBe("2");
+        idDoc.Element("FechaLimitePago")!.Value.ShouldBe("15-03-2026");
+    }
+
+    [Fact]
+    public void Totales_reflect_the_fiscal_engine()
+    {
+        var totales = Serialize(EcfTestData.CreditoFiscal()).Element("Encabezado")!.Element("Totales")!;
+
+        totales.Element("MontoGravadoTotal")!.Value.ShouldBe("2000");
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("2000");
+        totales.Element("ITBIS1")!.Value.ShouldBe("18");
+        totales.Element("TotalITBIS")!.Value.ShouldBe("360");
+        totales.Element("TotalITBIS1")!.Value.ShouldBe("360");
+        totales.Element("MontoTotal")!.Value.ShouldBe("2360");
+        totales.Element("MontoExento").ShouldBeNull();
+        totales.Element("MontoNoFacturable").ShouldBeNull();
+    }
+
+    [Fact]
+    public void Detail_line_amount_comes_from_the_engine_and_dates_are_dd_MM_yyyy()
+    {
+        var root = Serialize(EcfTestData.CreditoFiscal());
+        var item = root.Element("DetallesItems")!.Element("Item")!;
+
+        item.Element("NumeroLinea")!.Value.ShouldBe("1");
+        item.Element("IndicadorFacturacion")!.Value.ShouldBe("1");
+        item.Element("IndicadorBienoServicio")!.Value.ShouldBe("2");
+        item.Element("PrecioUnitarioItem")!.Value.ShouldBe("2000");
+        item.Element("MontoItem")!.Value.ShouldBe("2000");
+        root.Element("Encabezado")!.Element("Emisor")!.Element("FechaEmision")!.Value.ShouldBe("21-02-2026");
+        root.Element("FechaHoraFirma")!.Value.ShouldBe("21-02-2026 10:30:05");
+    }
+
+    [Fact]
+    public void Empty_optional_elements_are_omitted()
+    {
+        var emisor = Serialize(EcfTestData.CreditoFiscal()).Element("Encabezado")!.Element("Emisor")!;
+
+        emisor.Element("NombreComercial").ShouldBeNull();
+        emisor.Element("Sucursal").ShouldBeNull();
+        emisor.Element("CodigoVendedor").ShouldBeNull();
+    }
+
+    [Fact]
+    public void Text_escapes_the_dgii_special_characters()
+    {
+        var line = EcfTestData.Line(name: "Café \"René\" & Cía. © €");
+        var xml = Sut.Serialize(EcfTestData.CreditoFiscal(line), EcfTestData.SignedAt);
+
+        xml.ShouldContain("&amp;");
+        xml.ShouldContain("&quot;");
+        xml.ShouldContain("&#169;");
+        xml.ShouldContain("&#8364;");
+        // y sigue siendo XML válido
+        var name = XDocument.Parse(xml).Root!
+            .Element("DetallesItems")!.Element("Item")!.Element("NombreItem")!.Value;
+        name.ShouldBe("Café \"René\" & Cía. © €");
+    }
+
+    [Fact]
+    public void Zero_rate_line_produces_the_I3_bucket_not_the_exempt_total()
+    {
+        var totales = Serialize(EcfTestData.CreditoFiscal(
+                EcfTestData.Line(rate: ItbisRate.Zero, unitPrice: 500m)))
+            .Element("Encabezado")!.Element("Totales")!;
+
+        totales.Element("MontoGravadoI3")!.Value.ShouldBe("500");
+        totales.Element("ITBIS3")!.Value.ShouldBe("0");
+        totales.Element("MontoExento").ShouldBeNull();
+    }
+}

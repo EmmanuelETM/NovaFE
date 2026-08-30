@@ -38,6 +38,10 @@
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
   </ItemGroup>
 
+  <ItemGroup Label="XSD oficiales de la DGII (vendorizados) — validación de e-CF">
+    <EmbeddedResource Include="Ecf\Xsd\*.xsd" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Application\NovaFE.Application.csproj" />
   </ItemGroup>

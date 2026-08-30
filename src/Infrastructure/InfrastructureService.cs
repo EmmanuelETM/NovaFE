@@ -1,6 +1,7 @@
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Dgii.Interfaces;
+using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Sequences.Interfaces;
 using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
@@ -8,6 +9,7 @@ using NovaFE.Infrastructure.Caching;
 using NovaFE.Infrastructure.Certificates.EfCore;
 using NovaFE.Infrastructure.Certificates.Sql;
 using NovaFE.Infrastructure.Dgii;
+using NovaFE.Infrastructure.Ecf;
 using NovaFE.Infrastructure.Http;
 using NovaFE.Infrastructure.Persistence;
 using NovaFE.Infrastructure.Persistence.EfCore;
@@ -74,6 +76,10 @@ public static class InfrastructureService
 
         // Firma XMLDSig (parámetros exactos de la DGII). Sin estado → singleton.
         services.AddSingleton<IXmlSigner, XmlDsigSigner>();
+
+        // Generación y validación del XML del e-CF (Módulo 2). Sin estado.
+        services.AddSingleton<IEcfXmlSerializer, EcfXmlSerializer>();
+        services.AddSingleton<IEcfXsdValidator, EcfXsdValidator>();
 
         // ==========================================
         //        Autenticación con la DGII
