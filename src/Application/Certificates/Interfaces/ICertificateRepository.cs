@@ -8,6 +8,9 @@ public interface ICertificateRepository
 {
     Task<Certificate?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
+    /// <summary>The tenant's active certificate for an environment, or null.</summary>
+    Task<Certificate?> GetActiveAsync(DgiiEnvironment environment, CancellationToken ct = default);
+
     Task<bool> HasActiveCertificateAsync(DgiiEnvironment environment, CancellationToken ct = default);
 
     Task AddAsync(Certificate certificate, CancellationToken ct = default);

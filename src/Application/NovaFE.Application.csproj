@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Domain\NovaFE.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="NovaFE.UnitTests" />
+  </ItemGroup>
+
 </Project>

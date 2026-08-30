@@ -1,4 +1,5 @@
 ﻿using NovaFE.Application.Common;
+using NovaFE.Application.Signing;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +13,9 @@ public static class ApplicationService
 
         // FluentValidation
         services.AddValidatorsFromAssembly(assembly);
+
+        // Servicios de aplicación (orquestación que no es un caso de uso de cara al usuario).
+        services.AddScoped<ICertificateSigner, CertificateSigner>();
 
         // Auto-register all use cases that implement IUseCase<,>
         var useCaseTypes = assembly.GetTypes()

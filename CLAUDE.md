@@ -148,6 +148,12 @@ ciphertext en Postgres, KEK vía `IKeyProtector` desde config/KMS). Provider-agn
 a propósito — ver `docs/certificates.md`. Un `Certificate` solo guarda una
 `VaultReference` opaca.
 
+**Firma XMLDSig** (`src/Infrastructure/Security/XmlDsigSigner.cs`): `IXmlSigner`
+(cripto pura) e `ICertificateSigner` (orquesta vault + vigencia + firma). Los
+parámetros de la DGII (C14N **estándar** no exclusivo, SHA-256, `Reference URI=""`,
+`preserveWhitespace=false`, cert embebido) están fijos y afirmados en las pruebas.
+No cambiar sin leer `docs/signing.md`.
+
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
 - Con EF Core, la auditoría y el borrado lógico los aplican interceptores y un
