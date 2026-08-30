@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Domain.Certificates;
 using NovaFE.Domain.Common.Entities;
+using NovaFE.Domain.Sequences;
 using NovaFE.Domain.Tenants;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,8 @@ public class AppDbContext(
     public DbSet<Tenant> Tenants => Set<Tenant>();
 
     public DbSet<Certificate> Certificates => Set<Certificate>();
+
+    public DbSet<NcfSequence> NcfSequences => Set<NcfSequence>();
 
     /// <summary>
     /// Tenant de la petición en curso. Los filtros globales de consulta de las
