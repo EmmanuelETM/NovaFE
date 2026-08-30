@@ -1,6 +1,22 @@
 @Service_HostAddress = http://localhost:5071
 
-GET {{Service_HostAddress}}/weatherforecast/
+### Register a tenant
+POST {{Service_HostAddress}}/api/v1.0/tenants
+Content-Type: application/json
+
+{
+  "rnc": "101672919",
+  "legalName": "Contribuyente de Prueba SRL",
+  "tradeName": "Prueba",
+  "plan": "Developer"
+}
+
+### List tenants
+GET {{Service_HostAddress}}/api/v1.0/tenants?page=1&pageSize=20&search=Prueba
+Accept: application/json
+
+### Get one tenant
+GET {{Service_HostAddress}}/api/v1.0/tenants/00000000-0000-0000-0000-000000000000
 Accept: application/json
 
 ###

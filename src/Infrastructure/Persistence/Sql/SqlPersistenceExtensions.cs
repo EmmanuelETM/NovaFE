@@ -1,3 +1,4 @@
+using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace NovaFE.Infrastructure.Persistence.Sql;
@@ -14,6 +15,14 @@ internal static class SqlPersistenceExtensions
     /// </summary>
     internal static IServiceCollection AddSqlPersistence(this IServiceCollection services)
     {
+        // Las columnas son snake_case (created_at, legal_name); los DTOs son
+        // PascalCase. Esto le dice a Dapper que ignore los guiones bajos al mapear.
+        DefaultTypeMap.MatchNamesWithUnderscores = true;
+
+        // Npgsql devuelve DateTime para timestamptz; los modelos de lectura usan
+        // DateTimeOffset. Este handler cierra la brecha.
+        SqlMapper.AddTypeHandler(new DateTimeOffsetHandler());
+
         // Se registra el tipo concreto y la interfaz apunta a la misma instancia,
         // para que DapperUnitOfWork pueda publicar la transacción en la sesión.
         services.AddScoped<DbSession>();

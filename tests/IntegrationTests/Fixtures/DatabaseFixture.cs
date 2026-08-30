@@ -1,3 +1,5 @@
+using NovaFE.Infrastructure.Persistence.EfCore;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Respawn;
 using Testcontainers.PostgreSql;
@@ -5,8 +7,8 @@ using Testcontainers.PostgreSql;
 namespace NovaFE.IntegrationTests.Fixtures;
 
 /// <summary>
-/// Levanta un PostgreSQL real en un contenedor, le aplica el esquema y permite
-/// dejar la base limpia entre pruebas.
+/// Levanta un PostgreSQL real en un contenedor, le aplica las migraciones de EF
+/// Core y permite dejar la base limpia entre pruebas.
 /// <para>
 /// Se comparte por toda la colección: el contenedor arranca una sola vez
 /// (es lo caro) y cada prueba solo paga el reseteo de datos, que es rápido.
@@ -14,9 +16,9 @@ namespace NovaFE.IntegrationTests.Fixtures;
 /// </summary>
 public sealed class DatabaseFixture : IAsyncLifetime
 {
-    private const string Imagen = "postgres:16";
+    private const string Image = "postgres:16";
 
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder(Imagen)
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder(Image)
         .WithCleanUp(true)
         .Build();
 
@@ -33,19 +35,18 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
         ConnectionString = _container.GetConnectionString();
 
-        await AplicarEsquemaAsync();
+        await ApplyMigrationsAsync();
 
         // Respawn arma su plan de borrado leyendo el esquema, así que se crea
-        // después de aplicarlo.
-        await using var conexion = new NpgsqlConnection(ConnectionString);
-        await conexion.OpenAsync();
+        // después de aplicar las migraciones.
+        await using var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync();
 
-        _respawner = await Respawner.CreateAsync(conexion, new RespawnerOptions
+        _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             DbAdapter = DbAdapter.Postgres,
             SchemasToInclude = ["public"],
-            // Preserva la tabla de historial si más adelante usas migraciones.
-            TablesToIgnore = ["__EFMigrationsHistory"]
+            TablesToIgnore = ["__EFMigrationsHistory"],
         });
     }
 
@@ -58,31 +59,22 @@ public sealed class DatabaseFixture : IAsyncLifetime
         if (_respawner is null)
             return;
 
-        await using var conexion = new NpgsqlConnection(ConnectionString);
-        await conexion.OpenAsync();
+        await using var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync();
 
-        await _respawner.ResetAsync(conexion);
+        await _respawner.ResetAsync(connection);
     }
 
     public async ValueTask DisposeAsync() => await _container.DisposeAsync();
 
-    private async Task AplicarEsquemaAsync()
+    private async Task ApplyMigrationsAsync()
     {
-        var ruta = Path.Combine(AppContext.BaseDirectory, "Fixtures", "schema.sql");
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(ConnectionString)
+            .UseSnakeCaseNamingConvention()
+            .Options;
 
-        if (!File.Exists(ruta))
-            return;
-
-        var script = await File.ReadAllTextAsync(ruta);
-
-        if (string.IsNullOrWhiteSpace(script))
-            return;
-
-        await using var conexion = new NpgsqlConnection(ConnectionString);
-        await conexion.OpenAsync();
-
-        // Npgsql ejecuta varias sentencias separadas por ';' en un solo comando.
-        await using var comando = new NpgsqlCommand(script, conexion);
-        await comando.ExecuteNonQueryAsync();
+        await using var context = new AppDbContext(options, NullCurrentTenant.Instance);
+        await context.Database.MigrateAsync();
     }
 }

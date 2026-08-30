@@ -1,8 +1,11 @@
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Infrastructure.Caching;
 using NovaFE.Infrastructure.Persistence;
 using NovaFE.Infrastructure.Persistence.EfCore;
+using NovaFE.Infrastructure.Persistence.EfCore.Repositories;
 using NovaFE.Infrastructure.Persistence.Sql;
+using NovaFE.Infrastructure.Persistence.Sql.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -45,8 +48,8 @@ public static class InfrastructureService
         // ==========================================
         //             Repositorios
         // ==========================================
-        // Registra aquí cada repositorio a medida que lo crees:
-        // services.AddScoped<ISolicitudRepository, SolicitudRepository>();
+        services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<ITenantReadRepository, TenantReadRepository>();
 
         // ==========================================
         //         Clientes HTTP externos

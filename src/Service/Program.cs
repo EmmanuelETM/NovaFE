@@ -63,6 +63,12 @@ try
     // autenticación configurada; ver sección 6.
     builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
+    // Tenant actual. Lo llena TenantResolutionMiddleware (hoy del header
+    // X-Tenant-Id). Se registra el tipo concreto para que el middleware pueda
+    // asignarlo, y la interfaz apunta a la misma instancia del scope.
+    builder.Services.AddScoped<CurrentTenant>();
+    builder.Services.AddScoped<ICurrentTenant>(sp => sp.GetRequiredService<CurrentTenant>());
+
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -155,6 +161,10 @@ try
 
     // Antes que todo lo demás para que el TraceId aparezca en cada log y respuesta.
     app.UseMiddleware<TraceIdMiddleware>();
+
+    // Resuelve el tenant de la petición (header X-Tenant-Id por ahora) y lo deja
+    // disponible en ICurrentTenant para los casos de uso y la persistencia.
+    app.UseMiddleware<TenantResolutionMiddleware>();
 
     app.UseSerilogRequestLogging(options =>
     {

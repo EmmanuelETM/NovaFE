@@ -37,11 +37,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- El fixture lee este script desde el directorio de salida. -->
-    <None Update="Fixtures\schema.sql" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="Shouldly" />
   </ItemGroup>
