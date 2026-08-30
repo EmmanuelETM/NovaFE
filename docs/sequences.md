@@ -48,6 +48,12 @@ deriva el vencimiento y valida serie/rango/reglas de CerteCF. `Allocate(today)`
 entrega el siguiente número y avanza `Next` (solo avanza; nunca retrocede).
 `Deactivate()` lo saca del inventario.
 
+`RegisterSequenceRangeCommandValidator` es la puerta: forma, rango, ambiente y
+tipo conocidos, serie válida, y —con `TimeProvider` inyectado— que la fecha de
+autorización no sea futura; en CerteCF exige además `desde = 1` y `hasta ≤ 10M`.
+Lo que sí necesita base (serie ya activa) y las invariantes del agregado se
+quedan en el caso de uso y en `NcfSequence.Authorize` como defensa en profundidad.
+
 ## Asignación atómica
 
 `NcfSequenceAllocator.AllocateAsync`:

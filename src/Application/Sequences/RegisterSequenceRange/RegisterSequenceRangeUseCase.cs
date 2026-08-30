@@ -33,10 +33,8 @@ public sealed class RegisterSequenceRangeUseCase(
 
         var series = char.ToUpperInvariant(request.Series.Trim()[0]);
 
-        var today = timeProvider.GetDominicanToday();
-        var authorizedOn = request.AuthorizedOn ?? today;
-        if (authorizedOn > today)
-            return SequenceErrors.AuthorizationInTheFuture;
+        // El validador ya garantizó que no sea futura.
+        var authorizedOn = request.AuthorizedOn ?? timeProvider.GetDominicanToday();
 
         if (await sequences.HasActiveRangeAsync(environment, type, series, ct))
             return SequenceErrors.SeriesAlreadyActive(series, type.DisplayName);

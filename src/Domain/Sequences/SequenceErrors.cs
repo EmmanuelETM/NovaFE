@@ -38,10 +38,6 @@ public static class SequenceErrors
         code: "Sequence.SeriesAlreadyActive",
         description: $"Ya hay un rango activo para la serie '{series}' del tipo {type} en este ambiente. Desactívalo antes de registrar otro.");
 
-    public static Error AuthorizationInTheFuture => Error.Validation(
-        code: "Sequence.AuthorizationInTheFuture",
-        description: "La fecha de autorización no puede ser futura.");
-
     public static Error NotFound(Guid id) => Error.NotFound(
         code: "Sequence.NotFound",
         description: $"No existe un rango de secuencias con id '{id}'.");
