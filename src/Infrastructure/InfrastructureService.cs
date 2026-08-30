@@ -1,6 +1,7 @@
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Dgii;
+using NovaFE.Application.Sequences.Interfaces;
 using NovaFE.Application.Signing;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Infrastructure.Caching;
@@ -98,6 +99,9 @@ public static class InfrastructureService
         services.AddScoped<ITenantReadRepository, TenantReadRepository>();
         services.AddScoped<ICertificateRepository, CertificateRepository>();
         services.AddScoped<ICertificateReadRepository, CertificateReadRepository>();
+        services.AddScoped<INcfSequenceRepository, NcfSequenceRepository>();
+        services.AddScoped<INcfSequenceReadRepository, NcfSequenceReadRepository>();
+        services.AddScoped<INcfSequenceAllocator, NcfSequenceAllocator>();
 
         // ==========================================
         //         Clientes HTTP externos

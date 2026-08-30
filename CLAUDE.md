@@ -160,6 +160,17 @@ validar → guardar, con renovación proactiva. `IDgiiAuthClient` (HTTP resilien
 `IDgiiTokenCache` (sobre `IDistributedCache`). Ver `docs/dgii-auth.md`. El token
 nunca va a base de datos.
 
+**Secuencias e-NCF** (`src/Domain/Sequences`, `src/Application/Sequences`): el
+inventario de rangos autorizados por la DGII. `EcfType` (los diez tipos, en
+`Domain/Common`) y `Encf` (value object de 13 caracteres). `NcfSequence`
+(`ITenantOwned`) deriva el vencimiento (31-dic del año siguiente, salvo tipos 32 y
+34) y entrega números con `Allocate(today)`. `INcfSequenceAllocator` hace la
+asignación **atómica** con `SELECT … FOR UPDATE` (raw SQL vía
+`FromSql(...).IgnoreQueryFilters()`, dentro de `CreateExecutionStrategy` +
+`BeginTransactionAsync`). El lock va a PostgreSQL, nunca a caché. v1 usa solo el
+puntero `Next`; el pool de secuencias liberadas y el ciclo de vida por secuencia
+son slices posteriores. No cambiar sin leer `docs/sequences.md`.
+
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
 - Con EF Core, la auditoría y el borrado lógico los aplican interceptores y un
