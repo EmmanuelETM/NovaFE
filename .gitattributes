@@ -1,0 +1,21 @@
+# Normaliza los finales de línea: LF en el repositorio, CRLF en el working copy.
+* text=auto
+
+*.cs text diff=csharp
+*.csproj text
+*.props text
+*.slnx text
+*.json text
+*.md text
+
+# Estos archivos deben conservar LF incluso en Windows.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+*.nupkg binary
+*.png binary
+*.jpg binary
+*.pfx binary
+*.p12 binary

@@ -1,0 +1,23 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/node_modules/
+**/logs/
+**/*.user
+**/*.log
+**/TestResults/
+.git/
+.github/
+.gitignore
+.gitattributes
+.dockerignore
+.env
+.env.example
+**/Dockerfile
+docker-compose*.yml
+docker-compose*.yaml
+**/*.dcproj
+**/*.md
+# Las pruebas no entran en la imagen: el Dockerfile solo compila src/.
+tests/

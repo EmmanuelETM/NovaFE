@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pruebas de integración: la API completa contra PostgreSQL real (Testcontainers),
+    con la base reseteada entre pruebas (Respawn) y los servicios externos
+    simulados (WireMock).
+
+    Requieren Docker. Sin Docker, las pruebas marcadas con [RequiresDockerFact]
+    se omiten en lugar de fallar.
+  -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="Respawn" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="WireMock.Net" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Application\NovaFE.Application.csproj" />
+    <ProjectReference Include="..\..\src\Domain\NovaFE.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure\NovaFE.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Service\NovaFE.Service.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- El fixture lee este script desde el directorio de salida. -->
+    <None Update="Fixtures\schema.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+
+</Project>

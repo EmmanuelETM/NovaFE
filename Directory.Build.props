@@ -1,0 +1,36 @@
+<Project>
+
+  <!--
+    Propiedades comunes a TODOS los proyectos de la solución.
+    Si necesitas cambiar el target framework, nullable o el nivel de análisis,
+    hazlo aquí una sola vez en lugar de en cada .csproj.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!--
+      Un warning del compilador es un bug que todavía no te ha explotado: rompe el build.
+      Los avisos de los analizadores (CAxxxx) quedan como warnings visibles pero NO
+      rompen el build: son recomendaciones de diseño, y bloquear por ellas convierte
+      cada decisión legítima en una pelea con el compilador.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+
+    <!-- El estilo se valida con `dotnet format`, no rompiendo el build. -->
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- Convención: todo proyecto que termine en "Tests" es un proyecto de pruebas. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+</Project>

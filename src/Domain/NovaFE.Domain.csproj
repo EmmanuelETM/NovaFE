@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Capa de Dominio. No referencia ninguna otra capa ni ningún framework de
+    infraestructura: solo entidades, value objects, errores y reglas de negocio.
+  -->
+  <ItemGroup>
+    <PackageReference Include="ErrorOr" />
+  </ItemGroup>
+
+</Project>

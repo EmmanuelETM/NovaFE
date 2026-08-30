@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="CLAUDE.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path=".editorconfig" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Application/NovaFE.Application.csproj" />
+    <Project Path="src/Domain/NovaFE.Domain.csproj" />
+    <Project Path="src/Infrastructure/NovaFE.Infrastructure.csproj" />
+    <Project Path="src/Service/NovaFE.Service.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/IntegrationTests/NovaFE.IntegrationTests.csproj" />
+    <Project Path="tests/UnitTests/NovaFE.UnitTests.csproj" />
+  </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+</Solution>

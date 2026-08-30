@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Capa de Aplicación: casos de uso, validadores y las interfaces que
+    Infrastructure implementa. Solo depende de Domain.
+
+    No agregues aquí paquetes de persistencia (EF Core, Dapper) ni de ASP.NET:
+    esta capa debe poder compilarse y probarse sin base de datos ni servidor web.
+  -->
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\NovaFE.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

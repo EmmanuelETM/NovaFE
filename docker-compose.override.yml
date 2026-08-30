@@ -1,0 +1,41 @@
+# Comodidades de desarrollo. Compose y Visual Studio mezclan este archivo sobre
+# docker-compose.yml automáticamente; no hace falta nombrarlo con -f.
+#
+# Qué añade:
+#   - Puertos publicados al host (API 8080, PostgreSQL 5432).
+#   - Entorno Development explícito y montaje de user-secrets / certificados dev
+#     (lo que Visual Studio necesita para depurar dentro del contenedor).
+#   - Perfil "tools": pgweb (8081), que solo arranca con
+#     `docker compose --profile tools up`.
+
+services:
+  api:
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  postgres:
+    ports:
+      # Expuesto al host para conectarse con psql, DBeaver, DataGrip, etc.
+      - "5432:5432"
+
+  # ---- Herramientas de inspección (perfil "tools") --------------------------
+
+  pgweb:
+    image: sosedoff/pgweb:latest
+    profiles: ["tools"]
+    environment:
+      PGWEB_DATABASE_URL: "postgres://postgres:${POSTGRES_PASSWORD:-Local_dev_password_123}@postgres:5432/NovaFE?sslmode=disable"
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped

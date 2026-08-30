@@ -1,0 +1,59 @@
+# Orquestación de NovaFE para desarrollo local: la API y su PostgreSQL.
+# Visual Studio la arranca con F5 (proyecto docker-compose). Desde la terminal:
+#
+#   docker compose up --build            levanta api + postgres
+#   docker compose --profile tools up    añade pgweb (8081)
+#   docker compose logs -f api           sigue los logs de la API
+#   docker compose down -v               borra también los volúmenes de datos
+#
+# Este archivo tiene las definiciones "de fondo" (imágenes, build, volúmenes,
+# healthchecks, red interna). Las comodidades de desarrollo —puertos publicados
+# al host, entorno Development, herramientas de inspección— viven en
+# docker-compose.override.yml, que Compose y Visual Studio mezclan automáticamente.
+#
+# En producción la API se despliega desde el Dockerfile (Railway/DigitalOcean) y
+# PostgreSQL es un servicio gestionado. Este compose es solo para local.
+#
+# No hay Redis: a la escala de arranque la caché es en memoria (ver docs/redis.md).
+#
+# Variables sobrescribibles (p. ej. en un archivo .env):
+#   POSTGRES_PASSWORD   contraseña del usuario postgres  (default solo para local)
+#   DOCKER_REGISTRY     prefijo de registry al etiquetar la imagen
+
+services:
+  api:
+    image: ${DOCKER_REGISTRY-}novafe-api
+    build:
+      context: .
+      dockerfile: src/Service/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      # El doble guion bajo es el separador de secciones de configuración en
+      # .NET: esta variable sobrescribe ConnectionStrings:Default de appsettings.
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NovaFE;Username=postgres;Password=${POSTGRES_PASSWORD:-Local_dev_password_123}"
+    depends_on:
+      postgres:
+        # PostgreSQL crea la base NovaFE en el primer arranque; se espera a su
+        # healthcheck para que el probe de readiness no arranque en rojo.
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: NovaFE
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Local_dev_password_123}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d NovaFE"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
