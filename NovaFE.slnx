@@ -10,6 +10,7 @@
     <File Path="docs/api-ecf.md" />
     <File Path="docs/certificates.md" />
     <File Path="docs/dgii-auth.md" />
+    <File Path="docs/ecf-xml.md" />
     <File Path="docs/fiscal.md" />
     <File Path="docs/multi-tenancy.md" />
     <File Path="docs/pricing.md" />

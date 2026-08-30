@@ -194,6 +194,15 @@ asignación **atómica** con `SELECT … FOR UPDATE` (raw SQL vía
 puntero `Next`; el pool de secuencias liberadas y el ciclo de vida por secuencia
 son slices posteriores. No cambiar sin leer `docs/sequences.md`.
 
+**Generación XML del e-CF** (`src/Domain/Ecf`, `src/Infrastructure/Ecf`): `EcfDocument`
+(dominio) valida estructura y calcula totales con Módulo 6. `IEcfXmlSerializer`
+produce el `<ECF>` con el orden exacto del XSD, sin tags vacíos, escape DGII (8
+caracteres), formato numérico y fechas `dd-MM-yyyy`; incluye `<FechaHoraFirma>`
+pero no `<Signature>`. `IEcfXsdValidator` valida contra los XSD oficiales
+**vendorizados y embebidos** en `src/Infrastructure/Ecf/Xsd/`. v1: solo tipo 31.
+No cambiar sin leer `docs/ecf-xml.md`. `EcfDocument` **no es** el payload de la API
+(ese es curado — `docs/api-ecf.md`).
+
 **Motor de cálculo fiscal** (`src/Domain/Fiscal`): dominio puro, sin E/S ni reloj.
 `EcfCalculator.Calculate(lines)` da `<MontoItem>` por línea y todos los
 totalizadores del Encabezado. `EcfRounding` (regla DGII: mitad hacia afuera del
