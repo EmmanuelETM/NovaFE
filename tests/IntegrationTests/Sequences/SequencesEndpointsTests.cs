@@ -53,6 +53,31 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     }
 
     [RequiresDockerFact]
+    public async Task Register_rejects_a_future_authorization_date_with_400()
+    {
+        await RegisterAndActAsTenantAsync("130000037");
+
+        var response = await Client.PostAsJsonAsync("/api/v1.0/sequences", new
+        {
+            environment = "TestEcf", type = 31, series = "E", rangeFrom = 1L, rangeTo = 10L,
+            authorizedOn = new DateOnly(2099, 12, 31),
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [RequiresDockerFact]
+    public async Task Register_rejects_a_cert_ecf_range_that_does_not_start_at_one_with_400()
+    {
+        await RegisterAndActAsTenantAsync("130000038");
+
+        var response = await Client.PostAsJsonAsync("/api/v1.0/sequences",
+            Range(environment: "CertEcf", type: 31, series: "E", rangeFrom: 5, rangeTo: 100));
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [RequiresDockerFact]
     public async Task Register_rejects_a_second_active_range_for_the_same_series()
     {
         await RegisterAndActAsTenantAsync("130000033");

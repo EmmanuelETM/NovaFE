@@ -21,7 +21,7 @@ public class RegisterSequenceRangeUseCaseTests : UseCaseTestBase
     }
 
     private RegisterSequenceRangeUseCase Sut() =>
-        new(LoggerFactory, new RegisterSequenceRangeCommandValidator(), Clock, _currentTenant, _sequences);
+        new(LoggerFactory, new RegisterSequenceRangeCommandValidator(Clock), Clock, _currentTenant, _sequences);
 
     private static RegisterSequenceRangeCommand Command(
         string environment = "TestEcf",
@@ -69,11 +69,12 @@ public class RegisterSequenceRangeUseCaseTests : UseCaseTestBase
     }
 
     [Fact]
-    public async Task Rejects_a_future_authorization_date()
+    public async Task Rejects_a_future_authorization_date_at_the_validator()
     {
         var result = await Sut().Execute(Command(authorizedOn: Clock.GetDominicanToday().AddDays(1)));
 
-        result.FirstError.Code.ShouldBe("Sequence.AuthorizationInTheFuture");
+        result.FirstError.Type.ShouldBe(ErrorType.Validation);
+        result.FirstError.Code.ShouldBe(nameof(RegisterSequenceRangeCommand.AuthorizedOn));
         await _sequences.DidNotReceive().AddAsync(Arg.Any<NcfSequence>(), Arg.Any<CancellationToken>());
     }
 
@@ -94,6 +95,8 @@ public class RegisterSequenceRangeUseCaseTests : UseCaseTestBase
     [InlineData("TestEcf", 31, "P", 1, 100)] // excluded series
     [InlineData("TestEcf", 31, "E", 0, 100)] // from < 1
     [InlineData("TestEcf", 31, "E", 100, 1)] // to < from
+    [InlineData("CertEcf", 31, "E", 5, 100)] // CerteCF must start at 1
+    [InlineData("CertEcf", 31, "E", 1, 20_000_000)] // CerteCF over the 10M cap
     public async Task Rejects_invalid_input_with_validation_errors(
         string environment, int type, string series, long from, long to)
     {

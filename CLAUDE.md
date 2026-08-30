@@ -94,6 +94,22 @@ hace todo eso. Un caso de uso que tenga un `try/catch` genérico está mal.
 todo lo que implemente `IUseCase<,>` y todo `IValidator<T>`. Agregar un
 `services.AddScoped<MiUseCase>()` es redundante.
 
+### Validación
+
+Todo lo que **no necesita E/S** se valida en el `AbstractValidator<TCommand>`, no
+en el caso de uso: forma y presencia, rangos numéricos, enum conocido (ambiente,
+tipo e-CF, plan), reglas entre campos, reglas condicionales por campo
+(`When(...)`) y cordura de fechas de calendario. El validador **puede** recibir
+dependencias por constructor (p. ej. `TimeProvider` para "fecha no futura"); se
+resuelven del contenedor como cualquier servicio.
+
+El caso de uso solo se ocupa de lo que **sí** necesita E/S o contexto: resolver
+el tenant actual, mapear los primitivos del comando a los tipos del dominio,
+hechos de persistencia (unicidad y existencia contra la base), e invocar al
+dominio. Las invariantes del agregado se quedan en el dominio (defensa en
+profundidad); el validador es la puerta que hace que un request raro ni siquiera
+llegue al `ExecuteCore`.
+
 ### Errores
 
 Se devuelven, no se lanzan. El tipo de retorno es `ErrorOr<T>`:
