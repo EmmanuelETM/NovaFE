@@ -1,23 +1,27 @@
 using Asp.Versioning;
+using NovaFE.Application.Tenants.GetEmitterProfile;
 using NovaFE.Application.Tenants.GetTenant;
 using NovaFE.Application.Tenants.ListTenants;
 using NovaFE.Application.Tenants.RegisterTenant;
+using NovaFE.Application.Tenants.SetEmitterProfile;
 using NovaFE.Service.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace NovaFE.Service.Controllers;
 
 /// <summary>
-/// Alta y consulta de contribuyentes. Es un recurso de operador del SaaS: no
-/// requiere un tenant en la petición (un contribuyente se registra antes de
-/// existir).
+/// Alta y consulta de contribuyentes, y su perfil fiscal de emisor. Es un recurso
+/// de operador del SaaS: no requiere un tenant en la petición (un contribuyente se
+/// registra antes de existir).
 /// </summary>
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
 public sealed class TenantsController(
     RegisterTenantUseCase register,
     GetTenantUseCase get,
-    ListTenantsUseCase list) : ApiController
+    ListTenantsUseCase list,
+    GetEmitterProfileUseCase getEmitterProfile,
+    SetEmitterProfileUseCase setEmitterProfile) : ApiController
 {
     [HttpPost]
     public async Task<IActionResult> Register(
@@ -36,4 +40,38 @@ public sealed class TenantsController(
         [FromQuery] ListTenantsQuery query,
         CancellationToken ct)
         => (await list.Execute(query, ct)).Match(Ok, Problem);
+
+    /// <summary>El perfil fiscal del emisor (dirección, ubicación, teléfonos, ambiente).</summary>
+    [HttpGet("{id:guid}/emitter-profile")]
+    public async Task<IActionResult> GetEmitterProfile(Guid id, CancellationToken ct)
+        => (await getEmitterProfile.Execute(new GetEmitterProfileQuery(id), ct)).Match(Ok, Problem);
+
+    /// <summary>Crea o reemplaza el perfil fiscal del emisor (upsert).</summary>
+    [HttpPut("{id:guid}/emitter-profile")]
+    public async Task<IActionResult> SetEmitterProfile(
+        Guid id,
+        [FromBody] SetEmitterProfileBody body,
+        CancellationToken ct)
+        => (await setEmitterProfile.Execute(
+                new SetEmitterProfileCommand(
+                    id,
+                    body.Address,
+                    body.Municipality,
+                    body.Province,
+                    body.Phones,
+                    body.Email,
+                    body.EconomicActivity,
+                    body.DefaultEnvironment),
+                ct))
+            .Match(Ok, Problem);
+
+    /// <summary>Cuerpo del <c>PUT .../emitter-profile</c> (el contribuyente va en la ruta).</summary>
+    public sealed record SetEmitterProfileBody(
+        string Address,
+        string? Municipality,
+        string? Province,
+        IReadOnlyList<string>? Phones,
+        string? Email,
+        string? EconomicActivity,
+        string DefaultEnvironment);
 }

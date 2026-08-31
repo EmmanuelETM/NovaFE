@@ -109,6 +109,8 @@ public static class InfrastructureService
         // ==========================================
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantReadRepository, TenantReadRepository>();
+        services.AddScoped<IEmitterProfileRepository, EmitterProfileRepository>();
+        services.AddScoped<IEmitterProfileReadRepository, EmitterProfileReadRepository>();
         services.AddScoped<ICertificateRepository, CertificateRepository>();
         services.AddScoped<ICertificateReadRepository, CertificateReadRepository>();
         services.AddScoped<INcfSequenceRepository, NcfSequenceRepository>();
