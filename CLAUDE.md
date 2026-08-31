@@ -232,6 +232,23 @@ baja el `<ValorPagar>`. El **cálculo** de las tasas de retención, el ISC de
 alcoholes/cigarrillos y la distribución de la Sección D a nivel de línea son slices
 posteriores. No cambiar sin leer `docs/fiscal.md`.
 
+**API de emisión** (`src/Application/Ecf/IssueEcf`, `src/Service/Controllers/EcfController.cs`):
+`POST /api/v1.0/ecf` toma el payload curado (`IssueEcfCommand`, discriminado por
+`type`; enums aceptan nombre o código DGII), lo valida
+(`IssueEcfCommandValidator` — forma + reglas por tipo; `EcfDocument.Create` sigue
+siendo la matriz autoritativa), lo mapea (`EcfDocumentMapper`) y lo pasa por el
+pipeline de `IssueEcfUseCase`: resolver emisor (`Tenant` + `EmitterProfile`) y
+ambiente (`environment` del payload, o `EmitterProfile.DefaultEnvironment`) →
+idempotencia (`Idempotency-Key` → `IIdempotencyStore`, tabla PostgreSQL) → dedup
+(`internalNumber`, índice único parcial) → asignar secuencia (M7) → firmar (M3) →
+persistir el agregado **`IssuedEcf`** (tabla `issued_ecf`, estado `signed`).
+**No envía a la DGII** — eso es Módulo 4 (estados de envío, outbox, webhooks, `202`,
+número quemado si el pipeline falla post-asignación). `EmitterProfile`
+(`src/Domain/Tenants`) es 1:1 con el contribuyente, lo administra el operador
+(`GET/PUT /api/v1.0/tenants/{id}/emitter-profile`): dirección, ubicación,
+teléfonos, actividad y ambiente por defecto — datos del `<Emisor>` que el `Tenant`
+no tiene. No cambiar sin leer `docs/api-ecf.md`.
+
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
 - Con EF Core, la auditoría y el borrado lógico los aplican interceptores y un

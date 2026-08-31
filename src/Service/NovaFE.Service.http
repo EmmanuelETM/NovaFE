@@ -121,3 +121,75 @@ Content-Type: application/json
 }
 
 ###
+
+# ============================================================================
+#  Modulo 12 — emision de e-CF (POST /api/v1.0/ecf)
+#  Requiere: tenant registrado + perfil de emisor + certificado + rango de secuencias.
+# ============================================================================
+
+@tenantId = 00000000-0000-0000-0000-000000000000
+
+### 0. Perfil fiscal del emisor (recurso de operador; una sola vez por contribuyente)
+PUT {{Service_HostAddress}}/api/v1.0/tenants/{{tenantId}}/emitter-profile
+Content-Type: application/json
+
+{
+  "address": "Av. 27 de Febrero 100, Santo Domingo",
+  "municipality": "010100",
+  "province": "010000",
+  "phones": ["809-555-0100"],
+  "email": "facturacion@almax.do",
+  "economicActivity": "Comercio al por menor",
+  "defaultEnvironment": "TestEcf"
+}
+
+### 1. Emitir un Credito Fiscal (tipo 31)
+POST {{Service_HostAddress}}/api/v1.0/ecf
+Content-Type: application/json
+X-Tenant-Id: {{tenantId}}
+Idempotency-Key: demo-fac-2026-00042
+
+{
+  "type": 31,
+  "incomeType": "01",
+  "internalNumber": "FAC-2026-00042",
+  "buyer": { "rnc": "131880681", "name": "Mi Cliente SRL" },
+  "payment": {
+    "condition": "credit",
+    "dueDate": "15-03-2026",
+    "methods": [ { "type": "check_transfer", "amount": 2360.00 } ]
+  },
+  "lines": [
+    { "name": "Servicio de consultoria", "kind": "service", "quantity": 1,
+      "unitOfMeasure": "43", "unitPrice": 2000.00, "itbisRate": 1 }
+  ]
+}
+
+### 2. Emitir una Factura de Consumo de bajo monto (tipo 32 -> RFCE)
+POST {{Service_HostAddress}}/api/v1.0/ecf
+Content-Type: application/json
+X-Tenant-Id: {{tenantId}}
+
+{
+  "type": 32,
+  "incomeType": "01",
+  "payment": { "condition": "cash", "methods": [ { "type": "cash", "amount": 1180.00 } ] },
+  "lines": [
+    { "name": "Almuerzo ejecutivo", "kind": "good", "quantity": 1,
+      "unitOfMeasure": "43", "unitPrice": 1000.00, "itbisRate": 1 }
+  ]
+}
+
+### 3. Consultar un comprobante emitido
+GET {{Service_HostAddress}}/api/v1.0/ecf/00000000-0000-0000-0000-000000000000
+X-Tenant-Id: {{tenantId}}
+
+### 4. Descargar el XML firmado
+GET {{Service_HostAddress}}/api/v1.0/ecf/00000000-0000-0000-0000-000000000000/xml
+X-Tenant-Id: {{tenantId}}
+
+### 5. Listar los comprobantes del tenant (paginado, filtros opcionales)
+GET {{Service_HostAddress}}/api/v1.0/ecf?page=1&pageSize=20&type=31&search=E31
+X-Tenant-Id: {{tenantId}}
+
+###
