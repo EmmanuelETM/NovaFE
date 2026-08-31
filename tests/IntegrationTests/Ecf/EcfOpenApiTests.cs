@@ -25,4 +25,18 @@ public sealed class EcfOpenApiTests(DatabaseFixture database) : IntegrationTestB
         example.GetProperty("lines").GetArrayLength().ShouldBe(1);
         example.GetProperty("payment").GetProperty("condition").GetString().ShouldBe("credit");
     }
+
+    [RequiresDockerFact]
+    public async Task All_paths_are_lowercase_kebab_case()
+    {
+        using var doc = JsonDocument.Parse(
+            await (await Client.GetAsync("/openapi/v1.json")).Content.ReadAsStringAsync());
+
+        var paths = doc.RootElement.GetProperty("paths").EnumerateObject().Select(p => p.Name).ToList();
+
+        paths.ShouldContain("/api/v1/ecf");
+        paths.ShouldContain("/api/v1/tenants/{id}/emitter-profile");
+        paths.ShouldContain("/api/v1/dev/ecf-preview/samples");
+        paths.ShouldAllBe(p => !p.Any(char.IsUpper));
+    }
 }

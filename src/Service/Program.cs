@@ -10,6 +10,7 @@ using NovaFE.Service.Configuration;
 using NovaFE.Service.DevTools;
 using NovaFE.Service.Extensions;
 using NovaFE.Service.Middlewares;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.IO;
 using Scalar.AspNetCore;
 using Serilog;
@@ -132,8 +133,15 @@ try
     if (builder.Environment.IsDevelopment())
         builder.Services.AddScoped<DevEcfSigner>();
 
+    // URLs en minúsculas para lo que genere el link generator (Location, OpenAPI…).
+    builder.Services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+
     builder.Services.AddControllers(options =>
         {
+            // [controller]/[action] → kebab-case en minúsculas para todos los controllers.
+            options.Conventions.Add(
+                new RouteTokenTransformerConvention(new KebabCaseParameterTransformer()));
+
             // Fuera de Development, los controllers [DevelopmentOnly] no existen.
             if (!builder.Environment.IsDevelopment())
                 options.Conventions.Add(new RemoveDevelopmentOnlyConvention());
