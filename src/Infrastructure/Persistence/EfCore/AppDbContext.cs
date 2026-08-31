@@ -19,6 +19,8 @@ public class AppDbContext(
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
 
+    public DbSet<EmitterProfile> EmitterProfiles => Set<EmitterProfile>();
+
     public DbSet<Certificate> Certificates => Set<Certificate>();
 
     public DbSet<NcfSequence> NcfSequences => Set<NcfSequence>();

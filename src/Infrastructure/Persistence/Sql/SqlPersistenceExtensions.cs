@@ -23,6 +23,9 @@ internal static class SqlPersistenceExtensions
         // DateTimeOffset. Este handler cierra la brecha.
         SqlMapper.AddTypeHandler(new DateTimeOffsetHandler());
 
+        // text[] → string[] (Dapper no casa Array con string[] al elegir constructor).
+        SqlMapper.AddTypeHandler(new StringArrayHandler());
+
         // Se registra el tipo concreto y la interfaz apunta a la misma instancia,
         // para que DapperUnitOfWork pueda publicar la transacción en la sesión.
         services.AddScoped<DbSession>();
