@@ -35,3 +35,7 @@ appsettings.Local.json
 
 # Galería de XML de ejemplo (se regenera con EcfXmlGallery)
 samples/
+
+# Copias locales de la documentación regulatoria (la fuente vive en C:/workplace/FE_DGII/)
+/docs/contexto-proyecto-fe-dgii.md
+/docs/Plan Técnico Integral*.txt
