@@ -132,8 +132,9 @@ public static class InfrastructureService
         services.AddScoped<IEcfSubmissionQueue, PostgresEcfSubmissionQueue>();
         services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
 
-        // El jsonb de totales del comprobante emitido → EcfTotalsSnapshot en las lecturas Dapper.
+        // Los jsonb del comprobante emitido → tipos de dominio en las lecturas Dapper.
         SqlMapper.AddTypeHandler(new EcfTotalsSnapshotJsonHandler());
+        SqlMapper.AddTypeHandler(new DgiiMessagesJsonHandler());
 
         // ==========================================
         //         Clientes HTTP externos

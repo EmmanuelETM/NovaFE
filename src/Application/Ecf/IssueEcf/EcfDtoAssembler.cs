@@ -26,7 +26,14 @@ internal static class EcfDtoAssembler
         Totals: ecf.Totals,
         ToleranceWarning: ecf.ExpectedConditionalAcceptance
             ? "Los montos declarados no cuadran dentro de la tolerancia; la DGII podría aceptar el comprobante de forma condicional."
-            : null);
+            : null,
+        TrackId: ecf.TrackId,
+        SubmittedAt: ecf.SubmittedAt,
+        DgiiProcessedAt: ecf.DgiiProcessedAt,
+        DgiiStatusCode: ecf.DgiiStatusCode,
+        SequenceUsable: ecf.SequenceUsable,
+        SubmissionAttempts: ecf.SubmissionAttempts,
+        DgiiMessages: ecf.DgiiMessages);
 
     /// <summary>
     /// Los totales declarados por el cliente en el encabezado quedan fuera de la

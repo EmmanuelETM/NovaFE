@@ -95,7 +95,7 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         using var dgii = new WireMockFixture();
         StubAuth(dgii.Server);
         StubReception(dgii.Server);
-        StubResult(dgii.Server, codigo: 1, estado: "Aceptado");
+        StubResult(dgii.Server, codigo: 4, estado: "Aceptado Condicional");
 
         Reconfigure(new Dictionary<string, string?>
         {
@@ -110,7 +110,11 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         post.StatusCode.ShouldBe(HttpStatusCode.Created, await post.Content.ReadAsStringAsync());
 
         var issued = await LeerAsync<EcfResponse>(post);
-        issued!.Status.ShouldBe("accepted");
+        issued!.Status.ShouldBe("accepted_conditional");
+        issued.TrackId.ShouldBe("TRACK-1");
+        issued.DgiiStatusCode.ShouldBe(4);
+        issued.SubmittedAt.ShouldNotBeNull();
+        issued.DgiiProcessedAt.ShouldNotBeNull();
     }
 
     [RequiresDockerFact]
@@ -125,8 +129,8 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         {
             ["Dgii:EcfBaseUrl"] = dgii.BaseUrl,
             ["EcfSubmission:Enabled"] = "false",
-            ["EcfSubmission:SyncWaitBudgetSeconds"] = "5",
-            ["EcfSubmission:MaxInlinePolls"] = "1",
+            ["EcfSubmission:SyncWaitBudgetSeconds"] = "10",
+            ["EcfSubmission:MaxInlinePolls"] = "2",
             ["EcfSubmission:InlinePollDelayMillis"] = "50",
             ["EcfSubmission:FirstPollDelaySeconds"] = "0",
         });
@@ -169,5 +173,65 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         issued!.Status.ShouldBe("rejected");
     }
 
-    private sealed record EcfResponse(Guid Id, string Status, string Encf, string? TrackId);
+    [RequiresDockerFact]
+    public async Task A_failed_submission_can_be_retried()
+    {
+        using var dgii = new WireMockFixture();
+        StubAuth(dgii.Server);
+        // El gateway acepta pero no devuelve TrackId → 'failed' sin reintentos.
+        dgii.Server.Given(Request.Create().WithPath("/testecf/recepcion/api/facturaselectronicas").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200).WithBodyAsJson(new
+            {
+                trackId = "", error = "XML_INVALIDO", mensaje = "No cumple el XSD",
+            }));
+
+        Reconfigure(new Dictionary<string, string?>
+        {
+            ["Dgii:EcfBaseUrl"] = dgii.BaseUrl,
+            ["EcfSubmission:Enabled"] = "false",
+            ["EcfSubmission:SyncWaitBudgetSeconds"] = "0",
+            ["EcfSubmission:FirstPollDelaySeconds"] = "0",
+        });
+        await ArrangeTenantAsync();
+
+        var issued = await LeerAsync<EcfResponse>(await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal()));
+        issued!.Status.ShouldBe("signed");
+
+        await PumpAsync();
+        (await LeerAsync<EcfResponse>(await Client.GetAsync($"/api/v1/ecf/{issued.Id}")))!.Status.ShouldBe("failed");
+
+        // Ahora la DGII responde y el operador reintenta.
+        dgii.Server.ResetMappings();
+        StubAuth(dgii.Server);
+        StubReception(dgii.Server);
+        StubResult(dgii.Server, codigo: 1, estado: "Aceptado");
+
+        var retry = await Client.PostAsync($"/api/v1/ecf/{issued.Id}/retry", content: null);
+        retry.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        (await LeerAsync<EcfResponse>(retry))!.Status.ShouldBe("signed");
+
+        await PumpAsync();   // envío → submitted, poll +0s
+        await PumpAsync();   // poll → accepted
+        (await LeerAsync<EcfResponse>(await Client.GetAsync($"/api/v1/ecf/{issued.Id}")))!.Status.ShouldBe("accepted");
+    }
+
+    [RequiresDockerFact]
+    public async Task Retrying_a_comprobante_that_is_not_failed_is_a_conflict()
+    {
+        Reconfigure(new Dictionary<string, string?>
+        {
+            ["EcfSubmission:Enabled"] = "false",
+            ["EcfSubmission:SyncWaitBudgetSeconds"] = "0",
+        });
+        await ArrangeTenantAsync();
+
+        var issued = await LeerAsync<EcfResponse>(await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal()));
+
+        var retry = await Client.PostAsync($"/api/v1/ecf/{issued!.Id}/retry", content: null);
+        retry.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+    }
+
+    private sealed record EcfResponse(
+        Guid Id, string Status, string Encf, string? TrackId,
+        int? DgiiStatusCode, DateTimeOffset? SubmittedAt, DateTimeOffset? DgiiProcessedAt);
 }

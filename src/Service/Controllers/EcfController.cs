@@ -3,6 +3,7 @@ using NovaFE.Application.Ecf.Contracts;
 using NovaFE.Application.Ecf.GetEcf;
 using NovaFE.Application.Ecf.IssueEcf;
 using NovaFE.Application.Ecf.ListEcf;
+using NovaFE.Application.Ecf.RetrySubmission;
 using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +20,8 @@ public sealed class EcfController(
     IssueEcfUseCase issue,
     GetEcfUseCase get,
     GetEcfXmlUseCase getXml,
-    ListEcfUseCase list) : ApiController
+    ListEcfUseCase list,
+    RetryEcfSubmissionUseCase retry) : ApiController
 {
     /// <summary>
     /// Emite un e-CF. Header opcional <c>Idempotency-Key</c> para reintento seguro.
@@ -63,4 +65,17 @@ public sealed class EcfController(
     [ProducesResponseType(typeof(PagedResult<EcfSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] ListEcfQuery query, CancellationToken ct)
         => (await list.Execute(query, ct)).Match(Ok, Problem);
+
+    /// <summary>
+    /// Reencola el envío a la DGII de un comprobante en estado <c>failed</c> o
+    /// <c>review</c>. Devuelve <c>202</c> con el comprobante de vuelta en
+    /// <c>signed</c>; el worker retoma el envío.
+    /// </summary>
+    [HttpPost("{id:guid}/retry")]
+    [ProducesResponseType(typeof(EcfDto), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Retry(Guid id, CancellationToken ct)
+        => (await retry.Execute(new RetryEcfSubmissionCommand(id), ct))
+            .Match(dto => Accepted(Url.Action(nameof(GetById), new { id, version = "1" }), dto), Problem);
 }

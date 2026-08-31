@@ -35,7 +35,14 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
         CASE WHEN expected_conditional_acceptance
              THEN 'Los montos declarados no cuadran dentro de la tolerancia; la DGII podría aceptar el comprobante de forma condicional.'
              ELSE NULL
-        END                    AS "ToleranceWarning"
+        END                    AS "ToleranceWarning",
+        track_id               AS "TrackId",
+        submitted_at           AS "SubmittedAt",
+        dgii_processed_at      AS "DgiiProcessedAt",
+        dgii_status_code       AS "DgiiStatusCode",
+        sequence_usable        AS "SequenceUsable",
+        submission_attempts    AS "SubmissionAttempts",
+        dgii_messages          AS "DgiiMessages"
         """;
 
     public async Task<EcfDto?> GetByIdAsync(Guid id, Guid tenantId, CancellationToken ct = default)

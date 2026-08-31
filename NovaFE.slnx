@@ -6,12 +6,10 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/docs/">
-    <File Path="../FE_DGII/contexto-proyecto-fe-dgii.md" />
-    <File Path="../FE_DGII/Plan Técnico Integral v2.0.txt" />
-    <File Path="CLAUDE.md" />
     <File Path="docs/api-ecf.md" />
     <File Path="docs/certificates.md" />
     <File Path="docs/dgii-auth.md" />
+    <File Path="docs/dgii-submission.md" />
     <File Path="docs/ecf-xml.md" />
     <File Path="docs/fiscal.md" />
     <File Path="docs/multi-tenancy.md" />
