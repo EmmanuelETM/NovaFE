@@ -26,10 +26,16 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
     private readonly IEcfSigner _signer = Substitute.For<IEcfSigner>();
     private readonly IEcfRepository _ecf = Substitute.For<IEcfRepository>();
     private readonly IEcfReadRepository _ecfReads = Substitute.For<IEcfReadRepository>();
+    private readonly IEcfSubmissionQueue _queue = Substitute.For<IEcfSubmissionQueue>();
+    private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
 
     public IssueEcfUseCaseTests()
     {
         _tenant.TenantId.Returns(TenantId);
+
+        // La UoW de prueba solo ejecuta la operación (sin transacción real).
+        _uow.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(call => ((Func<CancellationToken, Task>)call[0]).Invoke(call.Arg<CancellationToken>()));
 
         _tenants.GetByIdAsync(TenantId, Arg.Any<CancellationToken>())
             .Returns(Tenant.Register(Rnc.FromStorage("132786262"), "AlMax Solutions EIRL", "AlMax", TenantPlan.GetAll().First()));
@@ -60,7 +66,7 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
     private IssueEcfUseCase Sut() => new(
         LoggerFactory,
         new IssueEcfCommandValidator(Clock),
-        _tenant, _tenants, _profiles, _idempotency, _allocator, _signer, _ecf, _ecfReads, Clock);
+        _tenant, _tenants, _profiles, _idempotency, _allocator, _signer, _ecf, _ecfReads, _queue, _uow, Clock);
 
     private static IssueEcfCommand Command() => new()
     {
@@ -92,6 +98,21 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
         await _ecf.Received(1).AddAsync(
             Arg.Is<IssuedEcf>(e => e.Encf.Value == "E310000000042" && e.Status == EcfStatus.Signed),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Enqueues_the_comprobante_for_submission_to_the_dgii()
+    {
+        var result = await Sut().Execute(Command());
+
+        result.IsError.ShouldBeFalse();
+        await _queue.Received(1).EnqueueSubmitAsync(
+            Arg.Is<Guid>(id => id == result.Value.Ecf.Id),
+            TenantId,
+            Arg.Is<DgiiEnvironment>(e => e == DgiiEnvironment.TestEcf),
+            Arg.Any<CancellationToken>());
+        await _uow.Received(1).ExecuteInTransactionAsync(
+            Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
