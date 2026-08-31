@@ -43,6 +43,12 @@ public sealed class ApiFactory(
                 // Silencia el log de peticiones para que la salida de la suite
                 // sea legible.
                 ["Serilog:MinimumLevel:Default"] = "Warning",
+
+                // El envío a la DGII está apagado por defecto: ninguna prueba debe
+                // tocar los servicios reales. Las que lo prueban lo reactivan con un
+                // WireMock vía Reconfigure.
+                ["EcfSubmission:Enabled"] = "false",
+                ["EcfSubmission:SyncWaitBudgetSeconds"] = "0",
             };
 
             if (overrides is not null)

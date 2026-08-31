@@ -4,6 +4,7 @@ using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Ecf.Contracts;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.IssueEcf;
+using NovaFE.Application.Ecf.Submission;
 using NovaFE.Application.Sequences.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Domain.Common;
@@ -27,6 +28,7 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
     private readonly IEcfRepository _ecf = Substitute.For<IEcfRepository>();
     private readonly IEcfReadRepository _ecfReads = Substitute.For<IEcfReadRepository>();
     private readonly IEcfSubmissionQueue _queue = Substitute.For<IEcfSubmissionQueue>();
+    private readonly IEcfSubmissionFastPath _fastPath = Substitute.For<IEcfSubmissionFastPath>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
 
     public IssueEcfUseCaseTests()
@@ -66,7 +68,8 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
     private IssueEcfUseCase Sut() => new(
         LoggerFactory,
         new IssueEcfCommandValidator(Clock),
-        _tenant, _tenants, _profiles, _idempotency, _allocator, _signer, _ecf, _ecfReads, _queue, _uow, Clock);
+        _tenant, _tenants, _profiles, _idempotency, _allocator, _signer, _ecf, _ecfReads, _queue,
+        _fastPath, new EcfSubmissionSettings { SyncWaitBudget = TimeSpan.Zero }, _uow, Clock);
 
     private static IssueEcfCommand Command() => new()
     {

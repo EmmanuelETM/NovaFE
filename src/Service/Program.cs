@@ -2,6 +2,7 @@ using System.Globalization;
 using Asp.Versioning;
 using NovaFE.Application;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Ecf.Submission;
 using NovaFE.Domain.Common.Json;
 using NovaFE.Infrastructure;
 using NovaFE.Infrastructure.Persistence;
@@ -10,7 +11,9 @@ using NovaFE.Service.Configuration;
 using NovaFE.Service.DevTools;
 using NovaFE.Service.Extensions;
 using NovaFE.Service.Middlewares;
+using NovaFE.Service.Workers;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.Extensions.Options;
 using Microsoft.IO;
 using Scalar.AspNetCore;
 using Serilog;
@@ -74,6 +77,17 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+
+    // Envío a la DGII (Módulo 4): opciones, tiempos internos, pump y worker.
+    builder.Services.AddOptions<EcfSubmissionOptions>()
+        .Bind(builder.Configuration.GetSection(EcfSubmissionOptions.SectionName))
+        .ValidateDataAnnotations();
+    builder.Services.AddSingleton(sp =>
+        sp.GetRequiredService<IOptions<EcfSubmissionOptions>>().Value.ToSettings());
+    builder.Services.AddSingleton<IEcfSubmissionPump, EcfSubmissionPump>();
+
+    if (builder.Configuration.GetValue("EcfSubmission:Enabled", defaultValue: true))
+        builder.Services.AddHostedService<EcfSubmissionWorker>();
 
     // ==========================================
     //     4. Observabilidad & Health Checks

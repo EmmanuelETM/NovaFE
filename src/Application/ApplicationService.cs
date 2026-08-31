@@ -1,6 +1,7 @@
 ﻿using NovaFE.Application.Common;
 using NovaFE.Application.Ecf;
 using NovaFE.Application.Ecf.Interfaces;
+using NovaFE.Application.Ecf.Submission;
 using NovaFE.Application.Signing;
 using NovaFE.Application.Signing.Interfaces;
 using FluentValidation;
@@ -20,6 +21,11 @@ public static class ApplicationService
         // Servicios de aplicación (orquestación que no es un caso de uso de cara al usuario).
         services.AddScoped<ICertificateSigner, CertificateSigner>();
         services.AddScoped<IEcfSigner, EcfSigner>();
+
+        // Envío a la DGII (Módulo 4). Los tiempos (EcfSubmissionSettings) los provee
+        // la capa Service desde configuración.
+        services.AddScoped<EcfSubmissionProcessor>();
+        services.AddScoped<IEcfSubmissionFastPath, EcfSubmissionFastPath>();
 
         // Auto-register all use cases that implement IUseCase<,>
         var useCaseTypes = assembly.GetTypes()

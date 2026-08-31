@@ -16,6 +16,13 @@ public sealed class EcfSubmissionOutboxTests(DatabaseFixture database) : Integra
 
     private async Task IssueOneAsync()
     {
+        // Sin fast-path ni worker: la prueba inspecciona la fila cruda del outbox.
+        Reconfigure(new Dictionary<string, string?>
+        {
+            ["EcfSubmission:Enabled"] = "false",
+            ["EcfSubmission:SyncWaitBudgetSeconds"] = "0",
+        });
+
         var tenantId = await RegisterAndActAsTenantAsync(Rnc);
 
         (await Client.PutAsJsonAsync($"/api/v1/tenants/{tenantId}/emitter-profile", new

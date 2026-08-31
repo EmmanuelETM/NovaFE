@@ -7,6 +7,7 @@ using NovaFE.Application.Common;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Ecf.Contracts;
 using NovaFE.Application.Ecf.Interfaces;
+using NovaFE.Application.Ecf.Submission;
 using NovaFE.Application.Sequences.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Domain.Common;
@@ -32,6 +33,8 @@ public sealed class IssueEcfUseCase(
     IEcfRepository ecf,
     IEcfReadRepository ecfReads,
     IEcfSubmissionQueue submissionQueue,
+    IEcfSubmissionFastPath submissionFastPath,
+    EcfSubmissionSettings submissionSettings,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
     : CommandUseCase<IssueEcfCommand, IssueEcfResult>(loggerFactory, validator)
@@ -126,7 +129,17 @@ public sealed class IssueEcfUseCase(
         if (key is not null)
             await idempotency.CompleteAsync(tenantId, key, issued.Id, ct);
 
-        return new IssueEcfResult(EcfDtoAssembler.From(issued), WasCreated: true);
+        // Fast-path síncrono: intenta resolver contra la DGII dentro del presupuesto.
+        // Si no alcanza, el worker de fondo termina; nunca falla el POST por esto.
+        if (submissionSettings.SyncWaitBudget > TimeSpan.Zero)
+        {
+            using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            budget.CancelAfter(submissionSettings.SyncWaitBudget);
+            await submissionFastPath.TryResolveAsync(issued.Id, budget.Token);
+        }
+
+        var dto = await ecfReads.GetByIdAsync(issued.Id, tenantId, ct) ?? EcfDtoAssembler.From(issued);
+        return new IssueEcfResult(dto, WasCreated: true);
     }
 
     private async Task<ErrorOr<IssueEcfResult>> ReplayAsync(Guid id, Guid tenantId, CancellationToken ct)

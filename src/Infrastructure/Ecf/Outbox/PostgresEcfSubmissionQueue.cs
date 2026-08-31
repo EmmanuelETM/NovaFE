@@ -53,13 +53,15 @@ internal sealed class PostgresEcfSubmissionQueue(AppDbContext context, TimeProvi
         var now = timeProvider.GetUtcNow();
         var token = Guid.NewGuid();
 
+        // El fast-path reclama la fila del comprobante ya, sin esperar a su
+        // next_attempt_at (esa planificación es solo para el worker de fondo).
         var claimed = await context.Database.ExecuteSqlInterpolatedAsync(
             $"""
             UPDATE ecf_submission_outbox
             SET status = 'processing', locked_at = {now}, locked_by = {token}, updated_at = {now}
             WHERE id IN (
                 SELECT id FROM ecf_submission_outbox
-                WHERE ecf_id = {ecfId} AND status = 'pending' AND next_attempt_at <= {now}
+                WHERE ecf_id = {ecfId} AND status = 'pending'
                 ORDER BY next_attempt_at
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
