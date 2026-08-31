@@ -13,7 +13,7 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
     [RequiresDockerFact]
     public async Task Samples_lists_one_per_type()
     {
-        var response = await Client.GetAsync("/api/v1.0/dev/ecf-preview/samples");
+        var response = await Client.GetAsync("/api/v1/dev/ecf-preview/samples");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var samples = await LeerAsync<List<SampleRow>>(response);
@@ -24,7 +24,7 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
     [RequiresDockerFact]
     public async Task A_sample_returns_the_raw_xml_with_the_xsd_header()
     {
-        var response = await Client.GetAsync("/api/v1.0/dev/ecf-preview/samples/compras?raw=true");
+        var response = await Client.GetAsync("/api/v1/dev/ecf-preview/samples/compras?raw=true");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         response.Content.Headers.ContentType!.MediaType.ShouldBe("application/xml");
@@ -38,7 +38,7 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
     [RequiresDockerFact]
     public async Task Post_builds_the_xml_from_a_raw_body()
     {
-        var response = await Client.PostAsJsonAsync("/api/v1.0/dev/ecf-preview", new
+        var response = await Client.PostAsJsonAsync("/api/v1/dev/ecf-preview", new
         {
             type = 31,
             lines = new[]
@@ -57,7 +57,7 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
     [RequiresDockerFact]
     public async Task Post_rfce_returns_the_reduced_document()
     {
-        var response = await Client.PostAsJsonAsync("/api/v1.0/dev/ecf-preview/rfce?raw=true", new
+        var response = await Client.PostAsJsonAsync("/api/v1/dev/ecf-preview/rfce?raw=true", new
         {
             document = new
             {
@@ -79,7 +79,7 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
     [RequiresDockerFact]
     public async Task An_unknown_type_is_a_400()
     {
-        var response = await Client.PostAsJsonAsync("/api/v1.0/dev/ecf-preview", new { type = 99 });
+        var response = await Client.PostAsJsonAsync("/api/v1/dev/ecf-preview", new { type = 99 });
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -87,7 +87,7 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
     [RequiresDockerFact]
     public async Task Signed_true_runs_the_document_through_module_3()
     {
-        var response = await Client.PostAsJsonAsync("/api/v1.0/dev/ecf-preview?signed=true", new
+        var response = await Client.PostAsJsonAsync("/api/v1/dev/ecf-preview?signed=true", new
         {
             type = 31,
             lines = new[] { new { rate = 1, name = "Item gravado", unitPrice = 1000m } },
@@ -108,7 +108,7 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
     [RequiresDockerFact]
     public async Task A_low_amount_consumo_sample_signed_yields_the_signed_rfce()
     {
-        var response = await Client.GetAsync("/api/v1.0/dev/ecf-preview/samples/consumo?signed=true&rfce=true&raw=true");
+        var response = await Client.GetAsync("/api/v1/dev/ecf-preview/samples/consumo?signed=true&rfce=true&raw=true");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         response.Headers.GetValues("X-Ecf-Xsd-Valid").ShouldBe(["true"]);

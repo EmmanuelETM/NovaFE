@@ -17,7 +17,7 @@ public sealed class SigningTests(DatabaseFixture database) : IntegrationTestBase
         const string rnc = "130862346";
         var tenantId = await RegisterAndActAsTenantAsync(rnc);
 
-        (await Client.PostAsync("/api/v1.0/certificates",
+        (await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf")))
             .EnsureSuccessStatusCode();
 

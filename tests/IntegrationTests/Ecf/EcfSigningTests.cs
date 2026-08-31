@@ -82,7 +82,7 @@ public sealed class EcfSigningTests(DatabaseFixture database) : IntegrationTestB
     {
         var tenantId = await RegisterAndActAsTenantAsync(Rnc);
 
-        (await Client.PostAsync("/api/v1.0/certificates",
+        (await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: Rnc), TestPkcs12.DefaultPassword, "TestEcf")))
             .EnsureSuccessStatusCode();
 

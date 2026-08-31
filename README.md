@@ -138,7 +138,7 @@ Para una funcionalidad nueva, siempre en este orden, un archivo por concepto:
 4. **Service** — el controller:
 
    ```csharp
-   [ApiVersion("1.0")]
+   [ApiVersion("1")]
    [Route("api/v{version:apiVersion}/[controller]")]
    public sealed class SolicitudesController(CrearSolicitudUseCase crear) : ApiController
    {

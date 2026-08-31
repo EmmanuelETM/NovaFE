@@ -233,7 +233,7 @@ alcoholes/cigarrillos y la distribución de la Sección D a nivel de línea son 
 posteriores. No cambiar sin leer `docs/fiscal.md`.
 
 **API de emisión** (`src/Application/Ecf/IssueEcf`, `src/Service/Controllers/EcfController.cs`):
-`POST /api/v1.0/ecf` toma el payload curado (`IssueEcfCommand`, discriminado por
+`POST /api/v1/ecf` toma el payload curado (`IssueEcfCommand`, discriminado por
 `type`; enums aceptan nombre o código DGII), lo valida
 (`IssueEcfCommandValidator` — forma + reglas por tipo; `EcfDocument.Create` sigue
 siendo la matriz autoritativa), lo mapea (`EcfDocumentMapper`) y lo pasa por el
@@ -245,7 +245,7 @@ persistir el agregado **`IssuedEcf`** (tabla `issued_ecf`, estado `signed`).
 **No envía a la DGII** — eso es Módulo 4 (estados de envío, outbox, webhooks, `202`,
 número quemado si el pipeline falla post-asignación). `EmitterProfile`
 (`src/Domain/Tenants`) es 1:1 con el contribuyente, lo administra el operador
-(`GET/PUT /api/v1.0/tenants/{id}/emitter-profile`): dirección, ubicación,
+(`GET/PUT /api/v1/tenants/{id}/emitter-profile`): dirección, ubicación,
 teléfonos, actividad y ambiente por defecto — datos del `<Emisor>` que el `Tenant`
 no tiene. No cambiar sin leer `docs/api-ecf.md`.
 
@@ -281,7 +281,7 @@ no tiene. No cambiar sin leer `docs/api-ecf.md`.
 ### Controllers
 
 ```csharp
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
 public sealed class SolicitudesController(CrearSolicitudUseCase crear) : ApiController
 ```
@@ -289,6 +289,10 @@ public sealed class SolicitudesController(CrearSolicitudUseCase crear) : ApiCont
 Heredan de `ApiController`, no de `ControllerBase` directamente. Todo endpoint
 recibe un `CancellationToken` y lo propaga. La ruta lleva siempre el segmento de
 versión; el versionado no asume una versión por defecto a propósito.
+
+**Versión**: solo por major — la URL y la versión declarada son `v1` / `"1"`, no
+`v1.0`. En `CreatedAtAction` el route value es `version = "1"`. El minor se
+reserva para cambios compatibles que no ameriten un segmento de URL nuevo.
 
 **URLs**: `[Route("api/v{version:apiVersion}/[controller]")]` — no escribas la ruta
 del recurso a mano. Un `RouteTokenTransformerConvention` +

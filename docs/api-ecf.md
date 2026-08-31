@@ -1,6 +1,6 @@
 # API pública de emisión de e-CF (Módulo 12)
 
-**Estado: implementado.** `POST /api/v1.0/ecf` arma, calcula, firma y persiste el
+**Estado: implementado.** `POST /api/v1/ecf` arma, calcula, firma y persiste el
 comprobante. El **envío a la DGII** (TrackId, polling, reintentos, webhooks, camino
 `202`) es Módulo 4 y todavía no existe: en v1 el comprobante queda en estado
 `signed`.
@@ -49,10 +49,10 @@ línea; encabezado: ±1 por campo) y devuelve `toleranceWarning` si no cuadran �
 ## 2. Endpoints
 
 ```
-POST   /api/v1.0/ecf                 emitir
-GET    /api/v1.0/ecf/{id}            estado y detalle
-GET    /api/v1.0/ecf/{id}/xml        XML firmado (?rfce=true → el <RFCE>)
-GET    /api/v1.0/ecf?...             listado / búsqueda paginado
+POST   /api/v1/ecf                 emitir
+GET    /api/v1/ecf/{id}            estado y detalle
+GET    /api/v1/ecf/{id}/xml        XML firmado (?rfce=true → el <RFCE>)
+GET    /api/v1/ecf?...             listado / búsqueda paginado
 ```
 
 | | |
@@ -245,7 +245,7 @@ números quemados son Módulo 4 / slices posteriores (`docs/sequences.md`).
 
 ## 8. Flujo
 
-`POST /api/v1.0/ecf` es **síncrono** en v1: resolver emisor + ambiente → idempotencia
+`POST /api/v1/ecf` es **síncrono** en v1: resolver emisor + ambiente → idempotencia
 → dedup → asignar secuencia (M7) → armar y calcular (M2 + M6) → firmar (M3) →
 persistir. Todo local, < 1 s. El intento a la DGII con espera acotada, el outbox
 (`SKIP LOCKED`), el camino `202 Accepted` y los webhooks (HMAC-SHA256) son
@@ -336,8 +336,8 @@ correo y actividad económica — datos que el `Tenant` no tiene. Se configuran 
 vez por contribuyente (recurso de **operador**, no del cliente emisor):
 
 ```
-GET  /api/v1.0/tenants/{id}/emitter-profile
-PUT  /api/v1.0/tenants/{id}/emitter-profile   (upsert)
+GET  /api/v1/tenants/{id}/emitter-profile
+PUT  /api/v1/tenants/{id}/emitter-profile   (upsert)
 ```
 
 Cuerpo del `PUT`:

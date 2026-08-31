@@ -9,7 +9,7 @@ namespace NovaFE.Service.Controllers;
 /// Utilidades de integración con la DGII. Recurso <b>por tenant</b> (header
 /// <c>X-Tenant-Id</c>).
 /// </summary>
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
 public sealed class DgiiController(CheckDgiiConnectionUseCase checkConnection) : ApiController
 {

@@ -12,7 +12,7 @@ namespace NovaFE.Service.Controllers;
 /// Inventario de secuencias e-NCF del contribuyente. Recurso <b>por tenant</b>: la
 /// petición debe traer el header <c>X-Tenant-Id</c>.
 /// </summary>
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
 public sealed class SequencesController(
     RegisterSequenceRangeUseCase register,
@@ -26,7 +26,7 @@ public sealed class SequencesController(
         [FromBody] RegisterSequenceRangeCommand command,
         CancellationToken ct)
         => (await register.Execute(command, ct)).Match(
-            id => CreatedAtAction(nameof(GetById), new { id, version = "1.0" }, new { id }),
+            id => CreatedAtAction(nameof(GetById), new { id, version = "1" }, new { id }),
             Problem);
 
     [HttpGet("{id:guid}")]
