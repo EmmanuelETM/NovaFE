@@ -29,6 +29,9 @@ public static class JsonSettings
 
             // Serializa todas las fechas en hora dominicana (offset -04:00).
             new DominicanDateTimeOffsetConverter(),
+
+            // Fechas de calendario (DateOnly) en formato DGII dd-MM-yyyy.
+            new DateOnlyJsonConverter(),
         }
     };
 }

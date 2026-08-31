@@ -100,7 +100,9 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
         body.SecurityCode.Length.ShouldBe(6);
         body.DocumentHash.Length.ShouldBe(64);
         body.QrUrl.ShouldStartWith("https://ecf.dgii.gov.do/testecf/consultatimbre?");
-        body.QrUrl.ShouldContain($"codigoseguridad={body.SecurityCode}");
+        // El código va URL-encoded (puede traer + / del Base64); solo comprobamos que esté.
+        body.QrUrl.ShouldContain("&codigoseguridad=");
+        body.QrUrl.ShouldEndWith(Uri.EscapeDataString(body.SecurityCode));
     }
 
     [RequiresDockerFact]

@@ -480,6 +480,7 @@ public sealed class EcfDocument
             AdditionalTaxes: line.AdditionalTaxDetail is { Count: > 0 } detail
                 ? detail.Sum(tax => tax.Amount)
                 : line.AdditionalTaxes,
+            SuppliedLineAmount: line.DeclaredAmount,
             ItbisWithheld: line.Retention?.ItbisWithheld ?? 0m,
             IsrWithheld: line.Retention?.IsrWithheld ?? 0m);
 }

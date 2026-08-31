@@ -27,6 +27,11 @@ public sealed record EcfItemCode(string Type, string Value);
 /// <param name="ForeignCurrency"><c>&lt;OtraMonedaDetalle&gt;</c> — precio y montos de la línea en divisa.</param>
 /// <param name="AdditionalTaxDetail">Desglose de <see cref="AdditionalTaxes"/> por código (Tabla I); alimenta <c>&lt;ImpuestosAdicionales&gt;</c>.</param>
 /// <param name="Details">Campos opcionales del <c>&lt;Item&gt;</c> (GradosAlcohol, CantidadReferencia, Mineria…).</param>
+/// <param name="DeclaredAmount">
+/// El <c>&lt;MontoItem&gt;</c> que calculó el cliente. Si viene, el motor lo compara
+/// con el suyo (tolerancia ±1, RF-06.6) — <b>nunca</b> rechaza; el valor de NovaFE
+/// es el que va al XML. Escape para migraciones desde otro proveedor.
+/// </param>
 public sealed record EcfLine(
     int Number,
     ItbisRate Rate,
@@ -44,4 +49,5 @@ public sealed record EcfLine(
     EcfLineRetention? Retention = null,
     EcfLineForeignCurrency? ForeignCurrency = null,
     IReadOnlyList<EcfAdditionalTax>? AdditionalTaxDetail = null,
-    EcfLineDetails? Details = null);
+    EcfLineDetails? Details = null,
+    decimal? DeclaredAmount = null);
