@@ -14,14 +14,17 @@ namespace NovaFE.Domain.Fiscal;
 /// <para>
 /// Alcance v1: ITBIS (tasas 18/16/0 y exento), ajustes de línea
 /// (<c>DescuentoMonto</c>/<c>RecargoMonto</c>), "otros impuestos adicionales" que
-/// el cliente ya trae calculados, la <b>totalización</b> de las retenciones de
-/// ITBIS/ISR por línea (tipos 41/47), y la <b>reconciliación mecánica</b> de los
-/// descuentos/recargos globales de la Sección D (se aplican al bucket que indica
+/// el cliente ya trae calculados, el <b>ISC específico</b> por línea (monto fijo
+/// que el cliente trae calculado) integrado a la base del ITBIS, la
+/// <b>totalización</b> de las retenciones de ITBIS/ISR por línea (tipos 41/47), y
+/// la <b>reconciliación mecánica</b> de los descuentos/recargos globales de la
+/// Sección D (se aplican al bucket que indica
 /// <c>IndicadorFacturacionDescuentooRecargo</c> y se recalcula su ITBIS; la
 /// Norma 10-07 solo baja el valor a pagar). <b>Fuera de v1</b> (slices aparte, ver
-/// <c>docs/fiscal.md</c>): ISC de alcoholes y cigarrillos que integra la base del
-/// ITBIS, la distribución proporcional de la Sección D a nivel de línea, y el
-/// cálculo de las tasas de retención a partir de las normas de la DGII.
+/// <c>docs/fiscal.md</c>): la <b>derivación</b> del ISC específico y del ad valorem
+/// desde <c>GradosAlcohol</c>/<c>CantidadReferencia</c> (RF-06.4/06.5), la
+/// distribución proporcional de la Sección D a nivel de línea, y el cálculo de las
+/// tasas de retención a partir de las normas de la DGII.
 /// </para>
 /// </summary>
 public static class EcfCalculator
@@ -47,8 +50,10 @@ public static class EcfCalculator
 
         decimal gravadoI1 = 0m, gravadoI2 = 0m, gravadoI3 = 0m;
         decimal itbis1 = 0m, itbis2 = 0m, itbis3 = 0m;
+        decimal isc1 = 0m, isc2 = 0m, isc3 = 0m;   // ISC específico por bucket (integra la base del ITBIS)
         decimal exento = 0m;
         decimal otrosImpuestos = 0m;
+        decimal selectivoConsumo = 0m;
         decimal itbisRetenido = 0m, isrRetenido = 0m;
 
         foreach (var line in lines)
@@ -58,20 +63,24 @@ public static class EcfCalculator
 
             itbisRetenido += line.ItbisWithheld;
             isrRetenido += line.IsrWithheld;
+            selectivoConsumo += line.IscSpecific;
 
             switch (line.Rate.Id)
             {
                 case 1:
                     gravadoI1 += result.TaxableBase;
                     itbis1 += result.TaxAmount;
+                    isc1 += line.IscSpecific;
                     break;
                 case 2:
                     gravadoI2 += result.TaxableBase;
                     itbis2 += result.TaxAmount;
+                    isc2 += line.IscSpecific;
                     break;
                 case 3:
                     gravadoI3 += result.TaxableBase;
                     itbis3 += result.TaxAmount;
+                    isc3 += line.IscSpecific;
                     break;
                 default: // 4 — Exento
                     exento += result.ExemptAmount;
@@ -113,18 +122,18 @@ public static class EcfCalculator
         if (gravadoI1 < 0m || gravadoI2 < 0m || gravadoI3 < 0m || exento < 0m)
             return FiscalErrors.GlobalAdjustmentExceedsBucket;
 
-        // El ITBIS de los buckets tocados se recalcula sobre la nueva base.
-        if (touched.Contains(1)) itbis1 = gravadoI1 * ItbisRate.Eighteen.Rate;
-        if (touched.Contains(2)) itbis2 = gravadoI2 * ItbisRate.Sixteen.Rate;
+        // El ITBIS de los buckets tocados se recalcula sobre la nueva base. El ISC
+        // específico del bucket integra esa base (contexto §5.2 nota 12).
+        if (touched.Contains(1)) itbis1 = (gravadoI1 + isc1) * ItbisRate.Eighteen.Rate;
+        if (touched.Contains(2)) itbis2 = (gravadoI2 + isc2) * ItbisRate.Sixteen.Rate;
         // bucket 3 (0 %): el ITBIS es siempre 0.
 
         var gravadoTotal = EcfRounding.Money(gravadoI1 + gravadoI2 + gravadoI3);
         var totalItbis = EcfRounding.Money(itbis1 + itbis2 + itbis3);
         exento = EcfRounding.Money(exento);
         otrosImpuestos = EcfRounding.Money(otrosImpuestos);
+        selectivoConsumo = EcfRounding.Money(selectivoConsumo);
 
-        // v1: sin ISC de alcoholes/cigarrillos.
-        const decimal selectivoConsumo = 0m;
         var impuestoAdicional = EcfRounding.Money(selectivoConsumo + otrosImpuestos);
 
         var montoTotal = EcfRounding.Money(gravadoTotal + exento + totalItbis + impuestoAdicional);
@@ -167,6 +176,11 @@ public static class EcfCalculator
         decimal taxAmount;
         decimal exemptAmount;
 
+        // El ISC específico integra la base imponible del ITBIS pero NO el
+        // <MontoGravado> reportado: se suma antes de aplicar la tasa y luego vive
+        // en <MontoImpuestoAdicional>, así <MontoTotal> no lo cuenta dos veces.
+        var isc = line.IscSpecific;
+
         if (line.Rate.IsExempt)
         {
             taxableBase = 0m;
@@ -175,16 +189,17 @@ public static class EcfCalculator
         }
         else if (line.PriceIncludesTax)
         {
-            // El precio ya trae el ITBIS: se extrae la base y el impuesto es el
-            // resto, para que la línea cuadre exactamente.
-            taxableBase = EcfRounding.Money(lineAmount / (1m + line.Rate.Rate));
-            taxAmount = lineAmount - taxableBase;
+            // El precio ya trae ITBIS (+ ISC): base+ISC = precio / (1 + tasa); el
+            // ITBIS es el resto y <MontoGravado> es esa base menos el ISC.
+            var baseWithIsc = EcfRounding.Money(lineAmount / (1m + line.Rate.Rate));
+            taxAmount = lineAmount - baseWithIsc;
+            taxableBase = baseWithIsc - isc;
             exemptAmount = 0m;
         }
         else
         {
             taxableBase = lineAmount;
-            taxAmount = EcfRounding.Money(lineAmount * line.Rate.Rate);
+            taxAmount = EcfRounding.Money((lineAmount + isc) * line.Rate.Rate);
             exemptAmount = 0m;
         }
 
@@ -255,15 +270,22 @@ public static class EcfCalculator
             if (line.UnitPrice < 0m)
                 errors.Add(FiscalErrors.NegativeUnitPrice(line.LineNumber));
 
-            if (line.Discount < 0m || line.Surcharge < 0m || line.AdditionalTaxes < 0m)
+            if (line.Discount < 0m || line.Surcharge < 0m || line.AdditionalTaxes < 0m || line.IscSpecific < 0m)
                 errors.Add(FiscalErrors.NegativeAdjustment(line.LineNumber));
 
             if (line.ItbisWithheld < 0m || line.IsrWithheld < 0m)
                 errors.Add(FiscalErrors.NegativeRetention(line.LineNumber));
 
             var raw = (line.UnitPrice * line.Quantity) - line.Discount + line.Surcharge;
-            if (EcfRounding.Money(raw) < 0m)
+            var lineAmount = EcfRounding.Money(raw);
+            if (lineAmount < 0m)
                 errors.Add(FiscalErrors.NegativeLineAmount(line.LineNumber));
+
+            // Con precio-con-ITBIS, el ISC específico se resta de la base extraída;
+            // si la supera, <MontoGravado> daría negativo.
+            if (line.IscSpecific > 0m && line.PriceIncludesTax && !line.Rate.IsExempt
+                && EcfRounding.Money(lineAmount / (1m + line.Rate.Rate)) - line.IscSpecific < 0m)
+                errors.Add(FiscalErrors.IscSpecificExceedsTaxableBase(line.LineNumber));
         }
 
         return errors;

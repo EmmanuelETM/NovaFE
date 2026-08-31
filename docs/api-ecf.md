@@ -121,7 +121,7 @@ aceptan el **nombre** (`"credit"`, `"check_transfer"`) o el **código DGII**
 | `priceIncludesTax` opc. | `IndicadorMontoGravado` | Sobrescribe el default del request |
 | `codes[]` opc. | `TablaCodigosItem` | `{ type, value }` |
 | `retention` opc. | Área `<Retencion>` | `{ agent, itbisWithheld, isrWithheld }` — `agent`: `withholding` (1) / `perception` (2). **Obligatoria** en cada línea de 41 y 47. Los montos los calcula el cliente (ver `docs/fiscal.md`) |
-| `additionalTaxes[]` opc. | `TablaImpuestoAdicional` + `<ImpuestosAdicionales>` | `{ code, rate, iscEspecifico, iscAdvalorem, otros }` — código de la Tabla I (001–039). Solo 31/32/33/34/44/45 |
+| `additionalTaxes[]` opc. | `TablaImpuestoAdicional` + `<ImpuestosAdicionales>` | `{ code, rate, iscEspecifico, iscAdvalorem, otros }` — código de la Tabla I (001–039). Solo 31/32/33/34/44/45. Todos los montos los trae el cliente. **`iscEspecifico`** (alcoholes 006-018, cigarrillos 019-022) **integra la base del ITBIS** de la línea: sube `totalItbis`, no `montoGravado`; se totaliza en `montoImpuestoAdicional` y se expone aparte en `totals.totalImpuestoSelectivoConsumo`. `iscAdvalorem` y `otros` van por encima |
 | `foreignCurrency` opc. | `<OtraMonedaDetalle>` | `{ unitPrice, discount, surcharge, lineAmount }` en divisa (passthrough) |
 | `details` opc. | Campos opcionales del `<Item>` | `{ referenceQuantity, referenceUnit, subquantities[], alcoholDegrees, referenceUnitPrice, manufactureDate, expiryDate, mining }`. Passthrough — el ISC de alcoholes/cigarrillos igual va en `additionalTaxes` (la derivación desde `alcoholDegrees` es un slice posterior). `mining` solo en 32/33/34/46 |
 | `declaredAmount` opc. | — | El `MontoItem` que calculó el cliente → chequeo de tolerancia |
@@ -213,7 +213,8 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   "totals": {
     "montoGravadoTotal": 2000.00, "montoGravadoI1": 2000.00,
     "montoExento": 0.00, "totalItbis": 360.00, "totalItbis1": 360.00,
-    "montoImpuestoAdicional": 0.00, "montoTotal": 2360.00,
+    "montoImpuestoAdicional": 0.00, "totalImpuestoSelectivoConsumo": 0.00,
+    "montoTotal": 2360.00,
     "montoNoFacturable": 0.00, "montoPeriodo": 2360.00,
     "totalItbisRetenido": 0.00, "totalIsrRetencion": 0.00
   },

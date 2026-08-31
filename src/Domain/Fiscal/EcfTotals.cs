@@ -30,8 +30,12 @@ namespace NovaFE.Domain.Fiscal;
 /// <param name="Itbis3">ITBIS al 0 % (siempre 0; el campo existe por simetría).</param>
 /// <param name="TotalItbis">Suma de <see cref="Itbis1"/> + I2 + I3.</param>
 /// <param name="MontoExento">Total de líneas exentas (<c>IndicadorFacturacion = 4</c>).</param>
-/// <param name="TotalImpuestoSelectivoConsumo">ISC de alcoholes y cigarrillos. Slice aparte; hoy 0.</param>
-/// <param name="TotalOtrosImpuestosAdicionales">Propina Legal, CDT, ISC de servicios, Primera Placa…</param>
+/// <param name="TotalImpuestoSelectivoConsumo">
+/// ISC <b>específico</b> de alcoholes y cigarrillos (suma de <c>EcfLineInput.IscSpecific</c>).
+/// Integra la base de cálculo del ITBIS por línea, pero se totaliza acá (dentro de
+/// <see cref="MontoImpuestoAdicional"/>), no en <see cref="MontoGravadoTotal"/>.
+/// </param>
+/// <param name="TotalOtrosImpuestosAdicionales">Propina Legal, CDT, ISC de servicios, ISC ad valorem, Primera Placa…</param>
 /// <param name="MontoImpuestoAdicional">Suma de ISC + otros impuestos adicionales.</param>
 /// <param name="MontoTotal">Total del comprobante.</param>
 /// <param name="MontoNoFacturable">Montos no facturables (reembolsos, propina voluntaria…). Puede ser negativo.</param>

@@ -467,8 +467,17 @@ public sealed class EcfDocument
             Amount: adj.Amount,
             Norma1007: adj.Norma1007);
 
-    private static EcfLineInput ToLineInput(EcfLine line, bool headerPricesIncludeTax) =>
-        new(
+    private static EcfLineInput ToLineInput(EcfLine line, bool headerPricesIncludeTax)
+    {
+        // Si viene el desglose por código, es la fuente de verdad del monto. El ISC
+        // específico (monto fijo) se separa porque integra la base del ITBIS; el
+        // ISC ad valorem y el resto van "por encima" como otros impuestos.
+        var detail = line.AdditionalTaxDetail;
+        var (otherTaxes, iscSpecific) = detail is { Count: > 0 }
+            ? (detail.Sum(tax => tax.IscAdvalorem + tax.Otros), detail.Sum(tax => tax.IscEspecifico))
+            : (line.AdditionalTaxes, 0m);
+
+        return new EcfLineInput(
             LineNumber: line.Number,
             Rate: line.Rate,
             Quantity: line.Quantity,
@@ -476,11 +485,10 @@ public sealed class EcfDocument
             Discount: line.Discount,
             Surcharge: line.Surcharge,
             PriceIncludesTax: line.PriceIncludesTax ?? headerPricesIncludeTax,
-            // Si viene el desglose por código, es la fuente de verdad del monto.
-            AdditionalTaxes: line.AdditionalTaxDetail is { Count: > 0 } detail
-                ? detail.Sum(tax => tax.Amount)
-                : line.AdditionalTaxes,
+            AdditionalTaxes: otherTaxes,
+            IscSpecific: iscSpecific,
             SuppliedLineAmount: line.DeclaredAmount,
             ItbisWithheld: line.Retention?.ItbisWithheld ?? 0m,
             IsrWithheld: line.Retention?.IsrWithheld ?? 0m);
+    }
 }

@@ -14,10 +14,12 @@ public class EcfCalculatorTests
         decimal surcharge = 0m,
         bool priceIncludesTax = false,
         decimal additionalTaxes = 0m,
+        decimal iscSpecific = 0m,
         decimal? supplied = null,
         decimal itbisWithheld = 0m,
         decimal isrWithheld = 0m)
-        => new(number, rate, quantity, unitPrice, discount, surcharge, priceIncludesTax, additionalTaxes, supplied, itbisWithheld, isrWithheld);
+        => new(number, rate, quantity, unitPrice, discount, surcharge, priceIncludesTax,
+            additionalTaxes, iscSpecific, supplied, itbisWithheld, isrWithheld);
 
     [Fact]
     public void Taxed_line_with_tax_on_top()
@@ -145,6 +147,81 @@ public class EcfCalculatorTests
         t.MontoImpuestoAdicional.ShouldBe(100.00m);
         t.MontoTotal.ShouldBe(1280.00m);
     }
+
+    [Fact]
+    public void Specific_isc_integrates_the_itbis_base_but_not_the_reported_gravado()
+    {
+        // Ron: precio 1000, ISC específico 634 (lo trae el cliente), tasa 18 %.
+        var result = EcfCalculator.Calculate(
+            [Line(1, ItbisRate.Eighteen, quantity: 1m, unitPrice: 1000m, iscSpecific: 634m)]);
+
+        var line = result.Value.Lines[0];
+        line.LineAmount.ShouldBe(1000.00m);                 // <MontoItem> = precio, sin ISC
+        line.TaxableBase.ShouldBe(1000.00m);                // <MontoGravado>, sin ISC
+        line.TaxAmount.ShouldBe(294.12m);                   // (1000 + 634) * 0.18
+
+        var t = result.Value.Totals;
+        t.MontoGravadoI1.ShouldBe(1000.00m);
+        t.Itbis1.ShouldBe(294.12m);
+        t.TotalImpuestoSelectivoConsumo.ShouldBe(634.00m);
+        t.TotalOtrosImpuestosAdicionales.ShouldBe(0m);
+        t.MontoImpuestoAdicional.ShouldBe(634.00m);
+        t.MontoTotal.ShouldBe(1928.12m);                    // 1000 + 294.12 + 634, sin doble conteo
+    }
+
+    [Fact]
+    public void Specific_isc_with_tax_included_price_reconciles()
+    {
+        // El precio 1928.12 ya trae ITBIS y ISC; el ISC específico es 634.
+        var result = EcfCalculator.Calculate(
+            [Line(1, ItbisRate.Eighteen, quantity: 1m, unitPrice: 1928.12m, priceIncludesTax: true, iscSpecific: 634m)]);
+
+        var line = result.Value.Lines[0];
+        line.TaxableBase.ShouldBe(1000.00m);
+        line.TaxAmount.ShouldBe(294.12m);
+        (line.TaxableBase + line.TaxAmount + 634m).ShouldBe(line.LineAmount);
+
+        result.Value.Totals.MontoTotal.ShouldBe(1928.12m);
+    }
+
+    [Fact]
+    public void Specific_isc_and_other_additional_taxes_land_in_different_totals()
+    {
+        var result = EcfCalculator.Calculate(
+            [Line(1, ItbisRate.Eighteen, quantity: 1m, unitPrice: 1000m, additionalTaxes: 100m, iscSpecific: 634m)]);
+
+        var t = result.Value.Totals;
+        t.Itbis1.ShouldBe(294.12m);                         // solo el ISC específico entra a la base
+        t.TotalImpuestoSelectivoConsumo.ShouldBe(634.00m);
+        t.TotalOtrosImpuestosAdicionales.ShouldBe(100.00m);
+        t.MontoImpuestoAdicional.ShouldBe(734.00m);
+        t.MontoTotal.ShouldBe(2028.12m);                    // 1000 + 294.12 + 734
+    }
+
+    [Fact]
+    public void A_global_discount_keeps_the_specific_isc_in_the_recomputed_base()
+    {
+        var result = EcfCalculator.Calculate(
+            [Line(1, ItbisRate.Eighteen, quantity: 1m, unitPrice: 10000m, iscSpecific: 500m)],
+            globalAdjustments: [new EcfGlobalAdjustmentInput(IsDiscount: true, ItbisRate.Eighteen, 1000m)]);
+
+        var t = result.Value.Totals;
+        t.MontoGravadoI1.ShouldBe(9000.00m);
+        t.Itbis1.ShouldBe(1710.00m);                        // (9000 + 500) * 0.18
+        t.TotalImpuestoSelectivoConsumo.ShouldBe(500.00m);
+        t.MontoTotal.ShouldBe(11210.00m);                   // 9000 + 1710 + 500
+    }
+
+    [Fact]
+    public void Rejects_a_negative_specific_isc()
+        => EcfCalculator.Calculate([Line(1, ItbisRate.Eighteen, 1m, 100m, iscSpecific: -5m)])
+            .FirstError.Code.ShouldBe("Fiscal.NegativeAdjustment");
+
+    [Fact]
+    public void Rejects_specific_isc_that_exceeds_the_base_extracted_from_a_tax_included_price()
+        => EcfCalculator.Calculate(
+                [Line(1, ItbisRate.Eighteen, 1m, 118m, priceIncludesTax: true, iscSpecific: 200m)])
+            .FirstError.Code.ShouldBe("Fiscal.IscSpecificExceedsTaxableBase");
 
     [Fact]
     public void MontoNoFacturable_only_moves_MontoPeriodo_and_can_be_negative()
