@@ -111,6 +111,11 @@ dotnet_diagnostic.CA2007.severity = none
 # CA1014: CLSCompliant solo importa en librerías públicas consumidas desde otros lenguajes .NET.
 dotnet_diagnostic.CA1014.severity = none
 
+[src/Domain/Ecf/*.cs]
+# CA1720: "signed" figura como designación de tipo CLI, pero en el vocabulario del
+# e-CF ("firmado") es un falso positivo recurrente (EcfStatus.Signed, FromSigned…).
+dotnet_diagnostic.CA1720.severity = none
+
 [tests/**/*.cs]
 # En pruebas los nombres de método describen el escenario; no forzamos PascalCase estricto.
 dotnet_diagnostic.CA1707.severity = none

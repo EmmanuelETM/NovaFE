@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using ErrorOr;
-using NovaFE.Application.Ecf.Contracts;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Domain.Common;

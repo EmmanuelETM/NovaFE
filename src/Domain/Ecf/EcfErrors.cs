@@ -142,4 +142,22 @@ public static class EcfErrors
     public static Error SignedDocumentFailedXsd(int documentType, string detail) => Error.Unexpected(
         code: "Ecf.SignedDocumentFailedXsd",
         description: $"El XML firmado del tipo {documentType} no valida contra el XSD oficial de la DGII: {detail}");
+
+    // --- Módulo 12: emisión por API ------------------------------------
+
+    public static Error NotFound(Guid id) => Error.NotFound(
+        code: "Ecf.NotFound",
+        description: $"No existe un comprobante emitido con id '{id}'.");
+
+    public static Error EnvironmentNotResolvable => Error.Validation(
+        code: "Ecf.EnvironmentNotResolvable",
+        description: "No se pudo determinar el ambiente de la DGII. Configure el ambiente por defecto del emisor o inclúyalo en la petición.");
+
+    public static Error RequestInProgress => Error.Conflict(
+        code: "Ecf.RequestInProgress",
+        description: "Una petición con esta Idempotency-Key ya se está procesando. Reintente en unos segundos.");
+
+    public static Error IdempotencyKeyConflict => Error.Conflict(
+        code: "Ecf.IdempotencyKeyConflict",
+        description: "La Idempotency-Key ya se usó con un cuerpo distinto. Use una clave nueva para una petición distinta.");
 }

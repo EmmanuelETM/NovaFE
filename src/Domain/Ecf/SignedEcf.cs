@@ -1,9 +1,9 @@
-namespace NovaFE.Application.Ecf.Contracts;
+namespace NovaFE.Domain.Ecf;
 
 /// <summary>
-/// El e-CF ya firmado y listo para la DGII — la salida de Módulo 3. Lo consume
-/// Módulo 4 (envío + persistencia); este contrato no sabe nada de HTTP ni de base
-/// de datos.
+/// El e-CF ya firmado y listo para la DGII — la salida de Módulo 3. Lo consumen
+/// el agregado persistido <see cref="Ecf"/> y Módulo 4 (envío); este contrato no
+/// sabe nada de HTTP ni de base de datos.
 /// </summary>
 /// <param name="SignedAt">
 /// Instante de firma (UTC). Es el mismo que quedó en <c>&lt;FechaHoraFirma&gt;</c>
