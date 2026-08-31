@@ -14,7 +14,7 @@ namespace NovaFE.Service.Controllers;
 /// de operador del SaaS: no requiere un tenant en la petición (un contribuyente se
 /// registra antes de existir).
 /// </summary>
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
 public sealed class TenantsController(
     RegisterTenantUseCase register,
@@ -28,7 +28,7 @@ public sealed class TenantsController(
         [FromBody] RegisterTenantCommand command,
         CancellationToken ct)
         => (await register.Execute(command, ct)).Match(
-            id => CreatedAtAction(nameof(GetById), new { id, version = "1.0" }, new { id }),
+            id => CreatedAtAction(nameof(GetById), new { id, version = "1" }, new { id }),
             Problem);
 
     [HttpGet("{id:guid}")]

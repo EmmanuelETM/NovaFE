@@ -8,7 +8,7 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
 {
     private async Task<Guid> RegisterTenantAsync()
     {
-        var register = await Client.PostAsJsonAsync("/api/v1.0/tenants", new
+        var register = await Client.PostAsJsonAsync("/api/v1/tenants", new
         {
             rnc = "132786262",
             legalName = "Acme SRL",
@@ -34,10 +34,10 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
     {
         var tenantId = await RegisterTenantAsync();
 
-        var put = await Client.PutAsJsonAsync($"/api/v1.0/tenants/{tenantId}/emitter-profile", ProfileBody());
+        var put = await Client.PutAsJsonAsync($"/api/v1/tenants/{tenantId}/emitter-profile", ProfileBody());
         put.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        var get = await Client.GetAsync($"/api/v1.0/tenants/{tenantId}/emitter-profile");
+        var get = await Client.GetAsync($"/api/v1/tenants/{tenantId}/emitter-profile");
         get.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var profile = await LeerAsync<EmitterProfileResponse>(get);
@@ -52,12 +52,12 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
     {
         var tenantId = await RegisterTenantAsync();
 
-        (await Client.PutAsJsonAsync($"/api/v1.0/tenants/{tenantId}/emitter-profile", ProfileBody())).EnsureSuccessStatusCode();
-        (await Client.PutAsJsonAsync($"/api/v1.0/tenants/{tenantId}/emitter-profile",
+        (await Client.PutAsJsonAsync($"/api/v1/tenants/{tenantId}/emitter-profile", ProfileBody())).EnsureSuccessStatusCode();
+        (await Client.PutAsJsonAsync($"/api/v1/tenants/{tenantId}/emitter-profile",
             ProfileBody(address: "Calle Nueva 5", environment: "Production"))).EnsureSuccessStatusCode();
 
         var profile = await LeerAsync<EmitterProfileResponse>(
-            await Client.GetAsync($"/api/v1.0/tenants/{tenantId}/emitter-profile"));
+            await Client.GetAsync($"/api/v1/tenants/{tenantId}/emitter-profile"));
 
         profile!.Address.ShouldBe("Calle Nueva 5");
         profile.DefaultEnvironment.ShouldBe("Production");
@@ -68,7 +68,7 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
     {
         var tenantId = await RegisterTenantAsync();
 
-        var get = await Client.GetAsync($"/api/v1.0/tenants/{tenantId}/emitter-profile");
+        var get = await Client.GetAsync($"/api/v1/tenants/{tenantId}/emitter-profile");
 
         get.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -77,7 +77,7 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
     public async Task Put_rejects_an_unknown_tenant_with_404()
     {
         var put = await Client.PutAsJsonAsync(
-            $"/api/v1.0/tenants/{Guid.NewGuid()}/emitter-profile", ProfileBody());
+            $"/api/v1/tenants/{Guid.NewGuid()}/emitter-profile", ProfileBody());
 
         put.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -88,7 +88,7 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
         var tenantId = await RegisterTenantAsync();
 
         var put = await Client.PutAsJsonAsync(
-            $"/api/v1.0/tenants/{tenantId}/emitter-profile", ProfileBody(address: ""));
+            $"/api/v1/tenants/{tenantId}/emitter-profile", ProfileBody(address: ""));
 
         put.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }

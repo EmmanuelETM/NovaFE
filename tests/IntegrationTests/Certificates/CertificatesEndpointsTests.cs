@@ -14,13 +14,13 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
         const string rnc = "130862346";
         await RegisterAndActAsTenantAsync(rnc);
 
-        var upload = await Client.PostAsync("/api/v1.0/certificates",
+        var upload = await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
 
         upload.StatusCode.ShouldBe(HttpStatusCode.Created);
         var id = (await LeerAsync<IdResponse>(upload))!.Id;
 
-        var get = await Client.GetAsync($"/api/v1.0/certificates/{id}");
+        var get = await Client.GetAsync($"/api/v1/certificates/{id}");
         get.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var certificate = await LeerAsync<CertificateResponse>(get);
@@ -35,7 +35,7 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
     {
         await RegisterAndActAsTenantAsync("130000001");
 
-        var response = await Client.PostAsync("/api/v1.0/certificates",
+        var response = await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: "999999999"), TestPkcs12.DefaultPassword, "TestEcf"));
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
@@ -47,11 +47,11 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
         const string rnc = "130000002";
         await RegisterAndActAsTenantAsync(rnc);
 
-        (await Client.PostAsync("/api/v1.0/certificates",
+        (await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf")))
             .EnsureSuccessStatusCode();
 
-        var second = await Client.PostAsync("/api/v1.0/certificates",
+        var second = await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
 
         second.StatusCode.ShouldBe(HttpStatusCode.Conflict);
@@ -63,15 +63,15 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
         const string rnc = "130000003";
         await RegisterAndActAsTenantAsync(rnc);
 
-        var first = await Client.PostAsync("/api/v1.0/certificates",
+        var first = await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
         first.EnsureSuccessStatusCode();
         var firstId = (await LeerAsync<IdResponse>(first))!.Id;
 
-        var revoke = await Client.PostAsync($"/api/v1.0/certificates/{firstId}/revoke", content: null);
+        var revoke = await Client.PostAsync($"/api/v1/certificates/{firstId}/revoke", content: null);
         revoke.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
-        var replacement = await Client.PostAsync("/api/v1.0/certificates",
+        var replacement = await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf"));
 
         replacement.StatusCode.ShouldBe(HttpStatusCode.Created);
@@ -84,18 +84,18 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
         var tenantB = await RegisterTenantAsync("130000011");
 
         ActAs(tenantA);
-        var upload = await Client.PostAsync("/api/v1.0/certificates",
+        var upload = await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: "130000010"), TestPkcs12.DefaultPassword, "TestEcf"));
         upload.EnsureSuccessStatusCode();
         var certificateId = (await LeerAsync<IdResponse>(upload))!.Id;
 
         ActAs(tenantB);
 
-        var listB = await Client.GetAsync("/api/v1.0/certificates");
+        var listB = await Client.GetAsync("/api/v1/certificates");
         listB.EnsureSuccessStatusCode();
         (await LeerAsync<CertificateResponse[]>(listB))!.ShouldBeEmpty();
 
-        var getB = await Client.GetAsync($"/api/v1.0/certificates/{certificateId}");
+        var getB = await Client.GetAsync($"/api/v1/certificates/{certificateId}");
         getB.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
@@ -119,7 +119,7 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
     [RequiresDockerFact]
     public async Task Certificate_endpoints_require_a_tenant_header()
     {
-        var response = await Client.GetAsync("/api/v1.0/certificates");
+        var response = await Client.GetAsync("/api/v1/certificates");
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }

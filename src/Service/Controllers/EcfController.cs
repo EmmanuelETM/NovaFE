@@ -13,7 +13,7 @@ namespace NovaFE.Service.Controllers;
 /// Emisión y consulta de comprobantes fiscales electrónicos. Recurso <b>por
 /// tenant</b>: la petición debe traer el header <c>X-Tenant-Id</c>.
 /// </summary>
-[ApiVersion("1.0")]
+[ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
 public sealed class EcfController(
     IssueEcfUseCase issue,
@@ -40,7 +40,7 @@ public sealed class EcfController(
 
         return result.Match(
             issued => issued.WasCreated
-                ? CreatedAtAction(nameof(GetById), new { id = issued.Ecf.Id, version = "1.0" }, issued.Ecf)
+                ? CreatedAtAction(nameof(GetById), new { id = issued.Ecf.Id, version = "1" }, issued.Ecf)
                 : Ok(issued.Ecf),
             Problem);
     }

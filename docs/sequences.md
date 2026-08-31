@@ -90,7 +90,7 @@ quedan en el caso de uso y en `NcfSequence.Authorize` como defensa en profundida
   (`asignada → firmada → enviada_dgii → aceptada | rechazada`, RF-07.5) y la
   anulación de rangos (ANECF, Módulo 8) son slices aparte.
 
-## Endpoints (`/api/v1.0/sequences`, por tenant)
+## Endpoints (`/api/v1/sequences`, por tenant)
 
 | Método | Ruta | |
 |---|---|---|

@@ -40,7 +40,7 @@ También es prueba de humo: si un serializador tira o genera XML inválido, fall
 
 ### 2. Endpoint dev-only (HTTP, interactivo)
 
-`GET/POST /api/v1.0/dev/ecf-preview` (`EcfPreviewController`, `[DevelopmentOnly]` —
+`GET/POST /api/v1/dev/ecf-preview` (`EcfPreviewController`, `[DevelopmentOnly]` —
 no existe fuera de Development). Ejemplos en `src/Service/NovaFE.Service.http`.
 
 - `GET .../samples` — lista los ejemplos (uno por tipo).

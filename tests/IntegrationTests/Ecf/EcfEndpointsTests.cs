@@ -5,7 +5,7 @@ using NovaFE.IntegrationTests.Fixtures;
 namespace NovaFE.IntegrationTests.Ecf;
 
 /// <summary>
-/// <c>POST /api/v1.0/ecf</c> de punta a punta: asigna secuencia → arma → calcula →
+/// <c>POST /api/v1/ecf</c> de punta a punta: asigna secuencia → arma → calcula →
 /// firma (con un certificado real subido al vault) → persiste. Sin tocar la DGII.
 /// </summary>
 public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTestBase(database)
@@ -18,7 +18,7 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     {
         var tenantId = await RegisterAndActAsTenantAsync(Rnc);
 
-        (await Client.PutAsJsonAsync($"/api/v1.0/tenants/{tenantId}/emitter-profile", new
+        (await Client.PutAsJsonAsync($"/api/v1/tenants/{tenantId}/emitter-profile", new
         {
             address = "Av. 27 de Febrero 100",
             municipality = "010100",  // Santo Domingo de Guzmán (Tabla III)
@@ -29,13 +29,13 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
             defaultEnvironment = "TestEcf",
         })).EnsureSuccessStatusCode();
 
-        (await Client.PostAsync("/api/v1.0/certificates",
+        (await Client.PostAsync("/api/v1/certificates",
             CertificateForm(TestPkcs12.Generate(holderIdentifier: Rnc), TestPkcs12.DefaultPassword, "TestEcf")))
             .EnsureSuccessStatusCode();
 
         foreach (var typeCode in SequenceTypes)
         {
-            (await Client.PostAsJsonAsync("/api/v1.0/sequences", new
+            (await Client.PostAsJsonAsync("/api/v1/sequences", new
             {
                 environment = "TestEcf",
                 type = typeCode,
@@ -66,7 +66,7 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     {
         await ArrangeTenantAsync();
 
-        var post = await Client.PostAsJsonAsync("/api/v1.0/ecf", CreditoFiscal());
+        var post = await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal());
         post.StatusCode.ShouldBe(HttpStatusCode.Created, await post.Content.ReadAsStringAsync());
 
         var issued = await LeerAsync<EcfResponse>(post);
@@ -76,11 +76,11 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
         issued.QrUrl.ShouldContain("/testecf/consultatimbre?");
         issued.SubmitsRfce.ShouldBeFalse();
 
-        var get = await Client.GetAsync($"/api/v1.0/ecf/{issued.Id}");
+        var get = await Client.GetAsync($"/api/v1/ecf/{issued.Id}");
         get.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await LeerAsync<EcfResponse>(get))!.Encf.ShouldBe("E310000000001");
 
-        var xml = await (await Client.GetAsync($"/api/v1.0/ecf/{issued.Id}/xml")).Content.ReadAsStringAsync();
+        var xml = await (await Client.GetAsync($"/api/v1/ecf/{issued.Id}/xml")).Content.ReadAsStringAsync();
         xml.ShouldContain("<TipoeCF>31</TipoeCF>");
         xml.ShouldContain("<Signature");
     }
@@ -90,7 +90,7 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     {
         await ArrangeTenantAsync();
 
-        var post = await Client.PostAsJsonAsync("/api/v1.0/ecf", new
+        var post = await Client.PostAsJsonAsync("/api/v1/ecf", new
         {
             type = 32,
             incomeType = "01",
@@ -103,7 +103,7 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
         issued!.SubmitsRfce.ShouldBeTrue();
         issued.QrUrl.ShouldContain("fc.dgii.gov.do/testecf/consultatimbrefc");
 
-        var rfce = await (await Client.GetAsync($"/api/v1.0/ecf/{issued.Id}/xml?rfce=true")).Content.ReadAsStringAsync();
+        var rfce = await (await Client.GetAsync($"/api/v1/ecf/{issued.Id}/xml?rfce=true")).Content.ReadAsStringAsync();
         rfce.ShouldContain("<RFCE>");
     }
 
@@ -114,11 +114,11 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
 
         Client.DefaultRequestHeaders.Add("Idempotency-Key", "abc-123");
 
-        var first = await Client.PostAsJsonAsync("/api/v1.0/ecf", CreditoFiscal());
+        var first = await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal());
         first.StatusCode.ShouldBe(HttpStatusCode.Created);
         var firstId = (await LeerAsync<EcfResponse>(first))!.Id;
 
-        var second = await Client.PostAsJsonAsync("/api/v1.0/ecf", CreditoFiscal());
+        var second = await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal());
         second.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await LeerAsync<EcfResponse>(second))!.Id.ShouldBe(firstId);
     }
@@ -128,10 +128,10 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     {
         await ArrangeTenantAsync();
 
-        var first = await Client.PostAsJsonAsync("/api/v1.0/ecf", CreditoFiscal(internalNumber: "FAC-2026-1"));
+        var first = await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal(internalNumber: "FAC-2026-1"));
         var firstId = (await LeerAsync<EcfResponse>(first))!.Id;
 
-        var second = await Client.PostAsJsonAsync("/api/v1.0/ecf", CreditoFiscal(internalNumber: "FAC-2026-1"));
+        var second = await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal(internalNumber: "FAC-2026-1"));
         second.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await LeerAsync<EcfResponse>(second))!.Id.ShouldBe(firstId);
     }
@@ -141,7 +141,7 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     {
         await RegisterAndActAsTenantAsync("131111111");
 
-        var post = await Client.PostAsJsonAsync("/api/v1.0/ecf", CreditoFiscal());
+        var post = await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal());
 
         post.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -151,7 +151,7 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     {
         await ArrangeTenantAsync();
 
-        var post = await Client.PostAsJsonAsync("/api/v1.0/ecf", new { type = 31, lines = Array.Empty<object>() });
+        var post = await Client.PostAsJsonAsync("/api/v1/ecf", new { type = 31, lines = Array.Empty<object>() });
 
         post.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -161,10 +161,10 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     {
         await ArrangeTenantAsync();
 
-        await Client.PostAsJsonAsync("/api/v1.0/ecf", CreditoFiscal());
-        await Client.PostAsJsonAsync("/api/v1.0/ecf", CreditoFiscal());
+        await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal());
+        await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal());
 
-        var page = await LeerAsync<PagedResponse<EcfSummaryResponse>>(await Client.GetAsync("/api/v1.0/ecf?pageSize=10"));
+        var page = await LeerAsync<PagedResponse<EcfSummaryResponse>>(await Client.GetAsync("/api/v1/ecf?pageSize=10"));
 
         page!.TotalCount.ShouldBe(2);
         page.Items.ShouldAllBe(e => e.Type == 31 && e.Status == "signed");

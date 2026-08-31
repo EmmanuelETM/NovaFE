@@ -1,6 +1,6 @@
 namespace NovaFE.Application.Ecf.Contracts;
 
-// Sub-estructuras del payload de emisión (POST /api/v1.0/ecf). Los campos "enum"
+// Sub-estructuras del payload de emisión (POST /api/v1/ecf). Los campos "enum"
 // aceptan el nombre ("credit", "check_transfer") o el código DGII ("2"); el mapper
 // los resuelve. Los montos de línea que no sean el ITBIS los trae el cliente ya
 // calculados (retención, impuestos adicionales, OtraMoneda).

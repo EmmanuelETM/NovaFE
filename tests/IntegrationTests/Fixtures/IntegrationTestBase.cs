@@ -76,7 +76,7 @@ public abstract class IntegrationTestBase(DatabaseFixture database) : IAsyncLife
     {
         Client.DefaultRequestHeaders.Remove(TenantHeader);
 
-        var response = await Client.PostAsJsonAsync("/api/v1.0/tenants", new
+        var response = await Client.PostAsJsonAsync("/api/v1/tenants", new
         {
             rnc,
             legalName = $"Contribuyente {rnc}",

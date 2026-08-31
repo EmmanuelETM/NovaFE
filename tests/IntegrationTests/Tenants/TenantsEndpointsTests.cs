@@ -9,7 +9,7 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
     [RequiresDockerFact]
     public async Task Register_then_get_returns_the_tenant()
     {
-        var register = await Client.PostAsJsonAsync("/api/v1.0/tenants", new
+        var register = await Client.PostAsJsonAsync("/api/v1/tenants", new
         {
             rnc = "101672919",
             legalName = "Acme SRL",
@@ -22,7 +22,7 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         var created = await LeerAsync<IdResponse>(register);
         created!.Id.ShouldNotBe(Guid.Empty);
 
-        var get = await Client.GetAsync($"/api/v1.0/tenants/{created.Id}");
+        var get = await Client.GetAsync($"/api/v1/tenants/{created.Id}");
         get.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var detail = await LeerAsync<TenantDetailResponse>(get);
@@ -36,7 +36,7 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
     [RequiresDockerFact]
     public async Task Timestamps_are_serialized_in_dominican_time()
     {
-        var register = await Client.PostAsJsonAsync("/api/v1.0/tenants", new
+        var register = await Client.PostAsJsonAsync("/api/v1/tenants", new
         {
             rnc = "131234567",
             legalName = "Zona SRL",
@@ -44,7 +44,7 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         });
         var id = (await LeerAsync<IdResponse>(register))!.Id;
 
-        var body = await (await Client.GetAsync($"/api/v1.0/tenants/{id}")).Content.ReadAsStringAsync();
+        var body = await (await Client.GetAsync($"/api/v1/tenants/{id}")).Content.ReadAsStringAsync();
 
         body.ShouldContain("-04:00");
         body.ShouldNotContain("+00:00");
@@ -54,7 +54,7 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
     [RequiresDockerFact]
     public async Task Get_unknown_tenant_returns_404()
     {
-        var get = await Client.GetAsync($"/api/v1.0/tenants/{Guid.NewGuid()}");
+        var get = await Client.GetAsync($"/api/v1/tenants/{Guid.NewGuid()}");
 
         get.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -64,16 +64,16 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
     {
         var body = new { rnc = "130111222", legalName = "First", plan = "Business" };
 
-        (await Client.PostAsJsonAsync("/api/v1.0/tenants", body)).EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync("/api/v1/tenants", body)).EnsureSuccessStatusCode();
 
-        var second = await Client.PostAsJsonAsync("/api/v1.0/tenants", body);
+        var second = await Client.PostAsJsonAsync("/api/v1/tenants", body);
         second.StatusCode.ShouldBe(HttpStatusCode.Conflict);
     }
 
     [RequiresDockerFact]
     public async Task Register_rejects_a_malformed_rnc_with_400()
     {
-        var res = await Client.PostAsJsonAsync("/api/v1.0/tenants", new
+        var res = await Client.PostAsJsonAsync("/api/v1/tenants", new
         {
             rnc = "abc",
             legalName = "X",
@@ -88,7 +88,7 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
     {
         foreach (var i in Enumerable.Range(1, 3))
         {
-            (await Client.PostAsJsonAsync("/api/v1.0/tenants", new
+            (await Client.PostAsJsonAsync("/api/v1/tenants", new
             {
                 rnc = $"13000000{i}",
                 legalName = $"Contoso {i}",
@@ -96,14 +96,14 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
             })).EnsureSuccessStatusCode();
         }
 
-        (await Client.PostAsJsonAsync("/api/v1.0/tenants", new
+        (await Client.PostAsJsonAsync("/api/v1/tenants", new
         {
             rnc = "140000001",
             legalName = "Unrelated",
             plan = "Developer",
         })).EnsureSuccessStatusCode();
 
-        var res = await Client.GetAsync("/api/v1.0/tenants?page=1&pageSize=2&search=Contoso");
+        var res = await Client.GetAsync("/api/v1/tenants?page=1&pageSize=2&search=Contoso");
         res.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var page = await LeerAsync<PagedResponse<TenantSummaryResponse>>(res);

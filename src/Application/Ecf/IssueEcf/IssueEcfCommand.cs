@@ -4,7 +4,7 @@ using NovaFE.Application.Ecf.Contracts;
 namespace NovaFE.Application.Ecf.IssueEcf;
 
 /// <summary>
-/// Payload de emisión de un e-CF (<c>POST /api/v1.0/ecf</c>). Un solo objeto
+/// Payload de emisión de un e-CF (<c>POST /api/v1/ecf</c>). Un solo objeto
 /// discriminado por <see cref="Type"/>; el servidor asigna la secuencia, arma el
 /// bloque Emisor desde el perfil del tenant, calcula los totales, firma y persiste.
 /// </summary>

@@ -19,11 +19,11 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     {
         await RegisterAndActAsTenantAsync("130862346");
 
-        var register = await Client.PostAsJsonAsync("/api/v1.0/sequences", Range(type: 31, rangeFrom: 1, rangeTo: 20));
+        var register = await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 31, rangeFrom: 1, rangeTo: 20));
         register.StatusCode.ShouldBe(HttpStatusCode.Created);
         var id = (await LeerAsync<IdResponse>(register))!.Id;
 
-        var get = await Client.GetAsync($"/api/v1.0/sequences/{id}");
+        var get = await Client.GetAsync($"/api/v1/sequences/{id}");
         get.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var view = await LeerAsync<SequenceResponse>(get);
@@ -44,11 +44,11 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     {
         await RegisterAndActAsTenantAsync("130000032");
 
-        var register = await Client.PostAsJsonAsync("/api/v1.0/sequences", Range(type: 32));
+        var register = await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 32));
         register.EnsureSuccessStatusCode();
         var id = (await LeerAsync<IdResponse>(register))!.Id;
 
-        var view = await LeerAsync<SequenceResponse>(await Client.GetAsync($"/api/v1.0/sequences/{id}"));
+        var view = await LeerAsync<SequenceResponse>(await Client.GetAsync($"/api/v1/sequences/{id}"));
         view!.ExpiresOn.ShouldBeNull();
     }
 
@@ -57,7 +57,7 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     {
         await RegisterAndActAsTenantAsync("130000037");
 
-        var response = await Client.PostAsJsonAsync("/api/v1.0/sequences", new
+        var response = await Client.PostAsJsonAsync("/api/v1/sequences", new
         {
             environment = "TestEcf", type = 31, series = "E", rangeFrom = 1L, rangeTo = 10L,
             authorizedOn = new DateOnly(2099, 12, 31),
@@ -71,7 +71,7 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     {
         await RegisterAndActAsTenantAsync("130000038");
 
-        var response = await Client.PostAsJsonAsync("/api/v1.0/sequences",
+        var response = await Client.PostAsJsonAsync("/api/v1/sequences",
             Range(environment: "CertEcf", type: 31, series: "E", rangeFrom: 5, rangeTo: 100));
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
@@ -82,10 +82,10 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     {
         await RegisterAndActAsTenantAsync("130000033");
 
-        (await Client.PostAsJsonAsync("/api/v1.0/sequences", Range(type: 31, series: "E")))
+        (await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 31, series: "E")))
             .EnsureSuccessStatusCode();
 
-        var second = await Client.PostAsJsonAsync("/api/v1.0/sequences", Range(type: 31, series: "E"));
+        var second = await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 31, series: "E"));
         second.StatusCode.ShouldBe(HttpStatusCode.Conflict);
     }
 
@@ -94,10 +94,10 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     {
         await RegisterAndActAsTenantAsync("130000034");
 
-        (await Client.PostAsJsonAsync("/api/v1.0/sequences", Range(type: 31, series: "E")))
+        (await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 31, series: "E")))
             .EnsureSuccessStatusCode();
 
-        var otherSeries = await Client.PostAsJsonAsync("/api/v1.0/sequences", Range(type: 31, series: "F"));
+        var otherSeries = await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 31, series: "F"));
         otherSeries.StatusCode.ShouldBe(HttpStatusCode.Created);
     }
 
@@ -105,13 +105,13 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     public async Task Allocate_hands_out_the_next_number_and_advances_the_pointer()
     {
         await RegisterAndActAsTenantAsync("130000035");
-        (await Client.PostAsJsonAsync("/api/v1.0/sequences", Range(type: 31, series: "E", rangeFrom: 1, rangeTo: 10)))
+        (await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 31, series: "E", rangeFrom: 1, rangeTo: 10)))
             .EnsureSuccessStatusCode();
 
         var first = await LeerAsync<AllocatedResponse>(
-            await Client.PostAsJsonAsync("/api/v1.0/sequences/allocate", new { environment = "TestEcf", type = 31 }));
+            await Client.PostAsJsonAsync("/api/v1/sequences/allocate", new { environment = "TestEcf", type = 31 }));
         var second = await LeerAsync<AllocatedResponse>(
-            await Client.PostAsJsonAsync("/api/v1.0/sequences/allocate", new { environment = "TestEcf", type = 31 }));
+            await Client.PostAsJsonAsync("/api/v1/sequences/allocate", new { environment = "TestEcf", type = 31 }));
 
         first!.Encf.ShouldBe("E310000000001");
         second!.Encf.ShouldBe("E310000000002");
@@ -123,7 +123,7 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
         await RegisterAndActAsTenantAsync("130000036");
 
         var response = await Client.PostAsJsonAsync(
-            "/api/v1.0/sequences/allocate", new { environment = "TestEcf", type = 41 });
+            "/api/v1/sequences/allocate", new { environment = "TestEcf", type = 41 });
 
         response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
     }
@@ -135,22 +135,22 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
         var tenantB = await RegisterTenantAsync("130000041");
 
         ActAs(tenantA);
-        var register = await Client.PostAsJsonAsync("/api/v1.0/sequences", Range(type: 31));
+        var register = await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 31));
         register.EnsureSuccessStatusCode();
         var id = (await LeerAsync<IdResponse>(register))!.Id;
 
         ActAs(tenantB);
 
-        var listB = await Client.GetAsync("/api/v1.0/sequences");
+        var listB = await Client.GetAsync("/api/v1/sequences");
         listB.EnsureSuccessStatusCode();
         (await LeerAsync<SequenceResponse[]>(listB))!.ShouldBeEmpty();
 
-        (await Client.GetAsync($"/api/v1.0/sequences/{id}")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/v1/sequences/{id}")).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
     [RequiresDockerFact]
     public async Task Sequence_endpoints_require_a_tenant_header()
-        => (await Client.GetAsync("/api/v1.0/sequences")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        => (await Client.GetAsync("/api/v1/sequences")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
     private sealed record SequenceResponse(
         Guid Id, string Environment, int Type, string TypeName, string Series,

@@ -14,7 +14,7 @@ internal static class ApiVersioningExtensions
     /// </summary>
     /// <example>
     /// <code>
-    /// [ApiVersion("1.0")]
+    /// [ApiVersion("1")]
     /// [Route("api/v{version:apiVersion}/[controller]")]
     /// public class SolicitudesController : ApiController { }
     /// </code>
@@ -23,7 +23,10 @@ internal static class ApiVersioningExtensions
     {
         services.AddApiVersioning(options =>
             {
-                options.DefaultApiVersion = new ApiVersion(1, 0);
+                // Versionado solo por major: las URLs y las versiones declaradas son
+                // "1", no "1.0". El minor se reserva para cambios compatibles que no
+                // ameritan un segmento de URL nuevo.
+                options.DefaultApiVersion = new ApiVersion(1);
 
                 // AssumeDefaultVersionWhenUnspecified se queda en false a propósito:
                 // solo tiene sentido en APIs que ya estaban en producción antes de

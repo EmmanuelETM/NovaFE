@@ -15,7 +15,7 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
         const int concurrency = 40;
         var tenantId = await RegisterAndActAsTenantAsync("130900001");
 
-        (await Client.PostAsJsonAsync("/api/v1.0/sequences",
+        (await Client.PostAsJsonAsync("/api/v1/sequences",
                 new { environment = "TestEcf", type = 31, series = "E", rangeFrom = 1L, rangeTo = 1000L }))
             .EnsureSuccessStatusCode();
 
@@ -40,7 +40,7 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
     {
         var tenantId = await RegisterAndActAsTenantAsync("130900002");
 
-        (await Client.PostAsJsonAsync("/api/v1.0/sequences",
+        (await Client.PostAsJsonAsync("/api/v1/sequences",
                 new { environment = "TestEcf", type = 33, series = "E", rangeFrom = 1L, rangeTo = 2L }))
             .EnsureSuccessStatusCode();
 
@@ -61,10 +61,10 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
     {
         var tenantId = await RegisterAndActAsTenantAsync("130900003");
 
-        (await Client.PostAsJsonAsync("/api/v1.0/sequences",
+        (await Client.PostAsJsonAsync("/api/v1/sequences",
                 new { environment = "TestEcf", type = 31, series = "E", rangeFrom = 1L, rangeTo = 1L }))
             .EnsureSuccessStatusCode();
-        (await Client.PostAsJsonAsync("/api/v1.0/sequences",
+        (await Client.PostAsJsonAsync("/api/v1/sequences",
                 new { environment = "TestEcf", type = 31, series = "F", rangeFrom = 1L, rangeTo = 5L }))
             .EnsureSuccessStatusCode();
 
