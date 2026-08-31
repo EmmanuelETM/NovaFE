@@ -37,7 +37,8 @@ if doc.QualifiesForRfce (tipo 32 < DOP 250 000):
 
 `SignedEcf`: `SignedAt`, `EcfXml` (firmado, se guarda **siempre**),
 `RfceXml` (firmado; `null` salvo tipo 32 < 250 k), `SignatureValue`, `SecurityCode`,
-`DocumentHash` (SHA-256 hex del `EcfXml`, RF-03.4), `SubmitsRfce`.
+`DocumentHash` (SHA-256 hex del `EcfXml`, RF-03.4), `QrUrl` (timbre de la RI —
+`EcfVerificationUrl`, ver `docs/verification-url.md`), `SubmitsRfce`.
 
 - **La validación XSD corre post-firma a propósito**: tanto el XSD del e-CF como el
   del RFCE exigen el bloque `<Signature>` (`xs:any minOccurs="1"`), así que el XML

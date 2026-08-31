@@ -127,6 +127,7 @@ public sealed class EcfPreviewController(
                     xsdError = result.RfceXsdError,
                     result.SecurityCode,
                     result.DocumentHash,
+                    result.QrUrl,
                     note = SignedNote,
                 });
         }
@@ -141,6 +142,7 @@ public sealed class EcfPreviewController(
                 rfceXml = result.RfceXml,
                 result.SecurityCode,
                 result.DocumentHash,
+                result.QrUrl,
                 note = SignedNote,
             });
     }

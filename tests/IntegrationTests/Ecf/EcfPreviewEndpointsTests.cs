@@ -99,6 +99,8 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
         body.Xml.ShouldContain("<Signature");
         body.SecurityCode.Length.ShouldBe(6);
         body.DocumentHash.Length.ShouldBe(64);
+        body.QrUrl.ShouldStartWith("https://ecf.dgii.gov.do/testecf/consultatimbre?");
+        body.QrUrl.ShouldContain($"codigoseguridad={body.SecurityCode}");
     }
 
     [RequiresDockerFact]
@@ -118,5 +120,6 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
 
     private sealed record PreviewResponse(string Xml, bool XsdValid, string? XsdError);
 
-    private sealed record SignedPreviewResponse(string Xml, bool XsdValid, string SecurityCode, string DocumentHash);
+    private sealed record SignedPreviewResponse(
+        string Xml, bool XsdValid, string SecurityCode, string DocumentHash, string QrUrl);
 }

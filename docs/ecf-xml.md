@@ -57,8 +57,9 @@ Mapeo DTO→dominio en `src/Service/DevTools/EcfPreviewMapper.cs`.
 
 **`?signed=true`** pasa el documento por Módulo 3 (`DevEcfSigner`): lo firma con un
 certificado **autofirmado efímero** (sin vault, sin tenant) y valida el XML
-*firmado* contra el XSD. La respuesta agrega `securityCode` + `documentHash`. Es
-para *ver* la forma del documento firmado — **esa firma no la aceptaría la DGII**.
+*firmado* contra el XSD. La respuesta agrega `securityCode` + `documentHash` +
+`qrUrl` (el timbre de la RI, ver `docs/verification-url.md`). Es para *ver* la
+forma del documento firmado — **esa firma no la aceptaría la DGII**.
 La firma real, con el certificado del tenant, es `IEcfSigner` (ver `docs/signing.md`).
 
 ## Organización del serializador
