@@ -31,6 +31,8 @@ public sealed class IssueEcfUseCase(
     IEcfSigner signer,
     IEcfRepository ecf,
     IEcfReadRepository ecfReads,
+    IEcfSubmissionQueue submissionQueue,
+    IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
     : CommandUseCase<IssueEcfCommand, IssueEcfResult>(loggerFactory, validator)
 {
@@ -114,7 +116,12 @@ public sealed class IssueEcfUseCase(
 
         var issued = IssuedEcf.FromSigned(document.Value, signed.Value, environment, expectConditional);
 
-        await ecf.AddAsync(issued, ct);
+        // Outbox transaccional: el comprobante y su fila de envío se guardan juntos.
+        await unitOfWork.ExecuteInTransactionAsync(async token =>
+        {
+            await ecf.AddAsync(issued, token);
+            await submissionQueue.EnqueueSubmitAsync(issued.Id, tenantId, environment, token);
+        }, ct);
 
         if (key is not null)
             await idempotency.CompleteAsync(tenantId, key, issued.Id, ct);

@@ -116,6 +116,10 @@ dotnet_diagnostic.CA1014.severity = none
 # e-CF ("firmado") es un falso positivo recurrente (EcfStatus.Signed, FromSigned…).
 dotnet_diagnostic.CA1720.severity = none
 
+[src/Application/Ecf/Interfaces/IEcfSubmissionQueue.cs]
+# CA1711: "Queue" describe con precisión lo que es — la cola de envío del outbox.
+dotnet_diagnostic.CA1711.severity = none
+
 [tests/**/*.cs]
 # En pruebas los nombres de método describen el escenario; no forzamos PascalCase estricto.
 dotnet_diagnostic.CA1707.severity = none

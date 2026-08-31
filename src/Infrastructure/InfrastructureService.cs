@@ -12,6 +12,7 @@ using Dapper;
 using NovaFE.Infrastructure.Dgii;
 using NovaFE.Infrastructure.Ecf;
 using NovaFE.Infrastructure.Ecf.EfCore;
+using NovaFE.Infrastructure.Ecf.Outbox;
 using NovaFE.Infrastructure.Ecf.Sql;
 using NovaFE.Infrastructure.Http;
 using NovaFE.Infrastructure.Persistence;
@@ -128,6 +129,7 @@ public static class InfrastructureService
         services.AddScoped<INcfSequenceAllocator, NcfSequenceAllocator>();
         services.AddScoped<IEcfRepository, EcfRepository>();
         services.AddScoped<IEcfReadRepository, EcfReadRepository>();
+        services.AddScoped<IEcfSubmissionQueue, PostgresEcfSubmissionQueue>();
         services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
 
         // El jsonb de totales del comprobante emitido → EcfTotalsSnapshot en las lecturas Dapper.
