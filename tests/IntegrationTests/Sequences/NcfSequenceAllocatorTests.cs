@@ -31,8 +31,8 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
         var results = await Task.WhenAll(tasks);
 
         results.ShouldAllBe(r => !r.IsError);
-        results.Select(r => r.Value.Value).Distinct().Count().ShouldBe(concurrency);
-        results.Select(r => r.Value.Sequential).OrderBy(n => n).ShouldBe(Enumerable.Range(1, concurrency).Select(n => (long)n));
+        results.Select(r => r.Value.Encf.Value).Distinct().Count().ShouldBe(concurrency);
+        results.Select(r => r.Value.Encf.Sequential).OrderBy(n => n).ShouldBe(Enumerable.Range(1, concurrency).Select(n => (long)n));
     }
 
     [RequiresDockerFact]
@@ -72,7 +72,7 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
         scope.ServiceProvider.GetRequiredService<CurrentTenant>().Set(tenantId);
         var allocator = scope.ServiceProvider.GetRequiredService<INcfSequenceAllocator>();
 
-        (await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.CreditoFiscal)).Value.Value.ShouldBe("E310000000001");
-        (await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.CreditoFiscal)).Value.Value.ShouldBe("F310000000001");
+        (await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.CreditoFiscal)).Value.Encf.Value.ShouldBe("E310000000001");
+        (await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.CreditoFiscal)).Value.Encf.Value.ShouldBe("F310000000001");
     }
 }

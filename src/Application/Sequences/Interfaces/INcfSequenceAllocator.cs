@@ -13,7 +13,7 @@ namespace NovaFE.Application.Sequences.Interfaces;
 /// </summary>
 public interface INcfSequenceAllocator
 {
-    Task<ErrorOr<Encf>> AllocateAsync(
+    Task<ErrorOr<NcfAllocation>> AllocateAsync(
         DgiiEnvironment environment,
         EcfType type,
         CancellationToken ct = default);

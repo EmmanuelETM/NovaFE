@@ -27,7 +27,7 @@ internal sealed class NcfSequenceAllocator(
     ICurrentTenant currentTenant,
     TimeProvider timeProvider) : INcfSequenceAllocator
 {
-    public async Task<ErrorOr<Encf>> AllocateAsync(
+    public async Task<ErrorOr<NcfAllocation>> AllocateAsync(
         DgiiEnvironment environment,
         EcfType type,
         CancellationToken ct = default)
@@ -86,7 +86,7 @@ internal sealed class NcfSequenceAllocator(
         });
     }
 
-    private static ErrorOr<Encf> TryAllocate(List<NcfSequence> ranges, EcfType type, DateOnly today)
+    private static ErrorOr<NcfAllocation> TryAllocate(List<NcfSequence> ranges, EcfType type, DateOnly today)
     {
         if (ranges.Count == 0)
             return SequenceErrors.NoAuthorizedRange(type.DisplayName);
@@ -99,7 +99,7 @@ internal sealed class NcfSequenceAllocator(
         {
             var allocation = range.Allocate(today);
             if (!allocation.IsError)
-                return allocation;
+                return new NcfAllocation(allocation.Value, range.ExpiresOn);
         }
 
         return SequenceErrors.AllRangesExhausted(type.DisplayName);

@@ -143,7 +143,15 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
     /// Construye el comprobante emitido a partir del modelo fiscal cuadrado
     /// (<paramref name="document"/>) y la salida de la firma (<paramref name="signed"/>).
     /// </summary>
-    public static IssuedEcf FromSigned(EcfDocument document, SignedEcf signed, DgiiEnvironment environment)
+    /// <param name="expectConditionalAcceptance">
+    /// Los montos declarados por el cliente (por línea o en el encabezado) quedaron
+    /// fuera de la tolerancia; la DGII probablemente los acepte de forma condicional.
+    /// </param>
+    public static IssuedEcf FromSigned(
+        EcfDocument document,
+        SignedEcf signed,
+        DgiiEnvironment environment,
+        bool expectConditionalAcceptance = false)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(signed);
@@ -164,7 +172,7 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
             EcfStatus.Signed,
             EcfTotalsSnapshot.From(document.Totals),
             document.Totals.MontoTotal,
-            document.Calculation.Tolerance.ExpectConditionalAcceptance,
+            expectConditionalAcceptance || document.Calculation.Tolerance.ExpectConditionalAcceptance,
             signed.SignedAt,
             signed.SignatureValue,
             signed.SecurityCode,
