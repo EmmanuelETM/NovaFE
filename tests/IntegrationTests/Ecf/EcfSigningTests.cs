@@ -35,7 +35,8 @@ public sealed class EcfSigningTests(DatabaseFixture database) : IntegrationTestB
         signed.SubmitsRfce.ShouldBeFalse();
         signed.RfceXml.ShouldBeNull();
         signed.QrUrl.ShouldContain("/consultatimbre?");
-        signed.QrUrl.ShouldContain($"codigoseguridad={signed.SecurityCode}");
+        // El código de seguridad va URL-encoded (puede traer + / del Base64).
+        signed.QrUrl.ShouldEndWith("&codigoseguridad=" + Uri.EscapeDataString(signed.SecurityCode));
 
         // El e-CF firmado ya pasó el XSD dentro del signer; acá confirmamos la firma.
         xmlSigner.Verify(signed.EcfXml).ShouldBeTrue();

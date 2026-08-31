@@ -5,6 +5,7 @@ using NovaFE.Domain.Common.Entities;
 using NovaFE.Domain.Ecf;
 using NovaFE.Domain.Sequences;
 using NovaFE.Domain.Tenants;
+using NovaFE.Infrastructure.Persistence.Idempotency;
 using Microsoft.EntityFrameworkCore;
 
 namespace NovaFE.Infrastructure.Persistence.EfCore;
@@ -28,6 +29,8 @@ public class AppDbContext(
 
     /// <summary>Comprobantes fiscales electrónicos emitidos (tabla <c>issued_ecf</c>).</summary>
     public DbSet<IssuedEcf> IssuedEcf => Set<IssuedEcf>();
+
+    internal DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 
     /// <summary>
     /// Tenant de la petición en curso. Los filtros globales de consulta de las
