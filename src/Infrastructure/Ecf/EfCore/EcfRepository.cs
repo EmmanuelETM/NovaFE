@@ -15,4 +15,10 @@ internal sealed class EcfRepository(AppDbContext context) : IEcfRepository
         await context.IssuedEcf.AddAsync(ecf, ct);
         await context.SaveChangesAsync(ct);
     }
+
+    public async Task UpdateAsync(IssuedEcf ecf, CancellationToken ct = default)
+    {
+        context.IssuedEcf.Update(ecf);
+        await context.SaveChangesAsync(ct);
+    }
 }

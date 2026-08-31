@@ -1,5 +1,7 @@
+using ErrorOr;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Common.Entities;
+using NovaFE.Domain.Dgii;
 using NovaFE.Domain.Sequences;
 
 namespace NovaFE.Domain.Ecf;
@@ -10,8 +12,11 @@ namespace NovaFE.Domain.Ecf;
 /// confundir con <see cref="EcfDocument"/>, el modelo fiscal transitorio del que
 /// se construye.
 /// <para>
-/// v1 representa siempre un comprobante <b>firmado con éxito</b>. El envío a la
-/// DGII, el <c>TrackId</c> y los estados posteriores llegan con Módulo 4.
+/// Nace en <see cref="EcfStatus.Signed"/> (Módulo 12). El envío a la DGII y el
+/// polling del <c>TrackId</c> (Módulo 4) lo llevan por
+/// <see cref="EcfStatus.Submitted"/> hasta <see cref="EcfStatus.Accepted"/> /
+/// <see cref="EcfStatus.AcceptedConditional"/> / <see cref="EcfStatus.Rejected"/>,
+/// vía los métodos <c>Mark*</c> (defensa en profundidad: validan el estado de origen).
 /// </para>
 /// </summary>
 public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, ISoftDeletable
@@ -130,6 +135,32 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
     /// <summary>El <c>&lt;RFCE&gt;</c> firmado — solo cuando <see cref="SubmitsRfce"/>.</summary>
     public string? RfceXml { get; private set; }
 
+    // --- Módulo 4: envío a la DGII y seguimiento --------------------------
+
+    /// <summary><c>TrackId</c> devuelto por la DGII al recibir el comprobante. Null hasta el envío.</summary>
+    public string? TrackId { get; private set; }
+
+    /// <summary>Instante en que la DGII confirmó la recepción (hay <see cref="TrackId"/>).</summary>
+    public DateTimeOffset? SubmittedAt { get; private set; }
+
+    /// <summary>Instante en que la DGII dio un resultado definitivo (aceptado/rechazado).</summary>
+    public DateTimeOffset? DgiiProcessedAt { get; private set; }
+
+    /// <summary>Código de estado de la DGII (1 aceptado / 2 rechazado / 4 aceptado condicional).</summary>
+    public int? DgiiStatusCode { get; private set; }
+
+    /// <summary>Mensajes de la DGII (observaciones, motivo de rechazo). Vacío hasta que haya alguno.</summary>
+    public IReadOnlyList<DgiiMessage> DgiiMessages { get; private set; } = [];
+
+    /// <summary>
+    /// <c>secuenciaUtilizada</c> de la DGII: <c>false</c> = el e-NCF se puede
+    /// reutilizar (firma/XML inválidos, etc.); <c>true</c> o null = quemado.
+    /// </summary>
+    public bool? SequenceUsable { get; private set; }
+
+    /// <summary>Cantidad de intentos de envío (no de polling).</summary>
+    public int SubmissionAttempts { get; private set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public string? CreatedBy { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
@@ -181,5 +212,90 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
             signed.SubmitsRfce,
             signed.EcfXml,
             signed.RfceXml);
+    }
+
+    // --- Transiciones de Módulo 4 ----------------------------------------
+
+    /// <summary>La DGII recibió el comprobante y devolvió un <paramref name="trackId"/>.</summary>
+    public ErrorOr<Success> MarkSubmitted(string trackId, DateTimeOffset at)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(trackId);
+
+        if (Status != EcfStatus.Signed)
+            return IssuedEcfErrors.InvalidTransition(Status.PublicName, EcfStatus.Submitted.PublicName);
+
+        TrackId = trackId;
+        SubmittedAt = at;
+        SubmissionAttempts++;
+        Status = EcfStatus.Submitted;
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// La DGII aceptó el comprobante (código 1) o lo aceptó de forma condicional
+    /// (código 4). El RFCE puede resolver sin pasar por <see cref="EcfStatus.Submitted"/>.
+    /// </summary>
+    public ErrorOr<Success> MarkAccepted(
+        DateTimeOffset at, bool conditional, IReadOnlyList<DgiiMessage> messages, bool? sequenceUsable)
+    {
+        if (Status != EcfStatus.Signed && Status != EcfStatus.Submitted)
+            return IssuedEcfErrors.InvalidTransition(Status.PublicName, "accepted");
+
+        DgiiProcessedAt = at;
+        DgiiStatusCode = conditional ? 4 : 1;
+        DgiiMessages = messages ?? [];
+        SequenceUsable = sequenceUsable;
+        Status = conditional ? EcfStatus.AcceptedConditional : EcfStatus.Accepted;
+        return Result.Success;
+    }
+
+    /// <summary>La DGII rechazó el comprobante (código 2): nulidad.</summary>
+    public ErrorOr<Success> MarkRejected(
+        DateTimeOffset at, IReadOnlyList<DgiiMessage> messages, bool? sequenceUsable)
+    {
+        if (Status != EcfStatus.Signed && Status != EcfStatus.Submitted)
+            return IssuedEcfErrors.InvalidTransition(Status.PublicName, EcfStatus.Rejected.PublicName);
+
+        DgiiProcessedAt = at;
+        DgiiStatusCode = 2;
+        DgiiMessages = messages ?? [];
+        SequenceUsable = sequenceUsable;
+        Status = EcfStatus.Rejected;
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Enviado, con <see cref="TrackId"/>, pero la DGII no dio un resultado
+    /// definitivo tras el ladder de polling. Necesita revisión manual.
+    /// </summary>
+    public ErrorOr<Success> MarkForReview(string reason)
+    {
+        if (Status != EcfStatus.Submitted)
+            return IssuedEcfErrors.InvalidTransition(Status.PublicName, EcfStatus.Review.PublicName);
+
+        DgiiMessages = [new DgiiMessage(0, reason)];
+        Status = EcfStatus.Review;
+        return Result.Success;
+    }
+
+    /// <summary>No se pudo enviar tras agotar los reintentos de transporte.</summary>
+    public ErrorOr<Success> MarkFailed(string reason)
+    {
+        if (Status != EcfStatus.Signed)
+            return IssuedEcfErrors.InvalidTransition(Status.PublicName, EcfStatus.Failed.PublicName);
+
+        DgiiMessages = [new DgiiMessage(0, reason)];
+        Status = EcfStatus.Failed;
+        return Result.Success;
+    }
+
+    /// <summary>Reencola un comprobante <c>failed</c>/<c>review</c> para un nuevo intento de envío.</summary>
+    public ErrorOr<Success> RequeueForRetry()
+    {
+        if (!Status.IsRetriable)
+            return IssuedEcfErrors.NotRetriable(Status.PublicName);
+
+        Status = EcfStatus.Signed;
+        return Result.Success;
     }
 }
