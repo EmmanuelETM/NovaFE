@@ -435,6 +435,12 @@ public class EcfXmlSerializerTests
         impuestos[1].Element("TipoImpuesto")!.Value.ShouldBe("014");
         impuestos[1].Element("MontoImpuestoSelectivoConsumoEspecifico")!.Value.ShouldBe("191.3");
 
+        // El ISC específico (191.30) integra la base del ITBIS: 1000 + 191.30 → * 0.18.
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("1000");     // sin el ISC
+        totales.Element("TotalITBIS")!.Value.ShouldBe("214.43");
+        totales.Element("MontoImpuestoAdicional")!.Value.ShouldBe("236.3");   // 191.30 + 45.00
+        totales.Element("MontoTotal")!.Value.ShouldBe("1450.73");      // 1000 + 214.43 + 236.30
+
         var item = root.Element("DetallesItems")!.Element("Item")!;
         item.Element("GradosAlcohol")!.Value.ShouldBe("40");
         item.Element("CantidadReferencia")!.Value.ShouldBe("0.75");

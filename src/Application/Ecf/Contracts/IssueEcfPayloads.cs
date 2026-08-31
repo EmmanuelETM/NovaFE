@@ -54,9 +54,10 @@ public sealed record EcfLineForeignCurrencyPayload(
     decimal? LineAmount = null);
 
 /// <summary>
-/// Campos opcionales del <c>&lt;Item&gt;</c> — passthrough. La derivación del ISC
-/// desde <c>alcoholDegrees</c>/<c>referenceQuantity</c> es un slice posterior; hoy
-/// el cliente trae el monto final del ISC en <c>additionalTaxes</c>.
+/// Campos opcionales del <c>&lt;Item&gt;</c> — passthrough. La <b>derivación</b> del
+/// ISC desde <c>alcoholDegrees</c>/<c>referenceQuantity</c> es un slice posterior;
+/// hoy el cliente trae el monto final del ISC en <c>additionalTaxes</c> (el ISC
+/// específico ahí sí integra la base del ITBIS — ver <see cref="EcfAdditionalTaxPayload"/>).
 /// </summary>
 public sealed record EcfLineDetailsPayload(
     decimal? ReferenceQuantity = null,
@@ -83,7 +84,13 @@ public sealed record EcfLineRetentionPayload(
     decimal ItbisWithheld = 0m,
     decimal IsrWithheld = 0m);
 
-/// <summary>Desglose de impuestos adicionales por código de la Tabla I (001–039).</summary>
+/// <summary>
+/// Desglose de impuestos adicionales por código de la Tabla I (001–039). Todos los
+/// montos los trae el cliente ya calculados. <c>iscEspecifico</c> (monto fijo por
+/// volumen: alcoholes 006-018, cigarrillos 019-022) <b>integra la base imponible
+/// del ITBIS</b> de esa línea; <c>iscAdvalorem</c> y <c>otros</c> (Propina, CDT, ISC
+/// de servicios, Primera Placa…) van "por encima", sin tocar la base.
+/// </summary>
 public sealed record EcfAdditionalTaxPayload(
     string Code,
     decimal Rate = 0m,

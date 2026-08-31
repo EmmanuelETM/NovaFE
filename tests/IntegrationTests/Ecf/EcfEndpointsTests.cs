@@ -157,6 +157,41 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     }
 
     [RequiresDockerFact]
+    public async Task Specific_isc_on_a_line_raises_the_itbis_and_is_broken_out()
+    {
+        await ArrangeTenantAsync();
+
+        var post = await Client.PostAsJsonAsync("/api/v1/ecf", new
+        {
+            type = 31,
+            incomeType = "01",
+            buyer = new { name = "Bar El Rincón SRL", rnc = "131880681" },
+            payment = new { condition = "cash", methods = new[] { new { type = "cash", amount = 1928.12m } } },
+            lines = new[]
+            {
+                new
+                {
+                    name = "Ron añejo 0.75L",
+                    kind = "good",
+                    quantity = 1,
+                    unitPrice = 1000m,
+                    itbisRate = 1,
+                    unitOfMeasure = "43",
+                    additionalTaxes = new[] { new { code = "014", rate = 10m, iscEspecifico = 634m } },
+                },
+            },
+        });
+
+        post.StatusCode.ShouldBe(HttpStatusCode.Created, await post.Content.ReadAsStringAsync());
+        var totals = (await LeerAsync<EcfResponse>(post))!.Totals;
+
+        totals.MontoGravadoI1.ShouldBe(1000m);                     // sin el ISC
+        totals.TotalItbis.ShouldBe(294.12m);                       // (1000 + 634) * 0.18
+        totals.TotalImpuestoSelectivoConsumo.ShouldBe(634m);
+        totals.MontoTotal.ShouldBe(1928.12m);                      // 1000 + 294.12 + 634
+    }
+
+    [RequiresDockerFact]
     public async Task List_returns_the_tenant_issued_ecf()
     {
         await ArrangeTenantAsync();
@@ -173,7 +208,8 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     private sealed record EcfResponse(
         Guid Id, string Status, string Encf, int Type, bool SubmitsRfce, string QrUrl, TotalsResponse Totals);
 
-    private sealed record TotalsResponse(decimal MontoTotal, decimal TotalItbis);
+    private sealed record TotalsResponse(
+        decimal MontoTotal, decimal TotalItbis, decimal MontoGravadoI1, decimal TotalImpuestoSelectivoConsumo);
 
     private sealed record EcfSummaryResponse(Guid Id, string Status, string Encf, int Type, decimal MontoTotal);
 

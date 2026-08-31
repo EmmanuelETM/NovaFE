@@ -30,7 +30,11 @@ public static class FiscalErrors
 
     public static Error NegativeAdjustment(int lineNumber) => Error.Validation(
         code: "Fiscal.NegativeAdjustment",
-        description: $"El descuento, el recargo y los impuestos adicionales de la línea {lineNumber} no pueden ser negativos.");
+        description: $"El descuento, el recargo, los impuestos adicionales y el ISC específico de la línea {lineNumber} no pueden ser negativos.");
+
+    public static Error IscSpecificExceedsTaxableBase(int lineNumber) => Error.Validation(
+        code: "Fiscal.IscSpecificExceedsTaxableBase",
+        description: $"El ISC específico de la línea {lineNumber} supera la base gravada extraída del precio con ITBIS incluido.");
 
     public static Error NegativeGlobalAdjustment => Error.Validation(
         code: "Fiscal.NegativeGlobalAdjustment",

@@ -16,10 +16,20 @@ namespace NovaFE.Domain.Fiscal;
 /// </param>
 /// <param name="AdditionalTaxes">
 /// Suma de "otros impuestos adicionales" de la línea que el cliente ya trae
-/// calculados (p. ej. Propina Legal, CDT). Se acumulan en
-/// <c>&lt;MontoImpuestoAdicional&gt;</c> y en <c>&lt;MontoTotal&gt;</c>; <b>no</b>
-/// entran a la base del ITBIS. El ISC de alcoholes y cigarrillos (que sí integra
-/// la base) es un slice aparte.
+/// calculados (p. ej. Propina Legal, CDT, ISC de servicios, ISC ad valorem). Se
+/// acumulan en <c>&lt;MontoImpuestoAdicional&gt;</c> y en <c>&lt;MontoTotal&gt;</c>;
+/// <b>no</b> entran a la base del ITBIS.
+/// </param>
+/// <param name="IscSpecific">
+/// ISC <b>específico</b> (Tabla I, montos fijos por volumen: alcoholes 006-018,
+/// cigarrillos 019-022), ya calculado por el cliente. A diferencia de
+/// <paramref name="AdditionalTaxes"/>, <b>sí integra la base imponible del
+/// ITBIS</b> (contexto §5.2 nota 12, RF-06.4): el ITBIS de la línea se calcula
+/// sobre <c>MontoItem + IscSpecific</c>. Igual se acumula en
+/// <c>&lt;MontoImpuestoAdicional&gt;</c> (vía <c>&lt;TotalImpuestoSelectivoConsumo&gt;</c>),
+/// no en <c>&lt;MontoGravado&gt;</c>, así que <c>&lt;MontoTotal&gt;</c> no lo cuenta
+/// dos veces. La <b>derivación</b> del ISC específico desde
+/// <c>GradosAlcohol</c>/<c>CantidadReferencia</c> sigue siendo un slice aparte.
 /// </param>
 /// <param name="SuppliedLineAmount">
 /// <c>&lt;MontoItem&gt;</c> tal como lo calculó el sistema del cliente, si se
@@ -42,6 +52,7 @@ public sealed record EcfLineInput(
     decimal Surcharge = 0m,
     bool PriceIncludesTax = false,
     decimal AdditionalTaxes = 0m,
+    decimal IscSpecific = 0m,
     decimal? SuppliedLineAmount = null,
     decimal ItbisWithheld = 0m,
     decimal IsrWithheld = 0m);

@@ -22,7 +22,14 @@ public sealed record EcfTotalsSnapshot(
     decimal MontoNoFacturable,
     decimal MontoPeriodo,
     decimal TotalItbisRetenido,
-    decimal TotalIsrRetencion)
+    decimal TotalIsrRetencion,
+    /// <summary>
+    /// ISC específico de alcoholes/cigarrillos, ya incluido en
+    /// <see cref="MontoImpuestoAdicional"/>. Se expone aparte porque integra la base
+    /// del ITBIS: explica por qué <see cref="TotalItbis"/> no es
+    /// <see cref="MontoGravadoTotal"/> × tasa.
+    /// </summary>
+    decimal TotalImpuestoSelectivoConsumo = 0m)
 {
     public static EcfTotalsSnapshot From(EcfTotals t)
     {
@@ -43,6 +50,7 @@ public sealed record EcfTotalsSnapshot(
             MontoNoFacturable: t.MontoNoFacturable,
             MontoPeriodo: t.MontoPeriodo,
             TotalItbisRetenido: t.TotalItbisWithheld,
-            TotalIsrRetencion: t.TotalIsrWithheld);
+            TotalIsrRetencion: t.TotalIsrWithheld,
+            TotalImpuestoSelectivoConsumo: t.TotalImpuestoSelectivoConsumo);
     }
 }

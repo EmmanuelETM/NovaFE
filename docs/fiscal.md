@@ -110,14 +110,37 @@ son lo que se descuenta al pagar. El neto a pagar es
 `MontoTotal − TotalITBISRetenido − TotalISRRetencion`, que el serializador emite
 como `<ValorPagar>` en el tipo 41.
 
+## ISC específico (integra la base del ITBIS)
+
+El ISC **específico** (Tabla I: alcoholes 006-018, cigarrillos 019-022 — montos
+fijos por volumen) lo **trae el cliente ya calculado**, por línea, en
+`EcfAdditionalTax.IscEspecifico`. A diferencia del resto de impuestos adicionales,
+la DGII exige aplicarlo **antes** del ITBIS (`contexto §5.2` nota 12, RF-06.4):
+
+```
+IndicadorMontoGravado=0:  ITBIS = Money((MontoItem + IscEspecifico) × tasa)
+IndicadorMontoGravado=1:  base+ISC = Money(MontoItem / (1 + tasa));  ITBIS = MontoItem − (base+ISC)
+                          MontoGravado = (base+ISC) − IscEspecifico
+```
+
+`<MontoGravadoI1/2/3>` **no** lleva el ISC (sigue siendo el `MontoItem`); el ISC
+vive en `<MontoImpuestoAdicional>` vía `EcfTotals.TotalImpuestoSelectivoConsumo`.
+Así `MontoTotal = MontoGravadoTotal + Exento + TotalITBIS + MontoImpuestoAdicional`
+no lo cuenta dos veces — lo único que sube es `TotalITBIS`. Si un descuento global
+de la Sección D toca ese bucket, el ITBIS se recalcula sobre `(gravado + isc) × tasa`.
+
+El **ISC ad valorem** (`IscAdvalorem`) y `Otros` siguen "por encima", sin tocar la
+base — su interacción con la base (RF-06.4 pasos 3-5) es un slice aparte.
+
 ## Alcance v1 y lo que falta
 
 **Incluido:** ITBIS (18/16/0/exento), ajustes de línea, "otros impuestos
-adicionales" que el cliente ya trae calculados (Propina Legal, CDT…), regla de
-los 30 días, chequeo de tolerancia, `MontoNoFacturable`/`MontoPeriodo`,
-`FiscalRules.CreditNoteTotalWithinOriginal`, la **totalización** de retenciones
-de ITBIS/ISR por línea (ver arriba), y la **reconciliación mecánica de la
-Sección D**.
+adicionales" que el cliente ya trae calculados (Propina Legal, CDT, ISC de
+servicios, ISC ad valorem…), **ISC específico** que integra la base del ITBIS
+(monto que trae el cliente), regla de los 30 días, chequeo de tolerancia,
+`MontoNoFacturable`/`MontoPeriodo`, `FiscalRules.CreditNoteTotalWithinOriginal`,
+la **totalización** de retenciones de ITBIS/ISR por línea (ver arriba), y la
+**reconciliación mecánica de la Sección D**.
 
 ## Descuentos y recargos globales (Sección D)
 
@@ -139,17 +162,15 @@ Norma1007)`. **Después** de acumular los buckets de línea:
 `<ValorPagar>` (`MontoTotal − retenciones − Norma1007Discount`). Formato notas 12,
 27 y campo `<ValorPagar>` nota c.
 
-**Fuera de alcance:** la distribución proporcional de la Sección D **a nivel de
-línea** (`MontoItem/ΣMontoItem`, para el cálculo del ISC y de los descuentos por
-código de impuesto adicional — Formato notas 28/29).
-
 **Slices aparte** (marcados en el código):
 
-- **ISC de alcoholes y cigarrillos** (Tabla I códigos 006-039). El ISC
-  *específico* **integra la base imponible del ITBIS** (`base → +ISC → ×tasa`);
-  las fórmulas de derivación desde `GradosAlcohol`/`CantidadReferencia` son
-  RF-06.4 (alcoholes) y RF-06.5 (cigarrillos). Hoy `TotalImpuestoSelectivoConsumo`
-  siempre es 0.
+- **Derivación del ISC** de alcoholes y cigarrillos desde
+  `GradosAlcohol`/`CantidadReferencia` — RF-06.4 (alcoholes) y RF-06.5
+  (cigarrillos), con las tasas de la Tabla I ajustadas trimestralmente. Hoy el
+  monto lo trae el cliente (ver "ISC específico" arriba); el ISC ad valorem y su
+  interacción con la base (RF-06.4 pasos 3-5) también quedan acá.
+- **Distribución de la Sección D a nivel de línea** (`MontoItem/ΣMontoItem`,
+  Formato notas 28/29) — hoy la Sección D solo se reconcilia a nivel de bucket.
 - **Cálculo** de las tasas de retención de ITBIS/ISR — a propósito fuera de
   alcance (ver "Retenciones" arriba): lo hace el cliente. Lo que sí podría
   agregarse es el chequeo `ItbisRetenido ≤ ITBIS de la línea`.
