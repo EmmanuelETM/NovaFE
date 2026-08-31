@@ -3,6 +3,7 @@ using NovaFE.Application.Ecf.Contracts;
 using NovaFE.Application.Ecf.GetEcf;
 using NovaFE.Application.Ecf.IssueEcf;
 using NovaFE.Application.Ecf.ListEcf;
+using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,6 +27,10 @@ public sealed class EcfController(
     /// <c>internalNumber</c> ya se habían usado.
     /// </summary>
     [HttpPost]
+    [ProducesResponseType(typeof(EcfDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(EcfDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Issue(
         [FromBody] IssueEcfCommand command,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
@@ -42,6 +47,8 @@ public sealed class EcfController(
 
     /// <summary>El comprobante emitido y su estado.</summary>
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(EcfDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => (await get.Execute(new GetEcfQuery(id), ct)).Match(Ok, Problem);
 
@@ -53,6 +60,7 @@ public sealed class EcfController(
 
     /// <summary>Listado paginado de comprobantes emitidos.</summary>
     [HttpGet]
+    [ProducesResponseType(typeof(PagedResult<EcfSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] ListEcfQuery query, CancellationToken ct)
         => (await list.Execute(query, ct)).Match(Ok, Problem);
 }
