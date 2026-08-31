@@ -35,7 +35,7 @@ public sealed class AllocateNcfUseCase(
         if (allocation.IsError)
             return allocation.Errors;
 
-        var encf = allocation.Value;
+        var encf = allocation.Value.Encf;
         return new AllocatedNcfDto(encf.Value, encf.TypeCode, encf.Series.ToString(), encf.Sequential);
     }
 }
