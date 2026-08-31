@@ -139,6 +139,31 @@ public class EcfDocumentMapperTests
     }
 
     [Fact]
+    public void Maps_line_level_foreign_currency_and_details()
+    {
+        var result = Map(31, CreditoFiscal() with
+        {
+            ForeignCurrency = new EcfForeignCurrencyPayload("USD", 58.50m,
+                new EcfForeignCurrencyTotalsPayload(MontoGravadoTotal: 34.19m, MontoTotal: 40.34m)),
+            Lines =
+            [
+                new EcfLinePayload("Ron añejo", Kind: "good", Quantity: 1, UnitPrice: 2000m, ItbisRate: 1, UnitOfMeasure: "43",
+                    ForeignCurrency: new EcfLineForeignCurrencyPayload(UnitPrice: 34.19m, LineAmount: 34.19m),
+                    Details: new EcfLineDetailsPayload(
+                        AlcoholDegrees: 40m, ReferenceQuantity: 0.75m, ReferenceUnit: "43",
+                        Subquantities: [new EcfSubquantityPayload(3m, "43")])),
+            ],
+        });
+
+        result.IsError.ShouldBeFalse();
+        var line = result.Document!.Lines[0];
+        line.ForeignCurrency!.UnitPrice.ShouldBe(34.19m);
+        line.Details!.AlcoholDegrees.ShouldBe(40m);
+        line.Details.Subquantities!.ShouldHaveSingleItem();
+        line.Details.Subquantities[0].Quantity.ShouldBe(3m);
+    }
+
+    [Fact]
     public void Threads_declared_amount_into_the_tolerance_report()
     {
         var result = Map(31, CreditoFiscal() with

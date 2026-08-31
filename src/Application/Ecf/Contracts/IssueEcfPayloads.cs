@@ -40,9 +40,42 @@ public sealed record EcfLinePayload(
     decimal? DeclaredAmount = null,
     IReadOnlyList<EcfItemCodePayload>? Codes = null,
     EcfLineRetentionPayload? Retention = null,
-    IReadOnlyList<EcfAdditionalTaxPayload>? AdditionalTaxes = null);
+    IReadOnlyList<EcfAdditionalTaxPayload>? AdditionalTaxes = null,
+    EcfLineForeignCurrencyPayload? ForeignCurrency = null,
+    EcfLineDetailsPayload? Details = null);
 
 public sealed record EcfItemCodePayload(string Type, string Value);
+
+/// <summary><c>&lt;OtraMonedaDetalle&gt;</c> — precio y montos de la línea en divisa (passthrough).</summary>
+public sealed record EcfLineForeignCurrencyPayload(
+    decimal? UnitPrice = null,
+    decimal? Discount = null,
+    decimal? Surcharge = null,
+    decimal? LineAmount = null);
+
+/// <summary>
+/// Campos opcionales del <c>&lt;Item&gt;</c> — passthrough. La derivación del ISC
+/// desde <c>alcoholDegrees</c>/<c>referenceQuantity</c> es un slice posterior; hoy
+/// el cliente trae el monto final del ISC en <c>additionalTaxes</c>.
+/// </summary>
+public sealed record EcfLineDetailsPayload(
+    decimal? ReferenceQuantity = null,
+    string? ReferenceUnit = null,
+    IReadOnlyList<EcfSubquantityPayload>? Subquantities = null,
+    decimal? AlcoholDegrees = null,
+    decimal? ReferenceUnitPrice = null,
+    DateOnly? ManufactureDate = null,
+    DateOnly? ExpiryDate = null,
+    EcfMiningPayload? Mining = null);
+
+public sealed record EcfSubquantityPayload(decimal Quantity, string UnitCode);
+
+/// <summary><c>&lt;Mineria&gt;</c> — datos de liquidación minera (solo tipos 32/33/34/46).</summary>
+public sealed record EcfMiningPayload(
+    decimal? NetWeightKilogram = null,
+    decimal? NetWeightMining = null,
+    int? AffiliationType = null,
+    int? Settlement = null);
 
 /// <summary>Área <c>&lt;Retencion&gt;</c> de la línea (tipos 41 y 47). Los montos los calcula el cliente.</summary>
 public sealed record EcfLineRetentionPayload(

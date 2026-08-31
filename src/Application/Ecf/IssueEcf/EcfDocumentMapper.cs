@@ -148,6 +148,12 @@ internal static class EcfDocumentMapper
             ?.Select(code => new EcfItemCode(code.Type, code.Value))
             .ToList();
 
+        var foreignCurrency = line.ForeignCurrency is { } fx
+            ? new EcfLineForeignCurrency(fx.UnitPrice, fx.Discount, fx.Surcharge, fx.LineAmount)
+            : null;
+
+        var details = MapLineDetails(line.Details);
+
         return new EcfLine(
             Number: number,
             Rate: rate,
@@ -162,8 +168,34 @@ internal static class EcfDocumentMapper
             PriceIncludesTax: line.PriceIncludesTax,
             Codes: codes,
             Retention: retention,
+            ForeignCurrency: foreignCurrency,
             AdditionalTaxDetail: additionalTaxes,
+            Details: details,
             DeclaredAmount: line.DeclaredAmount);
+    }
+
+    private static EcfLineDetails? MapLineDetails(EcfLineDetailsPayload? details)
+    {
+        if (details is null)
+            return null;
+
+        var subquantities = details.Subquantities is { Count: > 0 }
+            ? details.Subquantities.Select(s => new EcfSubquantity(s.Quantity, s.UnitCode)).ToList()
+            : null;
+
+        var mining = details.Mining is { } m
+            ? new EcfMining(m.NetWeightKilogram, m.NetWeightMining, m.AffiliationType, m.Settlement)
+            : null;
+
+        return new EcfLineDetails(
+            ReferenceQuantity: details.ReferenceQuantity,
+            ReferenceUnit: Clean(details.ReferenceUnit),
+            Subquantities: subquantities,
+            AlcoholDegrees: details.AlcoholDegrees,
+            ReferenceUnitPrice: details.ReferenceUnitPrice,
+            Elaboration: details.ManufactureDate,
+            ItemExpiry: details.ExpiryDate,
+            Mining: mining);
     }
 
     // --- referencia / Sección D / divisa / transporte ------------------
