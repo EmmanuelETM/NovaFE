@@ -1,3 +1,4 @@
+using NovaFE.Domain.Dgii;
 using NovaFE.Domain.Ecf;
 
 namespace NovaFE.Application.Ecf.Contracts;
@@ -20,7 +21,15 @@ public sealed record EcfDto(
     string? BuyerRnc,
     string? BuyerName,
     EcfTotalsSnapshot Totals,
-    string? ToleranceWarning);
+    string? ToleranceWarning,
+    // --- Módulo 4: envío a la DGII ---
+    string? TrackId = null,
+    DateTimeOffset? SubmittedAt = null,
+    DateTimeOffset? DgiiProcessedAt = null,
+    int? DgiiStatusCode = null,
+    bool? SequenceUsable = null,
+    int SubmissionAttempts = 0,
+    IReadOnlyList<DgiiMessage>? DgiiMessages = null);
 
 /// <summary>Fila del listado de comprobantes emitidos.</summary>
 public sealed record EcfSummaryDto(

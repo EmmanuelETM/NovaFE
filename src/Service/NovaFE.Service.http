@@ -192,4 +192,12 @@ X-Tenant-Id: {{tenantId}}
 GET {{Service_HostAddress}}/api/v1/ecf?page=1&pageSize=20&type=31&search=E31
 X-Tenant-Id: {{tenantId}}
 
+### 6. Listar solo los rechazados / en revisión
+GET {{Service_HostAddress}}/api/v1/ecf?status=rejected
+X-Tenant-Id: {{tenantId}}
+
+### 7. Reencolar el envío de un comprobante failed / review
+POST {{Service_HostAddress}}/api/v1/ecf/00000000-0000-0000-0000-000000000000/retry
+X-Tenant-Id: {{tenantId}}
+
 ###

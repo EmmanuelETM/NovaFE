@@ -244,13 +244,26 @@ pipeline de `IssueEcfUseCase`: resolver emisor (`Tenant` + `EmitterProfile`) y
 ambiente (`environment` del payload, o `EmitterProfile.DefaultEnvironment`) →
 idempotencia (`Idempotency-Key` → `IIdempotencyStore`, tabla PostgreSQL) → dedup
 (`internalNumber`, índice único parcial) → asignar secuencia (M7) → firmar (M3) →
-persistir el agregado **`IssuedEcf`** (tabla `issued_ecf`, estado `signed`).
-**No envía a la DGII** — eso es Módulo 4 (estados de envío, outbox, webhooks, `202`,
-número quemado si el pipeline falla post-asignación). `EmitterProfile`
+**persistir `IssuedEcf` + encolar el envío en una transacción** (M4). `EmitterProfile`
 (`src/Domain/Tenants`) es 1:1 con el contribuyente, lo administra el operador
 (`GET/PUT /api/v1/tenants/{id}/emitter-profile`): dirección, ubicación,
 teléfonos, actividad y ambiente por defecto — datos del `<Emisor>` que el `Tenant`
 no tiene. No cambiar sin leer `docs/api-ecf.md`.
+
+**Envío a la DGII (Módulo 4)** (`src/Application/Ecf/Submission`, `src/Service/Workers`):
+tras persistir, el `POST /ecf` corre un **fast-path inline** (`IEcfSubmissionFastPath`,
+presupuesto `EcfSubmission:SyncWaitBudgetSeconds` ~8 s) que intenta enviar y
+resolver contra la DGII; si no alcanza, `EcfSubmissionWorker : BackgroundService`
+lo termina desde el **outbox** `ecf_submission_outbox` (tabla de sistema, sin RLS;
+reclamo `FOR UPDATE SKIP LOCKED`). El **único** code path es `EcfSubmissionProcessor`
+(`ProcessAsync` con ladder RF-04.3 / `PollOnceAsync` sin ladder). `IDgiiSubmissionClient`
+habla con `recepcion/api/facturaselectronicas` (e-CF), `recepcionfc/api/recepcion/ecf`
+(RFCE, dominio `fc.dgii.gov.do`) y `consultaresultado/api/consultas/estado`.
+Estados: `signed → submitted → accepted/accepted_conditional/rejected`, con
+`review` (polling agotado) y `failed` (transporte agotado / rechazo del gateway)
+reencolables por `POST /ecf/{id}/retry`. Un rechazo quema el e-NCF (sin pool de
+liberadas en v1). **No** hay webhooks ni contingencia (M11) todavía. El worker
+fija `CurrentTenant` por fila. No cambiar sin leer `docs/dgii-submission.md`.
 
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.

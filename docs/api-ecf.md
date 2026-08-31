@@ -1,9 +1,10 @@
 # API pública de emisión de e-CF (Módulo 12)
 
-**Estado: implementado.** `POST /api/v1/ecf` arma, calcula, firma y persiste el
-comprobante. El **envío a la DGII** (TrackId, polling, reintentos, webhooks, camino
-`202`) es Módulo 4 y todavía no existe: en v1 el comprobante queda en estado
-`signed`.
+**Estado: implementado.** `POST /api/v1/ecf` arma, calcula, firma, persiste y
+**envía el comprobante a la DGII** (Módulo 4): intenta resolver el estado fiscal
+dentro del propio request (~8 s) y, si la DGII tarda, un worker de fondo termina
+el seguimiento por `TrackId`. Ver `docs/dgii-submission.md`. Los webhooks (el
+cliente hoy hace polling de `GET /ecf/{id}`) son un slice aparte.
 
 Piezas: `IssueEcfCommand` (payload) · `EcfDocumentMapper` (payload → `EcfDocument`)
 · `IssueEcfCommandValidator` · `IssueEcfUseCase` (pipeline) · `EcfController`.
@@ -52,7 +53,8 @@ línea; encabezado: ±1 por campo) y devuelve `toleranceWarning` si no cuadran �
 POST   /api/v1/ecf                 emitir
 GET    /api/v1/ecf/{id}            estado y detalle
 GET    /api/v1/ecf/{id}/xml        XML firmado (?rfce=true → el <RFCE>)
-GET    /api/v1/ecf?...             listado / búsqueda paginado
+GET    /api/v1/ecf?...             listado / búsqueda paginado (filtro ?status=)
+POST   /api/v1/ecf/{id}/retry      reencolar el envío (solo failed / review) → 202
 ```
 
 | | |
@@ -218,12 +220,29 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
     "montoNoFacturable": 0.00, "montoPeriodo": 2360.00,
     "totalItbisRetenido": 0.00, "totalIsrRetencion": 0.00
   },
-  "toleranceWarning": null
+  "toleranceWarning": null,
+
+  "trackId": "TRACK-ABC-123",
+  "submittedAt": "2026-02-21T10:30:06-04:00",
+  "dgiiProcessedAt": "2026-02-21T10:30:06-04:00",
+  "dgiiStatusCode": 1,
+  "sequenceUsable": true,
+  "submissionAttempts": 1,
+  "dgiiMessages": []
 }
 ```
 
 - **`201 Created`** en una emisión nueva (`Location` a `GET /ecf/{id}`); **`200 OK`**
   si la `Idempotency-Key` o el `internalNumber` ya se habían usado.
+- El `status` depende de qué alcanzó el envío dentro del presupuesto:
+
+  | `status` | Cuándo |
+  |---|---|
+  | `accepted` / `accepted_conditional` / `rejected` | la DGII respondió dentro del presupuesto (`dgiiMessages` trae las observaciones) |
+  | `submitted` | enviado, hay `trackId`, la DGII sigue procesando — el worker termina |
+  | `signed` | la DGII no respondió dentro del presupuesto — el worker enviará y hará polling |
+
+- Los campos de envío (`trackId`…`dgiiMessages`) son null / 0 hasta que hay envío.
 - Fechas de documento (`issueDate`, `sequenceExpiresOn`) en `dd-MM-yyyy`; timestamps
   del sistema en ISO 8601 `-04:00`.
 - El XML no va inline — está en `GET /ecf/{id}/xml`.
@@ -232,25 +251,31 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
 
 ## 7. Estados
 
-v1 solo llega a **`signed`** (secuencia asignada, XML armado, cuadrado y firmado;
-aún no enviado). `EcfStatus` es un smart enum; los estados de envío
-(`submitted`, `processing`, `accepted`, `accepted_conditional`, `rejected`,
-`contingency`, `voided`, `failed`) llegan con Módulo 4.
+```
+signed → submitted → accepted / accepted_conditional / rejected
+   │          └──────► review   (la DGII no resolvió tras el ladder de polling)
+   └───────► failed             (agotó el backoff de transporte, o rechazo del gateway)
+```
 
-Si el pipeline falla **después** de asignar la secuencia (validación fiscal
-inesperada, XSD, firma), el `POST` devuelve un error y el e-NCF se **quema** — se
-loguea, no se persiste. El pool de secuencias liberadas y la reconciliación de
-números quemados son Módulo 4 / slices posteriores (`docs/sequences.md`).
+`signed` = firmado y encolado. `review` y `failed` se reencolan con
+`POST /ecf/{id}/retry` (→ `signed`, `202`). Detalle en `docs/dgii-submission.md`.
+`contingency_pending` y `voided` (M8/M11) todavía no existen.
+
+Si el pipeline falla **antes** de encolar (validación fiscal inesperada, XSD,
+firma) el `POST` devuelve un error y el e-NCF se **quema** (se loguea, no se
+persiste). Un `rejected` de la DGII también quema el número; el pool de secuencias
+liberadas es un slice posterior (`docs/sequences.md`).
 
 ---
 
 ## 8. Flujo
 
-`POST /api/v1/ecf` es **síncrono** en v1: resolver emisor + ambiente → idempotencia
-→ dedup → asignar secuencia (M7) → armar y calcular (M2 + M6) → firmar (M3) →
-persistir. Todo local, < 1 s. El intento a la DGII con espera acotada, el outbox
-(`SKIP LOCKED`), el camino `202 Accepted` y los webhooks (HMAC-SHA256) son
-**Módulo 4**.
+`POST /api/v1/ecf`: resolver emisor + ambiente → idempotencia → dedup → asignar
+secuencia (M7) → armar y calcular (M2 + M6) → firmar (M3) → **persistir + encolar
+en una transacción** (M4). Luego el **fast-path inline** intenta el envío a la
+DGII con espera acotada (~8 s); si no alcanza, un worker de fondo (outbox
+`SKIP LOCKED`) lo termina. **Nunca** falla el `POST` por la DGII — el comprobante
+ya está firmado y guardado. Los webhooks (HMAC-SHA256) son un slice aparte.
 
 ---
 
@@ -313,12 +338,13 @@ persistir. Todo local, < 1 s. El intento a la DGII con espera acotada, el outbox
 
 ---
 
-## 10. Fuera de alcance (Módulo 4 / 5 / 9 / 14)
+## 10. Fuera de alcance (Módulo 5 / 9 / 11 / 14 / webhooks)
 
-- **M4** — envío a la DGII: `IDgiiEcfSubmissionClient`, outbox + worker, polling,
-  TrackId, estados de envío, `202`, webhooks, contingencia, RF-02.10 (NC ≤ total del
-  e-CF modificado — necesita el original persistido), estado `failed`.
-- **M5** — ACECF / `commercialApproval`.
+- **Webhooks** — notificación al cliente del cambio de estado (config por tenant,
+  HMAC-SHA256, reintentos, historial). Slice aparte; hoy el cliente hace polling.
+- **M5** — envío al receptor electrónico B2B + ACECF / `commercialApproval`.
+- **M11** — contingencia (`IndicadorEnvioDiferido`, Decreto 587-24).
+- **RF-02.10** — validar NC ≤ `MontoTotal` del e-CF modificado (necesita el original persistido).
 - **M9 (resto)** — `GET /ecf/{id}/ri` (PDF), bitmap del QR.
 - **M14** — API keys.
 - `payment.account` (`TipoCuentaPago`…) y `payment.billingPeriod` (`FechaDesde`/
