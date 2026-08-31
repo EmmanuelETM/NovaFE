@@ -26,7 +26,7 @@ namespace NovaFE.Service.Controllers;
 /// </summary>
 [DevelopmentOnly]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/dev/ecf-preview")]
+[Route("api/v{version:apiVersion}/dev/[controller]")]
 public sealed class EcfPreviewController(
     IEcfXmlSerializer serializer,
     IRfceSerializer rfceSerializer,

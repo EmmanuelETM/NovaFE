@@ -290,6 +290,14 @@ Heredan de `ApiController`, no de `ControllerBase` directamente. Todo endpoint
 recibe un `CancellationToken` y lo propaga. La ruta lleva siempre el segmento de
 versión; el versionado no asume una versión por defecto a propósito.
 
+**URLs**: `[Route("api/v{version:apiVersion}/[controller]")]` — no escribas la ruta
+del recurso a mano. Un `RouteTokenTransformerConvention` +
+`RouteOptions.LowercaseUrls` convierten `[controller]`/`[action]` a `kebab-case` en
+minúsculas (`EcfPreview` → `ecf-preview`) y el link generator emite todo en
+minúsculas. Sub-recursos como segmentos anidados en `kebab-case`
+(`{id}/emitter-profile`), colecciones en plural, sin verbos salvo acciones que no
+mapean a CRUD (`{id}/revoke`).
+
 ### Async
 
 Todo método que toque E/S es `async` y recibe `CancellationToken ct`, que se
