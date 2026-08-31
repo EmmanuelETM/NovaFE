@@ -104,6 +104,8 @@ dotnet_naming_symbols.constantes.required_modifiers = const
 # --- Analizadores: excepciones justificadas ---
 # CA1848: LoggerMessage delegates. Ganancia marginal para el ruido que genera.
 dotnet_diagnostic.CA1848.severity = none
+# CA1873: guardas IsEnabled antes de loguear. Misma familia que CA1848: no compensa.
+dotnet_diagnostic.CA1873.severity = none
 # CA1727: no exigimos PascalCase en los nombres de plantilla de log.
 dotnet_diagnostic.CA1727.severity = none
 # CA2007: ConfigureAwait no aplica en ASP.NET Core (no hay SynchronizationContext).
