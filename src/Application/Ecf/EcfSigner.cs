@@ -81,7 +81,8 @@ internal sealed class EcfSigner(
             RfceXml: rfceXml,
             SignatureValue: signed.SignatureValue,
             SecurityCode: signed.SecurityCode,
-            DocumentHash: Sha256Hex(signed.Xml));
+            DocumentHash: Sha256Hex(signed.Xml),
+            QrUrl: EcfVerificationUrl.For(document, environment, signed.SecurityCode, signedAt));
     }
 
     private static string Sha256Hex(string xml)

@@ -111,7 +111,7 @@ GET {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/samples/credito-fiscal?sign
 ### GET — tipo 32 de bajo monto firmado -> el RFCE firmado (atado al e-CF por el codigo de seguridad)
 GET {{Service_HostAddress}}/api/v1.0/dev/ecf-preview/samples/consumo?signed=true&rfce=true&raw=true
 
-### POST — cuerpo crudo, firmado (JSON con xml + securityCode + documentHash)
+### POST — cuerpo crudo, firmado (JSON con xml + securityCode + documentHash + qrUrl)
 POST {{Service_HostAddress}}/api/v1.0/dev/ecf-preview?signed=true
 Content-Type: application/json
 

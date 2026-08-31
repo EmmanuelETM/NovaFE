@@ -59,7 +59,9 @@ public sealed class DevEcfSigner(
             RfceXsdError: rfceXsdError,
             SecurityCode: ecfSigned.SecurityCode,
             DocumentHash: Convert.ToHexStringLower(
-                SHA256.HashData(Encoding.UTF8.GetBytes(ecfSigned.Xml))));
+                SHA256.HashData(Encoding.UTF8.GetBytes(ecfSigned.Xml))),
+            QrUrl: EcfVerificationUrl.For(
+                document, DgiiEnvironment.TestEcf, ecfSigned.SecurityCode, EcfSampleCatalog.SignedAt));
     }
 
     private static X509Certificate2 CreateEphemeralCertificate()
@@ -92,4 +94,5 @@ public sealed record DevSignedEcf(
     bool? RfceXsdValid,
     string? RfceXsdError,
     string SecurityCode,
-    string DocumentHash);
+    string DocumentHash,
+    string QrUrl);

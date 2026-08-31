@@ -54,6 +54,8 @@ public class EcfSignerTests : UseCaseTestBase
         signed.DocumentHash.Length.ShouldBe(64); // SHA-256 en hex
         signed.RfceXml.ShouldBeNull();
         signed.SubmitsRfce.ShouldBeFalse();
+        signed.QrUrl.ShouldStartWith("https://ecf.dgii.gov.do/testecf/consultatimbre?");
+        signed.QrUrl.ShouldContain($"codigoseguridad={StubSecurityCode}");
     }
 
     [Fact]
@@ -82,6 +84,7 @@ public class EcfSignerTests : UseCaseTestBase
         // El resumen queda atado al e-CF por el código de seguridad de la firma.
         result.Value.RfceXml.ShouldContain($"<CodigoSeguridadeCF>{StubSecurityCode}</CodigoSeguridadeCF>");
         result.Value.RfceXml.ShouldNotContain("<DetallesItems>");
+        result.Value.QrUrl.ShouldStartWith("https://fc.dgii.gov.do/testecf/consultatimbrefc?");
         // El <ECF> completo igual se firma y se guarda.
         result.Value.EcfXml.ShouldContain("<TipoeCF>32</TipoeCF>");
         // Dos firmas: una para el e-CF, otra para el RFCE.

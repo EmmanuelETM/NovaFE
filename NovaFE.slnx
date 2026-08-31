@@ -1,12 +1,14 @@
 <Solution>
   <Folder Name="/Solution Items/">
-    <File Path="CLAUDE.md" />
     <File Path="Directory.Build.props" />
     <File Path="Directory.Packages.props" />
     <File Path=".editorconfig" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/docs/">
+    <File Path="../FE_DGII/contexto-proyecto-fe-dgii.md" />
+    <File Path="../FE_DGII/Plan Técnico Integral v2.0.txt" />
+    <File Path="CLAUDE.md" />
     <File Path="docs/api-ecf.md" />
     <File Path="docs/certificates.md" />
     <File Path="docs/dgii-auth.md" />
@@ -18,6 +20,7 @@
     <File Path="docs/sequences.md" />
     <File Path="docs/signing.md" />
     <File Path="docs/time.md" />
+    <File Path="docs/verification-url.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Application/NovaFE.Application.csproj" />

@@ -32,13 +32,19 @@ namespace NovaFE.Application.Ecf.Contracts;
 /// SHA-256 en hex del <see cref="EcfXml"/> firmado — la huella de integridad
 /// post-firma para auditoría (RF-03.4). Una vez firmado, el documento es inmutable.
 /// </param>
+/// <param name="QrUrl">
+/// La URL del timbre QR de la Representación Impresa (Módulo 9, RF-09.1): una URL
+/// de <c>consultatimbre</c> en los servidores de la DGII. Variante
+/// <c>consultatimbrefc</c> (4 parámetros) cuando el documento va como RFCE.
+/// </param>
 public sealed record SignedEcf(
     DateTimeOffset SignedAt,
     string EcfXml,
     string? RfceXml,
     string SignatureValue,
     string SecurityCode,
-    string DocumentHash)
+    string DocumentHash,
+    string QrUrl)
 {
     /// <summary>
     /// El envío a la DGII usa el RFCE (<c>POST /api/rfce</c>) en lugar del e-CF
