@@ -108,6 +108,12 @@ public static class InfrastructureService
         services.AddScoped<IDgiiTokenCache, DistributedCacheDgiiTokenCache>();
         services.AddScoped<IDgiiTokenProvider, DgiiTokenProvider>();
 
+        // Recepción y consulta de resultado (Módulo 4): dos clientes resilientes con
+        // nombre, uno por dominio de la DGII (e-CF y Facturas de Consumo).
+        AddDgiiSubmissionHttpClient(services, DgiiSubmissionClient.EcfClientName, options => options.EcfBaseUrl);
+        AddDgiiSubmissionHttpClient(services, DgiiSubmissionClient.FcClientName, options => options.FcBaseUrl);
+        services.AddScoped<IDgiiSubmissionClient, DgiiSubmissionClient>();
+
         // ==========================================
         //             Repositorios
         // ==========================================
@@ -138,5 +144,20 @@ public static class InfrastructureService
         //     .AddStandardResilienceHandler();
 
         return services;
+    }
+
+    private static void AddDgiiSubmissionHttpClient(
+        IServiceCollection services, string name, Func<DgiiOptions, string> baseUrl)
+    {
+        // La BaseAddress se resuelve al crear el cliente (no al registrarlo), igual
+        // que el cliente de autenticación: así los tests y las variables de entorno
+        // pueden sobreescribir Dgii:EcfBaseUrl / Dgii:FcBaseUrl.
+        services.AddHttpClient(name, (sp, client) =>
+            {
+                var options = sp.GetRequiredService<IOptions<DgiiOptions>>().Value;
+                client.BaseAddress = new Uri(baseUrl(options).TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(options.SubmissionTimeoutSeconds);
+            })
+            .AddStandardResilienceHandler();
     }
 }
