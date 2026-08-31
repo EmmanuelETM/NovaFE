@@ -38,7 +38,7 @@ public sealed class EcfController(
     {
         var result = await issue.Execute(command with { IdempotencyKey = idempotencyKey }, ct);
 
-        return result.Match<IActionResult>(
+        return result.Match(
             issued => issued.WasCreated
                 ? CreatedAtAction(nameof(GetById), new { id = issued.Ecf.Id, version = "1.0" }, issued.Ecf)
                 : Ok(issued.Ecf),

@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.OpenApi;
 
 namespace NovaFE.Service.Extensions;
 
@@ -43,6 +44,11 @@ internal static class ApiVersioningExtensions
             // Genera un documento OpenAPI por versión de API. Reemplaza a
             // services.AddOpenApi(): esta variante conoce las versiones.
             .AddOpenApi();
+
+        // El documento se llama "v1" (formato de grupo 'v'VVV). Le sumamos los
+        // transformadores de esquema (ejemplos legibles del payload de emisión).
+        services.Configure<OpenApiOptions>("v1", options =>
+            options.AddSchemaTransformer<EcfOpenApiExamples>());
 
         return services;
     }

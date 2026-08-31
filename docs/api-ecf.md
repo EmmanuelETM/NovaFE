@@ -122,6 +122,8 @@ aceptan el **nombre** (`"credit"`, `"check_transfer"`) o el **código DGII**
 | `codes[]` opc. | `TablaCodigosItem` | `{ type, value }` |
 | `retention` opc. | Área `<Retencion>` | `{ agent, itbisWithheld, isrWithheld }` — `agent`: `withholding` (1) / `perception` (2). **Obligatoria** en cada línea de 41 y 47. Los montos los calcula el cliente (ver `docs/fiscal.md`) |
 | `additionalTaxes[]` opc. | `TablaImpuestoAdicional` + `<ImpuestosAdicionales>` | `{ code, rate, iscEspecifico, iscAdvalorem, otros }` — código de la Tabla I (001–039). Solo 31/32/33/34/44/45 |
+| `foreignCurrency` opc. | `<OtraMonedaDetalle>` | `{ unitPrice, discount, surcharge, lineAmount }` en divisa (passthrough) |
+| `details` opc. | Campos opcionales del `<Item>` | `{ referenceQuantity, referenceUnit, subquantities[], alcoholDegrees, referenceUnitPrice, manufactureDate, expiryDate, mining }`. Passthrough — el ISC de alcoholes/cigarrillos igual va en `additionalTaxes` (la derivación desde `alcoholDegrees` es un slice posterior). `mining` solo en 32/33/34/46 |
 | `declaredAmount` opc. | — | El `MontoItem` que calculó el cliente → chequeo de tolerancia |
 
 `numeroLinea` lo asigna NovaFE (1…N).
@@ -159,7 +161,10 @@ solo al tipo 46. `transport` no aplica a 41/43; el 47 solo admite
 ### 4.9 `subtotals[]` / `pagination[]`
 
 Passthrough informativo para la RI (Sección C / `<Paginacion>`). No tocan ningún
-total.
+total. `<Paginacion>` es condicional (solo facturas largas); el diseño original la
+derivaba del layout de la RI, pero mientras Módulo 9 (renderizador de RI) no exista
+no hay layout del que derivar — el cliente que pagina su propia RI la manda. Cuando
+M9 la construya, este campo pasa a ser un override.
 
 ### 4.10 `declaredTotals` (opcional — tolerancia)
 
@@ -315,10 +320,12 @@ persistir. Todo local, < 1 s. El intento a la DGII con espera acotada, el outbox
 - **M5** — ACECF / `commercialApproval`.
 - **M9 (resto)** — `GET /ecf/{id}/ri` (PDF), bitmap del QR.
 - **M14** — API keys.
+- `payment.account` (`TipoCuentaPago`…) y `payment.billingPeriod` (`FechaDesde`/
+  `FechaHasta`) — no existen en el dominio todavía.
 - Sucursales del emisor (`<Sucursal>`); `TablaSubDescuento`/`TablaSubRecargo` de
-  línea; derivación del ISC; validación de las tablas de códigos de la DGII (un
-  código de provincia/municipio inválido en el `EmitterProfile` hoy falla el XSD
-  post-firma con `500`).
+  línea; derivación del ISC desde `details.alcoholDegrees`/`referenceQuantity`;
+  validación de las tablas de códigos de la DGII (un código de provincia/municipio
+  inválido en el `EmitterProfile` hoy falla el XSD post-firma con `500`).
 
 ---
 

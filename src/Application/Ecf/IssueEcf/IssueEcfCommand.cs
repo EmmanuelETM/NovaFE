@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using NovaFE.Application.Ecf.Contracts;
 
 namespace NovaFE.Application.Ecf.IssueEcf;
@@ -10,6 +11,7 @@ namespace NovaFE.Application.Ecf.IssueEcf;
 public sealed record IssueEcfCommand
 {
     /// <summary>Código DGII del tipo de e-CF: 31, 32, 33, 34, 41, 43, 44, 45, 46, 47.</summary>
+    [DefaultValue(31)]
     public int Type { get; init; }
 
     /// <summary>Fecha de emisión (calendario dominicano). Default: hoy.</summary>
