@@ -1,5 +1,6 @@
 using System.Text.Json;
 using NovaFE.Domain.Common;
+using NovaFE.Domain.Dgii;
 using NovaFE.Domain.Ecf;
 using NovaFE.Domain.Sequences;
 using Microsoft.EntityFrameworkCore;
@@ -66,6 +67,21 @@ internal sealed class EcfConfiguration : IEntityTypeConfiguration<IssuedEcf>
         builder.Property(e => e.EcfXml).HasColumnType("text").IsRequired();
         builder.Property(e => e.RfceXml).HasColumnType("text");
 
+        // --- Módulo 4: envío a la DGII -----------------------------------
+        builder.Property(e => e.TrackId).HasMaxLength(50);
+
+        builder.Property(e => e.DgiiMessages)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                messages => JsonSerializer.Serialize(messages, (JsonSerializerOptions?)null),
+                json => JsonSerializer.Deserialize<IReadOnlyList<DgiiMessage>>(json, (JsonSerializerOptions?)null)
+                        ?? new List<DgiiMessage>(),
+                new ValueComparer<IReadOnlyList<DgiiMessage>>(
+                    (a, b) => a!.SequenceEqual(b!),
+                    v => v.Aggregate(0, (hash, message) => HashCode.Combine(hash, message)),
+                    v => v.ToList()))
+            .IsRequired();
+
         builder.Property(e => e.CreatedBy).HasMaxLength(256);
         builder.Property(e => e.UpdatedBy).HasMaxLength(256);
         builder.Property(e => e.DeletedBy).HasMaxLength(256);
@@ -75,8 +91,9 @@ internal sealed class EcfConfiguration : IEntityTypeConfiguration<IssuedEcf>
             .IsUnique()
             .HasFilter("internal_invoice_number is not null and is_deleted = false");
 
-        // Listado (orden por fecha) y búsqueda por e-NCF.
+        // Listado (orden por fecha), búsqueda por e-NCF y filtro por estado.
         builder.HasIndex(e => new { e.TenantId, e.CreatedAt });
         builder.HasIndex(e => new { e.TenantId, e.Encf });
+        builder.HasIndex(e => new { e.TenantId, e.Status });
     }
 }

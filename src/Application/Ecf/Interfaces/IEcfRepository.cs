@@ -11,4 +11,7 @@ public interface IEcfRepository
     Task<IssuedEcf?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
     Task AddAsync(IssuedEcf ecf, CancellationToken ct = default);
+
+    /// <summary>Persiste los cambios de estado del comprobante (Módulo 4).</summary>
+    Task UpdateAsync(IssuedEcf ecf, CancellationToken ct = default);
 }
