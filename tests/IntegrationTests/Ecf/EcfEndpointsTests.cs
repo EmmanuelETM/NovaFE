@@ -77,6 +77,7 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
         issued.SubmitsRfce.ShouldBeFalse();
         issued.Links.Xml.ShouldBe($"/api/v1/ecf/{issued.Id}/xml");
         issued.Links.RfceXml.ShouldBeNull();
+        issued.Links.Representation.ShouldBe($"/api/v1/ecf/{issued.Id}/representation");
 
         var get = await Client.GetAsync($"/api/v1/ecf/{issued.Id}");
         get.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -213,7 +214,7 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     private sealed record EcfResponse(
         Guid Id, string Status, string Encf, int Type, bool SubmitsRfce, string QrUrl, LinksResponse Links);
 
-    private sealed record LinksResponse(string Self, string Xml, string? RfceXml);
+    private sealed record LinksResponse(string Self, string Xml, string? RfceXml, string Representation);
 
     private sealed record EcfSummaryResponse(Guid Id, string Status, string Encf, int Type, decimal MontoTotal);
 

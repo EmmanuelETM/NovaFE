@@ -9,6 +9,11 @@
 # ==========================================
 # 'aspnet' (no 'sdk'): imagen chica, sin compilador ni SDK en producción.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+# libfontconfig1: lo necesita el Skia nativo de QuestPDF (Representación Impresa,
+# Módulo 9) para resolver fuentes en Linux. La imagen slim no lo trae.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libfontconfig1 \
+    && rm -rf /var/lib/apt/lists/*
 USER $APP_UID
 WORKDIR /app
 # 8080 es el puerto por defecto de las imágenes .NET desde la versión 8. El 8081

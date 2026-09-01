@@ -16,6 +16,7 @@
     <File Path="docs/multi-tenancy.md" />
     <File Path="docs/pricing.md" />
     <File Path="docs/redis.md" />
+    <File Path="docs/representation.md" />
     <File Path="docs/sequences.md" />
     <File Path="docs/signing.md" />
     <File Path="docs/time.md" />
