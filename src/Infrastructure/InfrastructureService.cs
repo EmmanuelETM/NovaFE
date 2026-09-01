@@ -2,6 +2,7 @@ using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
+using NovaFE.Application.Ecf.Representation;
 using NovaFE.Application.Sequences.Interfaces;
 using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
@@ -13,6 +14,7 @@ using NovaFE.Infrastructure.Dgii;
 using NovaFE.Infrastructure.Ecf;
 using NovaFE.Infrastructure.Ecf.EfCore;
 using NovaFE.Infrastructure.Ecf.Outbox;
+using NovaFE.Infrastructure.Ecf.Representation;
 using NovaFE.Infrastructure.Ecf.Sql;
 using NovaFE.Infrastructure.Http;
 using NovaFE.Infrastructure.Persistence;
@@ -86,6 +88,9 @@ public static class InfrastructureService
         services.AddSingleton<IEcfXmlSerializer, EcfXmlSerializer>();
         services.AddSingleton<IRfceSerializer, RfceSerializer>();
         services.AddSingleton<IEcfXsdValidator, EcfXsdValidator>();
+
+        // Representación Impresa (Módulo 9): lee el <ECF> firmado → modelo de la RI.
+        services.AddSingleton<IEcfRepresentationReader, EcfXmlRepresentationReader>();
 
         // ==========================================
         //        Autenticación con la DGII
