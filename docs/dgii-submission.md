@@ -56,6 +56,16 @@ signed ──(fast-path inline / worker)──► submitted ──► accepted
 - Las transiciones son métodos del agregado (`IssuedEcf.Mark*`); una transición
   inválida → `IssuedEcf.InvalidTransition`.
 
+## Lo que ve el cliente
+
+`GET /ecf/{id}` (y la respuesta del `POST`) traen el `status` de NovaFE y un
+objeto **`dgii`** con el intercambio: `trackId`, `statusCode` (1/2/3/4),
+`sequenceUsed`, `messages[]` y los instantes `submittedAt` / `processedAt`. Es
+`null` hasta que hay envío. Internamente el agregado guarda los mismos datos en
+columnas planas (`track_id`, `dgii_status_code`, `sequence_usable`,
+`dgii_messages` jsonb, `submitted_at`, `dgii_processed_at`) más
+`submission_attempts` (que no se expone). Detalle del contrato en `docs/api-ecf.md` §6.
+
 ## Fast-path síncrono del `POST /ecf`
 
 Tras firmar y persistir (+ encolar, en la misma transacción), el request intenta

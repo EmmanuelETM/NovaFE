@@ -212,11 +212,14 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   "internalNumber": "FAC-2026-00042",
   "toleranceWarning": null,
 
-  "trackId": "TRACK-ABC-123",
-  "submittedAt": "2026-02-21T10:30:06-04:00",
-  "dgiiProcessedAt": "2026-02-21T10:30:06-04:00",
-  "dgiiStatusCode": 1,
-  "dgiiMessages": [],
+  "dgii": {
+    "trackId": "TRACK-ABC-123",
+    "statusCode": 1,
+    "sequenceUsed": true,
+    "messages": [],
+    "submittedAt": "2026-02-21T10:30:06-04:00",
+    "processedAt": "2026-02-21T10:30:06-04:00"
+  },
 
   "links": {
     "self": "/api/v1/ecf/0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c",
@@ -228,19 +231,25 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
 
 - **`201 Created`** en una emisión nueva (`Location` a `GET /ecf/{id}`); **`200 OK`**
   si la `Idempotency-Key` o el `internalNumber` ya se habían usado.
-- El `status` depende de qué alcanzó el envío dentro del presupuesto:
+- El `status` de nivel superior es el estado de NovaFE; depende de qué alcanzó el
+  envío dentro del presupuesto:
 
   | `status` | Cuándo |
   |---|---|
-  | `accepted` / `accepted_conditional` / `rejected` | la DGII respondió dentro del presupuesto (`dgiiMessages` trae las observaciones) |
-  | `submitted` | enviado, hay `trackId`, la DGII sigue procesando — el worker termina |
+  | `accepted` / `accepted_conditional` / `rejected` | la DGII respondió dentro del presupuesto (`dgii.messages` trae las observaciones) |
+  | `submitted` | enviado, hay `dgii.trackId`, la DGII sigue procesando — el worker termina |
   | `signed` | la DGII no respondió dentro del presupuesto — el worker enviará y hará polling |
 
-- **La respuesta es solo la identidad fiscal + el estado.** El detalle comercial
-  (comprador, líneas, montos, retenciones) vive en el **XML firmado** —
-  `links.xml` (`GET /ecf/{id}/xml`); `links.rfceXml` trae el `<RFCE>` cuando
-  `submitsRfce` es `true`.
-- Los campos de envío (`trackId`…`dgiiMessages`) son null hasta que hay envío.
+- **La respuesta es identidad fiscal + estado + el intercambio con la DGII.** El
+  detalle comercial (comprador, líneas, montos, retenciones) vive en el **XML
+  firmado** — `links.xml` (`GET /ecf/{id}/xml`); `links.rfceXml` trae el `<RFCE>`
+  cuando `submitsRfce` es `true`.
+- **`dgii`** agrupa todo lo del envío y es `null` mientras no haya envío:
+  `trackId`, `statusCode` (1 aceptado · 2 rechazado · 3 en proceso · 4 aceptado
+  condicional), `sequenceUsed` (el `secuenciaUtilizada` de la DGII), `messages`
+  (`{ code, value }` — el `value` en el idioma en que lo manda la DGII), y los
+  instantes `submittedAt` (recepción confirmada) y `processedAt` (resultado
+  definitivo).
 - Fechas de documento (`issueDate`, `sequenceExpiresOn`) en `dd-MM-yyyy`; timestamps
   del sistema en ISO 8601 `-04:00`.
 

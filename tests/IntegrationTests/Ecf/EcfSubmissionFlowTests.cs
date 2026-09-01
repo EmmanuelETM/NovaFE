@@ -111,10 +111,11 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
 
         var issued = await LeerAsync<EcfResponse>(post);
         issued!.Status.ShouldBe("accepted_conditional");
-        issued.TrackId.ShouldBe("TRACK-1");
-        issued.DgiiStatusCode.ShouldBe(4);
-        issued.SubmittedAt.ShouldNotBeNull();
-        issued.DgiiProcessedAt.ShouldNotBeNull();
+        issued.Dgii.ShouldNotBeNull();
+        issued.Dgii.TrackId.ShouldBe("TRACK-1");
+        issued.Dgii.StatusCode.ShouldBe(4);
+        issued.Dgii.SubmittedAt.ShouldNotBeNull();
+        issued.Dgii.ProcessedAt.ShouldNotBeNull();
     }
 
     [RequiresDockerFact]
@@ -231,7 +232,9 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         retry.StatusCode.ShouldBe(HttpStatusCode.Conflict);
     }
 
-    private sealed record EcfResponse(
-        Guid Id, string Status, string Encf, string? TrackId,
-        int? DgiiStatusCode, DateTimeOffset? SubmittedAt, DateTimeOffset? DgiiProcessedAt);
+    private sealed record EcfResponse(Guid Id, string Status, string Encf, DgiiExchange? Dgii);
+
+    private sealed record DgiiExchange(
+        string? TrackId, int? StatusCode, bool? SequenceUsed,
+        DateTimeOffset? SubmittedAt, DateTimeOffset? ProcessedAt);
 }
