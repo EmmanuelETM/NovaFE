@@ -1,0 +1,18 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/[^/]+/recepcionfc/api/recepcion/ecf"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "codigo": 1,
+      "estado": "Aceptado",
+      "mensajes": [],
+      "encf": "",
+      "secuenciaUtilizada": true
+    }
+  }
+}

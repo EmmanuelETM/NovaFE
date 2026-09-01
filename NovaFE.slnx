@@ -12,6 +12,7 @@
     <File Path="docs/dgii-submission.md" />
     <File Path="docs/ecf-xml.md" />
     <File Path="docs/fiscal.md" />
+    <File Path="docs/local-e2e.md" />
     <File Path="docs/multi-tenancy.md" />
     <File Path="docs/pricing.md" />
     <File Path="docs/redis.md" />

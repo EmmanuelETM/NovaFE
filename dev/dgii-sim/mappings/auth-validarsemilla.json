@@ -1,0 +1,16 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/[^/]+/autenticacion/api/autenticacion/validarsemilla"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "token": "SIMULADOR-TOKEN-0001",
+      "expira": "2035-12-31T23:59:59-04:00",
+      "expedido": "2026-01-01T00:00:00-04:00"
+    }
+  }
+}

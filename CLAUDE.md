@@ -347,7 +347,12 @@ dotnet test NovaFE.slnx               # unitarias + integración (requiere Docke
 dotnet run --project src/Service      # levanta la API
 docker compose up --build             # API + PostgreSQL en contenedores
 docker compose --profile tools up     # además: pgweb (8081)
+docker compose --profile dgii-sim up  # además: simulador de la DGII (ver docs/local-e2e.md)
 ```
+
+Para probar el pipeline completo en local sin certificado real de la DGII:
+`POST /api/v1/dev/sandbox` (onboarding en un paso) + el perfil `dgii-sim`. Runbook
+en `docs/local-e2e.md`.
 
 La raíz del repo tiene el `.slnx` y `docker-compose.dcproj`, así que los comandos
 `dotnet` sin argumento de proyecto necesitan `NovaFE.slnx` explícito.

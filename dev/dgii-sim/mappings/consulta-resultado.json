@@ -1,0 +1,21 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/[^/]+/consultaresultado/api/consultas/estado"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "trackId": "SIM-TRACK-0001",
+      "codigo": 1,
+      "estado": "Aceptado",
+      "rnc": "",
+      "eNCF": "",
+      "secuenciaUtilizada": true,
+      "fechaRecepcion": "2026-01-01T00:00:00-04:00",
+      "mensajes": []
+    }
+  }
+}
