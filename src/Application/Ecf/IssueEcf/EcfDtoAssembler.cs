@@ -27,7 +27,9 @@ internal static class EcfDtoAssembler
         TrackId: ecf.TrackId,
         SubmittedAt: ecf.SubmittedAt,
         DgiiProcessedAt: ecf.DgiiProcessedAt,
+        DgiiReceivedAt: ecf.DgiiReceivedAt,
         DgiiStatusCode: ecf.DgiiStatusCode,
+        DgiiStatusText: ecf.DgiiStatusText,
         SequenceUsed: ecf.SequenceUsable,
         DgiiMessages: ecf.DgiiMessages);
 

@@ -69,6 +69,7 @@ internal sealed class EcfConfiguration : IEntityTypeConfiguration<IssuedEcf>
 
         // --- Módulo 4: envío a la DGII -----------------------------------
         builder.Property(e => e.TrackId).HasMaxLength(50);
+        builder.Property(e => e.DgiiStatusText).HasMaxLength(40);
 
         builder.Property(e => e.DgiiMessages)
             .HasColumnType("jsonb")

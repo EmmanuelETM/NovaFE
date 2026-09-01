@@ -149,6 +149,12 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
     /// <summary>Código de estado de la DGII (1 aceptado / 2 rechazado / 4 aceptado condicional).</summary>
     public int? DgiiStatusCode { get; private set; }
 
+    /// <summary>El <c>estado</c> textual que devolvió la DGII ("Aceptado", "Rechazado"…). Null hasta la resolución.</summary>
+    public string? DgiiStatusText { get; private set; }
+
+    /// <summary><c>fechaRecepcion</c> informada por la DGII. Null si no la dio (p. ej. RFCE síncrono).</summary>
+    public DateTimeOffset? DgiiReceivedAt { get; private set; }
+
     /// <summary>Mensajes de la DGII (observaciones, motivo de rechazo). Vacío hasta que haya alguno.</summary>
     public IReadOnlyList<DgiiMessage> DgiiMessages { get; private set; } = [];
 
@@ -235,33 +241,40 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
     /// La DGII aceptó el comprobante (código 1) o lo aceptó de forma condicional
     /// (código 4). El RFCE puede resolver sin pasar por <see cref="EcfStatus.Submitted"/>.
     /// </summary>
-    public ErrorOr<Success> MarkAccepted(
-        DateTimeOffset at, bool conditional, IReadOnlyList<DgiiMessage> messages, bool? sequenceUsable)
+    public ErrorOr<Success> MarkAccepted(DateTimeOffset at, DgiiVerdict verdict)
     {
+        ArgumentNullException.ThrowIfNull(verdict);
+
         if (Status != EcfStatus.Signed && Status != EcfStatus.Submitted)
             return IssuedEcfErrors.InvalidTransition(Status.PublicName, "accepted");
 
-        DgiiProcessedAt = at;
-        DgiiStatusCode = conditional ? 4 : 1;
-        DgiiMessages = messages ?? [];
-        SequenceUsable = sequenceUsable;
-        Status = conditional ? EcfStatus.AcceptedConditional : EcfStatus.Accepted;
+        ApplyVerdict(at, verdict);
+        Status = verdict.StatusCode == 4 ? EcfStatus.AcceptedConditional : EcfStatus.Accepted;
         return Result.Success;
     }
 
     /// <summary>La DGII rechazó el comprobante (código 2): nulidad.</summary>
-    public ErrorOr<Success> MarkRejected(
-        DateTimeOffset at, IReadOnlyList<DgiiMessage> messages, bool? sequenceUsable)
+    public ErrorOr<Success> MarkRejected(DateTimeOffset at, DgiiVerdict verdict)
     {
+        ArgumentNullException.ThrowIfNull(verdict);
+
         if (Status != EcfStatus.Signed && Status != EcfStatus.Submitted)
             return IssuedEcfErrors.InvalidTransition(Status.PublicName, EcfStatus.Rejected.PublicName);
 
-        DgiiProcessedAt = at;
-        DgiiStatusCode = 2;
-        DgiiMessages = messages ?? [];
-        SequenceUsable = sequenceUsable;
+        ApplyVerdict(at, verdict);
         Status = EcfStatus.Rejected;
         return Result.Success;
+    }
+
+    private void ApplyVerdict(DateTimeOffset at, DgiiVerdict verdict)
+    {
+        DgiiProcessedAt = at;
+        DgiiStatusCode = verdict.StatusCode;
+        DgiiStatusText = verdict.StatusText;
+        // La DGII manda la fecha en hora dominicana; se guarda como instante UTC.
+        DgiiReceivedAt = verdict.ReceivedAt?.ToUniversalTime();
+        DgiiMessages = verdict.Messages ?? [];
+        SequenceUsable = verdict.SequenceUsed;
     }
 
     /// <summary>

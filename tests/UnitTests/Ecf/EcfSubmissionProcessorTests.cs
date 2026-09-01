@@ -131,6 +131,8 @@ public class EcfSubmissionProcessorTests
         await Sut().ProcessAsync(item);
 
         ecf.Status.ShouldBe(EcfStatus.Accepted);
+        ecf.DgiiStatusText.ShouldBe("Aceptado");
+        ecf.DgiiReceivedAt.ShouldBe(Now);
         await _queue.Received(1).CompleteAsync(item.Id, Arg.Any<CancellationToken>());
     }
 

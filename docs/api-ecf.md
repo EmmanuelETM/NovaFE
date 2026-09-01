@@ -211,16 +211,16 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   "submitsRfce": false,
   "internalNumber": "FAC-2026-00042",
   "toleranceWarning": null,
-
   "dgii": {
     "trackId": "TRACK-ABC-123",
+    "status": "Aceptado",
     "statusCode": 1,
     "sequenceUsed": true,
     "messages": [],
     "submittedAt": "2026-02-21T10:30:06-04:00",
+    "receivedAt": "2026-02-21T10:30:06-04:00",
     "processedAt": "2026-02-21T10:30:06-04:00"
   },
-
   "links": {
     "self": "/api/v1/ecf/0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c",
     "xml":  "/api/v1/ecf/0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c/xml",
@@ -245,11 +245,13 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   firmado** — `links.xml` (`GET /ecf/{id}/xml`); `links.rfceXml` trae el `<RFCE>`
   cuando `submitsRfce` es `true`.
 - **`dgii`** agrupa todo lo del envío y es `null` mientras no haya envío:
-  `trackId`, `statusCode` (1 aceptado · 2 rechazado · 3 en proceso · 4 aceptado
-  condicional), `sequenceUsed` (el `secuenciaUtilizada` de la DGII), `messages`
-  (`{ code, value }` — el `value` en el idioma en que lo manda la DGII), y los
-  instantes `submittedAt` (recepción confirmada) y `processedAt` (resultado
-  definitivo).
+  `trackId`, `status` (el `estado` textual de la DGII, tal cual lo manda:
+  "Aceptado", "Rechazado"…), `statusCode` (1 aceptado · 2 rechazado · 3 en proceso ·
+  4 aceptado condicional), `sequenceUsed` (el `secuenciaUtilizada` de la DGII),
+  `messages` (`{ code, value }` — el `value` en el idioma en que lo manda la DGII),
+  y los instantes `submittedAt` (recepción confirmada), `receivedAt` (la
+  `fechaRecepcion` que informó la DGII; ausente si no la dio, p. ej. el RFCE) y
+  `processedAt` (resultado definitivo registrado por NovaFE).
 - Fechas de documento (`issueDate`, `sequenceExpiresOn`) en `dd-MM-yyyy`; timestamps
   del sistema en ISO 8601 `-04:00`.
 

@@ -59,12 +59,15 @@ signed ──(fast-path inline / worker)──► submitted ──► accepted
 ## Lo que ve el cliente
 
 `GET /ecf/{id}` (y la respuesta del `POST`) traen el `status` de NovaFE y un
-objeto **`dgii`** con el intercambio: `trackId`, `statusCode` (1/2/3/4),
-`sequenceUsed`, `messages[]` y los instantes `submittedAt` / `processedAt`. Es
+objeto **`dgii`** con el intercambio: `trackId`, `status` (el `estado` textual),
+`statusCode` (1/2/3/4), `sequenceUsed`, `messages[]` y los instantes
+`submittedAt` / `receivedAt` (la `fechaRecepcion` de la DGII) / `processedAt`. Es
 `null` hasta que hay envío. Internamente el agregado guarda los mismos datos en
-columnas planas (`track_id`, `dgii_status_code`, `sequence_usable`,
-`dgii_messages` jsonb, `submitted_at`, `dgii_processed_at`) más
-`submission_attempts` (que no se expone). Detalle del contrato en `docs/api-ecf.md` §6.
+columnas planas (`track_id`, `dgii_status_code`, `dgii_status_text`,
+`sequence_usable`, `dgii_messages` jsonb, `submitted_at`, `dgii_received_at`,
+`dgii_processed_at`) más `submission_attempts` (que no se expone). La
+`fechaRecepcion` llega en hora dominicana y se guarda como instante UTC como todo
+lo demás. Detalle del contrato en `docs/api-ecf.md` §6.
 
 ## Fast-path síncrono del `POST /ecf`
 

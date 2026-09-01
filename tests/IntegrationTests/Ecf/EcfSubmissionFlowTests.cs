@@ -22,6 +22,9 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
     private const string SeedXml =
         "<SemillaModel><valor>0xabc123</valor><fecha>2026-08-30T10:00:00-04:00</fecha></SemillaModel>";
 
+    private static readonly DateTimeOffset ReceivedAt =
+        new(2026, 8, 30, 10, 5, 0, TimeSpan.FromHours(-4));
+
     private static void StubAuth(WireMockServer dgii)
     {
         dgii.Given(Request.Create().WithPath("/testecf/autenticacion/api/autenticacion/semilla").UsingGet())
@@ -47,6 +50,7 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
                 codigo,
                 estado,
                 secuenciaUtilizada = codigo != 2,
+                fechaRecepcion = ReceivedAt,
                 mensajes = Array.Empty<object>(),
             }));
 
@@ -114,7 +118,9 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         issued.Dgii.ShouldNotBeNull();
         issued.Dgii.TrackId.ShouldBe("TRACK-1");
         issued.Dgii.StatusCode.ShouldBe(4);
+        issued.Dgii.Status.ShouldBe("Aceptado Condicional");
         issued.Dgii.SubmittedAt.ShouldNotBeNull();
+        issued.Dgii.ReceivedAt.ShouldBe(ReceivedAt);
         issued.Dgii.ProcessedAt.ShouldNotBeNull();
     }
 
@@ -235,6 +241,6 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
     private sealed record EcfResponse(Guid Id, string Status, string Encf, DgiiExchange? Dgii);
 
     private sealed record DgiiExchange(
-        string? TrackId, int? StatusCode, bool? SequenceUsed,
-        DateTimeOffset? SubmittedAt, DateTimeOffset? ProcessedAt);
+        string? TrackId, string? Status, int? StatusCode, bool? SequenceUsed,
+        DateTimeOffset? SubmittedAt, DateTimeOffset? ReceivedAt, DateTimeOffset? ProcessedAt);
 }
