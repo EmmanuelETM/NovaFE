@@ -29,9 +29,6 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
         qr_url                 AS "QrUrl",
         submits_rfce           AS "SubmitsRfce",
         internal_invoice_number AS "InternalNumber",
-        buyer_rnc              AS "BuyerRnc",
-        buyer_name             AS "BuyerName",
-        totals                 AS "Totals",
         CASE WHEN expected_conditional_acceptance
              THEN 'Los montos declarados no cuadran dentro de la tolerancia; la DGII podría aceptar el comprobante de forma condicional.'
              ELSE NULL
@@ -40,8 +37,6 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
         submitted_at           AS "SubmittedAt",
         dgii_processed_at      AS "DgiiProcessedAt",
         dgii_status_code       AS "DgiiStatusCode",
-        sequence_usable        AS "SequenceUsable",
-        submission_attempts    AS "SubmissionAttempts",
         dgii_messages          AS "DgiiMessages"
         """;
 

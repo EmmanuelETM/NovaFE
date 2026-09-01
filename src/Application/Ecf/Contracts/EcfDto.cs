@@ -1,9 +1,13 @@
 using NovaFE.Domain.Dgii;
-using NovaFE.Domain.Ecf;
 
 namespace NovaFE.Application.Ecf.Contracts;
 
-/// <summary>Vista completa de un comprobante emitido (respuesta de <c>POST /ecf</c> y <c>GET /ecf/{id}</c>).</summary>
+/// <summary>
+/// Vista de un comprobante emitido (respuesta de <c>POST /ecf</c> y <c>GET /ecf/{id}</c>).
+/// El detalle comercial (comprador, líneas, montos) vive en el XML firmado, que se
+/// sirve por <c>GET /ecf/{id}/xml</c>; aquí solo va la identidad fiscal del
+/// comprobante y su estado frente a la DGII.
+/// </summary>
 public sealed record EcfDto(
     Guid Id,
     string Status,
@@ -18,18 +22,26 @@ public sealed record EcfDto(
     string QrUrl,
     bool SubmitsRfce,
     string? InternalNumber,
-    string? BuyerRnc,
-    string? BuyerName,
-    EcfTotalsSnapshot Totals,
     string? ToleranceWarning,
     // --- Módulo 4: envío a la DGII ---
     string? TrackId = null,
     DateTimeOffset? SubmittedAt = null,
     DateTimeOffset? DgiiProcessedAt = null,
     int? DgiiStatusCode = null,
-    bool? SequenceUsable = null,
-    int SubmissionAttempts = 0,
-    IReadOnlyList<DgiiMessage>? DgiiMessages = null);
+    IReadOnlyList<DgiiMessage>? DgiiMessages = null)
+{
+    /// <summary>Enlaces a los recursos relacionados del comprobante.</summary>
+    public EcfLinks Links => new(
+        Self: $"/api/v1/ecf/{Id}",
+        Xml: $"/api/v1/ecf/{Id}/xml",
+        RfceXml: SubmitsRfce ? $"/api/v1/ecf/{Id}/xml?rfce=true" : null);
+}
+
+/// <summary>Enlaces (relativos) a los recursos del comprobante.</summary>
+/// <param name="Self">El comprobante y su estado.</param>
+/// <param name="Xml">El XML firmado (<c>&lt;ECF&gt;</c>).</param>
+/// <param name="RfceXml">El resumen firmado (<c>&lt;RFCE&gt;</c>); solo cuando <c>submitsRfce</c>.</param>
+public sealed record EcfLinks(string Self, string Xml, string? RfceXml);
 
 /// <summary>Fila del listado de comprobantes emitidos.</summary>
 public sealed record EcfSummaryDto(
