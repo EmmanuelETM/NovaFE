@@ -33,6 +33,11 @@
     <PackageReference Include="System.Security.Cryptography.Xml" />
   </ItemGroup>
 
+  <ItemGroup Label="Representación Impresa (Módulo 9)">
+    <PackageReference Include="QuestPDF" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+
   <ItemGroup Label="Options validadas al arrancar">
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
@@ -40,6 +45,10 @@
 
   <ItemGroup Label="XSD oficiales de la DGII (vendorizados) — validación de e-CF">
     <EmbeddedResource Include="Ecf\Xsd\*.xsd" />
+  </ItemGroup>
+
+  <ItemGroup Label="Fuente Geist (OFL) embebida — Representación Impresa">
+    <EmbeddedResource Include="Representation\Fonts\*.ttf" />
   </ItemGroup>
 
   <ItemGroup>

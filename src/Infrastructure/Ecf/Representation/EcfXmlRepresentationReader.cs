@@ -105,7 +105,7 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
             Methods: methods);
     }
 
-    private static IReadOnlyList<RepresentationLine> ReadLines(XElement? detalles)
+    private static List<RepresentationLine> ReadLines(XElement? detalles)
     {
         if (detalles is null)
             return [];
@@ -156,7 +156,7 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
             Reason: ModificationReasonLabel(Str(reference, "CodigoModificacion")));
     }
 
-    private static IReadOnlyList<string> Phones(XElement? table) =>
+    private static List<string> Phones(XElement? table) =>
         table?.Elements("TelefonoEmisor").Select(e => e.Value.Trim())
             .Where(v => v.Length > 0).ToList() ?? [];
 
@@ -218,11 +218,11 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
 
     private static string? IncomeTypeLabel(string? code) => code switch
     {
-        "01" => "Ingresos por operaciones (no financieros)",
-        "02" => "Ingresos financieros",
-        "03" => "Ingresos extraordinarios",
-        "04" => "Ingresos por arrendamiento",
-        "05" => "Ingresos por venta de activo depreciable",
+        "01" => "Operaciones (no financieras)",
+        "02" => "Financieros",
+        "03" => "Extraordinarios",
+        "04" => "Arrendamiento",
+        "05" => "Venta de activo depreciable",
         "06" => "Otros ingresos",
         _ => null,
     };
