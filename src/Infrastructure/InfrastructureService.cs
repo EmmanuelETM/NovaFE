@@ -19,6 +19,7 @@ using NovaFE.Infrastructure.Ecf.Sql;
 using NovaFE.Infrastructure.Http;
 using NovaFE.Infrastructure.Persistence;
 using NovaFE.Infrastructure.Persistence.EfCore;
+using NovaFE.Infrastructure.Representation;
 using NovaFE.Infrastructure.Persistence.Idempotency;
 using NovaFE.Infrastructure.Persistence.Sql;
 using NovaFE.Infrastructure.Security;
@@ -89,8 +90,9 @@ public static class InfrastructureService
         services.AddSingleton<IRfceSerializer, RfceSerializer>();
         services.AddSingleton<IEcfXsdValidator, EcfXsdValidator>();
 
-        // Representación Impresa (Módulo 9): lee el <ECF> firmado → modelo de la RI.
+        // Representación Impresa (Módulo 9): lee el <ECF> firmado → modelo → PDF.
         services.AddSingleton<IEcfRepresentationReader, EcfXmlRepresentationReader>();
+        services.AddSingleton<IRepresentationRenderer, QuestPdfRepresentationRenderer>();
 
         // ==========================================
         //        Autenticación con la DGII
