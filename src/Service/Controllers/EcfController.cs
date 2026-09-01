@@ -3,6 +3,7 @@ using NovaFE.Application.Ecf.Contracts;
 using NovaFE.Application.Ecf.GetEcf;
 using NovaFE.Application.Ecf.IssueEcf;
 using NovaFE.Application.Ecf.ListEcf;
+using NovaFE.Application.Ecf.Representation;
 using NovaFE.Application.Ecf.RetrySubmission;
 using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
@@ -20,6 +21,7 @@ public sealed class EcfController(
     IssueEcfUseCase issue,
     GetEcfUseCase get,
     GetEcfXmlUseCase getXml,
+    GetEcfRepresentationUseCase getRepresentation,
     ListEcfUseCase list,
     RetryEcfSubmissionUseCase retry) : ApiController
 {
@@ -59,6 +61,29 @@ public sealed class EcfController(
     public async Task<IActionResult> GetXml(Guid id, [FromQuery] bool rfce, CancellationToken ct)
         => (await getXml.Execute(new GetEcfXmlQuery(id, rfce), ct))
             .Match(xml => Content(xml, "application/xml; charset=utf-8"), Problem);
+
+    /// <summary>
+    /// La Representación Impresa en PDF. <c>?layout=letter</c> (por defecto) o
+    /// <c>pos</c>; <c>?download=true</c> la descarga en vez de abrirla en el navegador.
+    /// </summary>
+    [HttpGet("{id:guid}/representation")]
+    [Produces("application/pdf")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRepresentation(
+        Guid id,
+        [FromQuery] RepresentationLayout layout,
+        [FromQuery] bool download,
+        CancellationToken ct)
+        => (await getRepresentation.Execute(new GetEcfRepresentationQuery(id, layout), ct))
+            .Match(
+                result =>
+                {
+                    Response.Headers.ContentDisposition =
+                        $"{(download ? "attachment" : "inline")}; filename=\"{result.FileName}\"";
+                    return File(result.Pdf, "application/pdf");
+                },
+                Problem);
 
     /// <summary>Listado paginado de comprobantes emitidos.</summary>
     [HttpGet]

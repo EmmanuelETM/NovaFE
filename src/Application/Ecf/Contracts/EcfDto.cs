@@ -56,7 +56,8 @@ public sealed record EcfDto(
     public EcfLinks Links => new(
         Self: $"/api/v1/ecf/{Id}",
         Xml: $"/api/v1/ecf/{Id}/xml",
-        RfceXml: SubmitsRfce ? $"/api/v1/ecf/{Id}/xml?rfce=true" : null);
+        RfceXml: SubmitsRfce ? $"/api/v1/ecf/{Id}/xml?rfce=true" : null,
+        Representation: $"/api/v1/ecf/{Id}/representation");
 }
 
 /// <summary>
@@ -88,7 +89,8 @@ public sealed record EcfDgiiExchange(
 /// <param name="Self">El comprobante y su estado.</param>
 /// <param name="Xml">El XML firmado (<c>&lt;ECF&gt;</c>).</param>
 /// <param name="RfceXml">El resumen firmado (<c>&lt;RFCE&gt;</c>); solo cuando <c>submitsRfce</c>.</param>
-public sealed record EcfLinks(string Self, string Xml, string? RfceXml);
+/// <param name="Representation">La Representación Impresa en PDF.</param>
+public sealed record EcfLinks(string Self, string Xml, string? RfceXml, string Representation);
 
 /// <summary>Fila del listado de comprobantes emitidos.</summary>
 public sealed record EcfSummaryDto(

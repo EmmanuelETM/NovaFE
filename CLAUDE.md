@@ -265,6 +265,18 @@ reencolables por `POST /ecf/{id}/retry`. Un rechazo quema el e-NCF (sin pool de
 liberadas en v1). **No** hay webhooks ni contingencia (M11) todavía. El worker
 fija `CurrentTenant` por fila. No cambiar sin leer `docs/dgii-submission.md`.
 
+**Representación Impresa (Módulo 9)** (`src/Application/Ecf/Representation`,
+`src/Infrastructure/Representation`): `GET /api/v1/ecf/{id}/representation` devuelve
+el **PDF** de la RI (Decreto 254-06, RF-09). `IEcfRepresentationReader` proyecta el
+`<ECF>` firmado que ya se guarda (fuente única, ignora `<Signature>`) a
+`RepresentationModel`; `IRepresentationRenderer` / `QuestPdfRepresentationRenderer`
+lo pinta con **QuestPDF** (Skia embebido; licencia Community &lt; US$1M) y la fuente
+**Geist** (OFL, vendorizada y embebida). Solo formato **Carta** por ahora — `pos`
+(80 mm) y el envío por correo (RF-09.7) son slices posteriores. La RI siempre se
+arma del `<ECF>` completo, aun para un tipo 32 que fue como RFCE. `?download=true`
+adjunta; si no, `inline`. `EcfDto.links.representation`. El Dockerfile instala
+`libfontconfig1`. No cambiar sin leer `docs/representation.md`.
+
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
 - Con EF Core, la auditoría y el borrado lógico los aplican interceptores y un

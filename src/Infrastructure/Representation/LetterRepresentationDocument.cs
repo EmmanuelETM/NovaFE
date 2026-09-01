@@ -377,13 +377,13 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
 
     private static void TotalRow(ColumnDescriptor col, string label, decimal? value, bool onlyIf = true, bool signed = false)
     {
-        if (value is null || !onlyIf)
+        if (value is null or 0m || !onlyIf)
             return;
 
         col.Item().Row(r =>
         {
             r.RelativeItem().Text(label).FontSize(T.Small).FontColor(T.InkSoft);
-            r.AutoItem().Text((signed && value < 0m ? "−" : string.Empty) + Money(Math.Abs(value.Value)))
+            r.AutoItem().Text((signed && value < 0m ? "-" : string.Empty) + Money(Math.Abs(value.Value)))
                 .FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.Ink);
         });
     }

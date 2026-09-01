@@ -224,7 +224,8 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   "links": {
     "self": "/api/v1/ecf/0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c",
     "xml":  "/api/v1/ecf/0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c/xml",
-    "rfceXml": null
+    "rfceXml": null,
+    "representation": "/api/v1/ecf/0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c/representation"
   }
 }
 ```
@@ -243,7 +244,8 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
 - **La respuesta es identidad fiscal + estado + el intercambio con la DGII.** El
   detalle comercial (comprador, líneas, montos, retenciones) vive en el **XML
   firmado** — `links.xml` (`GET /ecf/{id}/xml`); `links.rfceXml` trae el `<RFCE>`
-  cuando `submitsRfce` es `true`.
+  cuando `submitsRfce` es `true`; `links.representation` es la **Representación
+  Impresa en PDF** (`GET /ecf/{id}/representation`, ver `docs/representation.md`).
 - **`dgii`** agrupa todo lo del envío y es `null` mientras no haya envío:
   `trackId`, `status` (el `estado` textual de la DGII, tal cual lo manda:
   "Aceptado", "Rechazado"…), `statusCode` (1 aceptado · 2 rechazado · 3 en proceso ·
