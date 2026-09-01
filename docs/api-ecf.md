@@ -123,7 +123,7 @@ aceptan el **nombre** (`"credit"`, `"check_transfer"`) o el **código DGII**
 | `priceIncludesTax` opc. | `IndicadorMontoGravado` | Sobrescribe el default del request |
 | `codes[]` opc. | `TablaCodigosItem` | `{ type, value }` |
 | `retention` opc. | Área `<Retencion>` | `{ agent, itbisWithheld, isrWithheld }` — `agent`: `withholding` (1) / `perception` (2). **Obligatoria** en cada línea de 41 y 47. Los montos los calcula el cliente (ver `docs/fiscal.md`) |
-| `additionalTaxes[]` opc. | `TablaImpuestoAdicional` + `<ImpuestosAdicionales>` | `{ code, rate, iscEspecifico, iscAdvalorem, otros }` — código de la Tabla I (001–039). Solo 31/32/33/34/44/45. Todos los montos los trae el cliente. **`iscEspecifico`** (alcoholes 006-018, cigarrillos 019-022) **integra la base del ITBIS** de la línea: sube `totalItbis`, no `montoGravado`; se totaliza en `montoImpuestoAdicional` y se expone aparte en `totals.totalImpuestoSelectivoConsumo`. `iscAdvalorem` y `otros` van por encima |
+| `additionalTaxes[]` opc. | `TablaImpuestoAdicional` + `<ImpuestosAdicionales>` | `{ code, rate, iscEspecifico, iscAdvalorem, otros }` — código de la Tabla I (001–039). Solo 31/32/33/34/44/45. Todos los montos los trae el cliente. **`iscEspecifico`** (alcoholes 006-018, cigarrillos 019-022) **integra la base del ITBIS** de la línea: sube `<TotalITBIS>`, no `<MontoGravado>`; se totaliza en `<MontoImpuestoAdicional>` (todo en el XML firmado). `iscAdvalorem` y `otros` van por encima |
 | `foreignCurrency` opc. | `<OtraMonedaDetalle>` | `{ unitPrice, discount, surcharge, lineAmount }` en divisa (passthrough) |
 | `details` opc. | Campos opcionales del `<Item>` | `{ referenceQuantity, referenceUnit, subquantities[], alcoholDegrees, referenceUnitPrice, manufactureDate, expiryDate, mining }`. Passthrough — el ISC de alcoholes/cigarrillos igual va en `additionalTaxes` (la derivación desde `alcoholDegrees` es un slice posterior). `mining` solo en 32/33/34/46 |
 | `declaredAmount` opc. | — | El `MontoItem` que calculó el cliente → chequeo de tolerancia |
@@ -198,7 +198,7 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
 ```json
 {
   "id": "0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c",
-  "status": "signed",
+  "status": "accepted",
   "encf": "E310000000042",
   "type": 31,
   "environment": "TestEcf",
@@ -210,25 +210,19 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   "qrUrl": "https://ecf.dgii.gov.do/testecf/consultatimbre?rncemisor=...",
   "submitsRfce": false,
   "internalNumber": "FAC-2026-00042",
-  "buyerRnc": "131880681",
-  "buyerName": "Mi Cliente SRL",
-  "totals": {
-    "montoGravadoTotal": 2000.00, "montoGravadoI1": 2000.00,
-    "montoExento": 0.00, "totalItbis": 360.00, "totalItbis1": 360.00,
-    "montoImpuestoAdicional": 0.00, "totalImpuestoSelectivoConsumo": 0.00,
-    "montoTotal": 2360.00,
-    "montoNoFacturable": 0.00, "montoPeriodo": 2360.00,
-    "totalItbisRetenido": 0.00, "totalIsrRetencion": 0.00
-  },
   "toleranceWarning": null,
 
   "trackId": "TRACK-ABC-123",
   "submittedAt": "2026-02-21T10:30:06-04:00",
   "dgiiProcessedAt": "2026-02-21T10:30:06-04:00",
   "dgiiStatusCode": 1,
-  "sequenceUsable": true,
-  "submissionAttempts": 1,
-  "dgiiMessages": []
+  "dgiiMessages": [],
+
+  "links": {
+    "self": "/api/v1/ecf/0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c",
+    "xml":  "/api/v1/ecf/0194f2c1-8a3e-7b21-9c44-1f2e3d4a5b6c/xml",
+    "rfceXml": null
+  }
 }
 ```
 
@@ -242,10 +236,13 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   | `submitted` | enviado, hay `trackId`, la DGII sigue procesando — el worker termina |
   | `signed` | la DGII no respondió dentro del presupuesto — el worker enviará y hará polling |
 
-- Los campos de envío (`trackId`…`dgiiMessages`) son null / 0 hasta que hay envío.
+- **La respuesta es solo la identidad fiscal + el estado.** El detalle comercial
+  (comprador, líneas, montos, retenciones) vive en el **XML firmado** —
+  `links.xml` (`GET /ecf/{id}/xml`); `links.rfceXml` trae el `<RFCE>` cuando
+  `submitsRfce` es `true`.
+- Los campos de envío (`trackId`…`dgiiMessages`) son null hasta que hay envío.
 - Fechas de documento (`issueDate`, `sequenceExpiresOn`) en `dd-MM-yyyy`; timestamps
   del sistema en ISO 8601 `-04:00`.
-- El XML no va inline — está en `GET /ecf/{id}/xml`.
 
 ---
 

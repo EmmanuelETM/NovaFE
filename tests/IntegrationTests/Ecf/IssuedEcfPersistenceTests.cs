@@ -55,7 +55,6 @@ public sealed class IssuedEcfPersistenceTests(DatabaseFixture database) : Integr
         dto.Status.ShouldBe("signed");
         dto.Encf.ShouldBe(ecf.Encf.Value);
         dto.Type.ShouldBe(31);
-        dto.Totals.MontoTotal.ShouldBe(ecf.Totals.MontoTotal);
         dto.ToleranceWarning.ShouldBeNull();
 
         var xml = await scope.ServiceProvider.GetRequiredService<IEcfReadRepository>()

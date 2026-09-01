@@ -94,9 +94,9 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
         dto.Encf.ShouldBe("E310000000042");
         dto.Type.ShouldBe(31);
         dto.SequenceExpiresOn.ShouldBe(new DateOnly(2027, 12, 31));
-        dto.Totals.MontoTotal.ShouldBe(2360m);
         dto.SecurityCode.ShouldBe("aB3xZ9");
         dto.QrUrl.ShouldContain("consultatimbre");
+        dto.Links.Xml.ShouldBe($"/api/v1/ecf/{dto.Id}/xml");
 
         await _ecf.Received(1).AddAsync(
             Arg.Is<IssuedEcf>(e => e.Encf.Value == "E310000000042" && e.Status == EcfStatus.Signed),
@@ -206,11 +206,8 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
         await _allocator.DidNotReceive().AllocateAsync(Arg.Any<DgiiEnvironment>(), Arg.Any<EcfType>(), Arg.Any<CancellationToken>());
     }
 
-    private static readonly EcfTotalsSnapshot ZeroTotals =
-        new(0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m);
-
     private static EcfDto StubDto(Guid id) => new(
         id, "signed", "E310000000001", 31, "TestEcf", null, new DateOnly(2026, 1, 10),
         new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero),
-        "aB3xZ9", "https://x", false, null, null, null, ZeroTotals, null);
+        "aB3xZ9", "https://x", false, null, null);
 }

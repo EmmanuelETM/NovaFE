@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Xml.Linq;
 using NovaFE.IntegrationTests.Fixtures;
 
 namespace NovaFE.IntegrationTests.Ecf;
@@ -72,9 +73,10 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
         var issued = await LeerAsync<EcfResponse>(post);
         issued!.Status.ShouldBe("signed");
         issued.Encf.ShouldBe("E310000000001");
-        issued.Totals.MontoTotal.ShouldBe(2360m);
         issued.QrUrl.ShouldContain("/testecf/consultatimbre?");
         issued.SubmitsRfce.ShouldBeFalse();
+        issued.Links.Xml.ShouldBe($"/api/v1/ecf/{issued.Id}/xml");
+        issued.Links.RfceXml.ShouldBeNull();
 
         var get = await Client.GetAsync($"/api/v1/ecf/{issued.Id}");
         get.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -183,12 +185,15 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
         });
 
         post.StatusCode.ShouldBe(HttpStatusCode.Created, await post.Content.ReadAsStringAsync());
-        var totals = (await LeerAsync<EcfResponse>(post))!.Totals;
+        var issued = await LeerAsync<EcfResponse>(post);
 
-        totals.MontoGravadoI1.ShouldBe(1000m);                     // sin el ISC
-        totals.TotalItbis.ShouldBe(294.12m);                       // (1000 + 634) * 0.18
-        totals.TotalImpuestoSelectivoConsumo.ShouldBe(634m);
-        totals.MontoTotal.ShouldBe(1928.12m);                      // 1000 + 294.12 + 634
+        var xml = await (await Client.GetAsync($"/api/v1/ecf/{issued!.Id}/xml")).Content.ReadAsStringAsync();
+        var totales = XDocument.Parse(xml).Descendants("Totales").Single();
+
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("1000");   // sin el ISC
+        totales.Element("TotalITBIS")!.Value.ShouldBe("294.12");     // (1000 + 634) * 0.18
+        totales.Element("MontoImpuestoAdicional")!.Value.ShouldBe("634");
+        totales.Element("MontoTotal")!.Value.ShouldBe("1928.12");    // 1000 + 294.12 + 634
     }
 
     [RequiresDockerFact]
@@ -206,10 +211,9 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     }
 
     private sealed record EcfResponse(
-        Guid Id, string Status, string Encf, int Type, bool SubmitsRfce, string QrUrl, TotalsResponse Totals);
+        Guid Id, string Status, string Encf, int Type, bool SubmitsRfce, string QrUrl, LinksResponse Links);
 
-    private sealed record TotalsResponse(
-        decimal MontoTotal, decimal TotalItbis, decimal MontoGravadoI1, decimal TotalImpuestoSelectivoConsumo);
+    private sealed record LinksResponse(string Self, string Xml, string? RfceXml);
 
     private sealed record EcfSummaryResponse(Guid Id, string Status, string Encf, int Type, decimal MontoTotal);
 
