@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using NovaFE.Application.Dgii.Contracts;
 using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Domain.Common;
@@ -69,7 +70,7 @@ public sealed class EcfSubmissionProcessor(
         if (result.IsError || result.Value.Codigo is not (1 or 2 or 4))
             return false;
 
-        await ApplyTerminalAsync(ecf, result.Value.Codigo, result.Value.Mensajes, result.Value.SecuenciaUtilizada, ct);
+        await ApplyTerminalAsync(ecf, Verdict(result.Value), ct);
         return true;
     }
 
@@ -91,7 +92,7 @@ public sealed class EcfSubmissionProcessor(
             // El RFCE resuelve síncrono: no hay TrackId ni polling.
             if (rfce.Value.Codigo is 1 or 2 or 4)
             {
-                await ApplyTerminalAsync(ecf, rfce.Value.Codigo, rfce.Value.Mensajes, rfce.Value.SecuenciaUtilizada, ct);
+                await ApplyTerminalAsync(ecf, Verdict(rfce.Value), ct);
                 await queue.CompleteAsync(item.Id, ct);
             }
             else
@@ -142,7 +143,7 @@ public sealed class EcfSubmissionProcessor(
 
         if (result.Value.Codigo is 1 or 2 or 4)
         {
-            await ApplyTerminalAsync(ecf, result.Value.Codigo, result.Value.Mensajes, result.Value.SecuenciaUtilizada, ct);
+            await ApplyTerminalAsync(ecf, Verdict(result.Value), ct);
             await queue.CompleteAsync(item.Id, ct);
             return;
         }
@@ -169,30 +170,32 @@ public sealed class EcfSubmissionProcessor(
 
     // --- resultados y fallos -----------------------------------------
 
-    private async Task ApplyTerminalAsync(
-        IssuedEcf ecf, int codigo, IReadOnlyList<DgiiMessage> messages, bool? sequenceUsable, CancellationToken ct)
+    private static DgiiVerdict Verdict(DgiiEcfResult r)
+        => new(r.Codigo, r.Estado, r.Mensajes, r.SecuenciaUtilizada, r.FechaRecepcion);
+
+    private static DgiiVerdict Verdict(DgiiRfceReceipt r)
+        => new(r.Codigo, r.Estado, r.Mensajes, r.SecuenciaUtilizada, ReceivedAt: null);
+
+    private async Task ApplyTerminalAsync(IssuedEcf ecf, DgiiVerdict verdict, CancellationToken ct)
     {
         var now = timeProvider.GetUtcNow();
 
-        var transition = codigo switch
-        {
-            1 => ecf.MarkAccepted(now, conditional: false, messages, sequenceUsable),
-            4 => ecf.MarkAccepted(now, conditional: true, messages, sequenceUsable),
-            _ => ecf.MarkRejected(now, messages, sequenceUsable),
-        };
+        var transition = verdict.StatusCode is 1 or 4
+            ? ecf.MarkAccepted(now, verdict)
+            : ecf.MarkRejected(now, verdict);
 
         if (transition.IsError)
         {
             logger.LogError("e-NCF {Encf}: no se pudo aplicar el resultado {Codigo} de la DGII ({Error})",
-                ecf.Encf.Value, codigo, transition.FirstError.Description);
+                ecf.Encf.Value, verdict.StatusCode, transition.FirstError.Description);
             return;
         }
 
         await ecfRepo.UpdateAsync(ecf, ct);
 
-        if (codigo == 2)
+        if (verdict.StatusCode == 2)
             logger.LogWarning("e-NCF {Encf} rechazado por la DGII (secuencia reutilizable: {Usable})",
-                ecf.Encf.Value, sequenceUsable);
+                ecf.Encf.Value, verdict.SequenceUsed);
     }
 
     private async Task OnTransportFailureAsync(EcfSubmissionWorkItem item, IssuedEcf ecf, string reason, CancellationToken ct)

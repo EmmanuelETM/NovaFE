@@ -142,6 +142,7 @@ public sealed class DgiiSubmissionClientTests(DatabaseFixture database) : Integr
                 codigo = 2,
                 estado = "Rechazado",
                 secuenciaUtilizada = false,
+                fechaRecepcion = "2026-08-30T10:05:00-04:00",
                 mensajes = new[] { new { valor = "Firma inválida", codigo = 11 } },
             }));
 
@@ -155,6 +156,7 @@ public sealed class DgiiSubmissionClientTests(DatabaseFixture database) : Integr
             result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
             result.Value.Codigo.ShouldBe(2);
             result.Value.SecuenciaUtilizada.ShouldBe(false);
+            result.Value.FechaRecepcion.ShouldBe(new DateTimeOffset(2026, 8, 30, 10, 5, 0, TimeSpan.FromHours(-4)));
             result.Value.Mensajes[0].Code.ShouldBe(11);
             result.Value.Mensajes[0].Value.ShouldBe("Firma inválida");
         }

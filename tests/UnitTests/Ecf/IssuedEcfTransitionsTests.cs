@@ -9,6 +9,9 @@ public class IssuedEcfTransitionsTests
     private static readonly DateTimeOffset Now = EcfTestData.SignedAt.AddMinutes(1);
     private static readonly IReadOnlyList<DgiiMessage> Messages = [new DgiiMessage(0, "OK")];
 
+    private static DgiiVerdict Verdict(int code, bool? sequenceUsed = true, string? text = "Aceptado")
+        => new(code, text, Messages, sequenceUsed, Now.AddSeconds(-5));
+
     private static IssuedEcf NewlySigned() => IssuedEcf.FromSigned(
         EcfTestData.CreditoFiscal(),
         new SignedEcf(EcfTestData.SignedAt, "<ECF/>", null, "aB3xZ9KkLlMm", "aB3xZ9", new string('a', 64),
@@ -51,11 +54,13 @@ public class IssuedEcfTransitionsTests
     {
         var ecf = Submitted();
 
-        ecf.MarkAccepted(Now, conditional: false, Messages, sequenceUsable: true).IsError.ShouldBeFalse();
+        ecf.MarkAccepted(Now, Verdict(1)).IsError.ShouldBeFalse();
 
         ecf.Status.ShouldBe(EcfStatus.Accepted);
         ecf.DgiiStatusCode.ShouldBe(1);
+        ecf.DgiiStatusText.ShouldBe("Aceptado");
         ecf.DgiiProcessedAt.ShouldBe(Now);
+        ecf.DgiiReceivedAt.ShouldBe(Now.AddSeconds(-5));
         ecf.DgiiMessages.ShouldBe(Messages);
         ecf.SequenceUsable.ShouldBe(true);
     }
@@ -65,7 +70,7 @@ public class IssuedEcfTransitionsTests
     {
         var ecf = Submitted();
 
-        ecf.MarkAccepted(Now, conditional: true, Messages, sequenceUsable: null).IsError.ShouldBeFalse();
+        ecf.MarkAccepted(Now, Verdict(4, sequenceUsed: null, text: "Aceptado Condicional")).IsError.ShouldBeFalse();
 
         ecf.Status.ShouldBe(EcfStatus.AcceptedConditional);
         ecf.DgiiStatusCode.ShouldBe(4);
@@ -76,7 +81,7 @@ public class IssuedEcfTransitionsTests
     {
         var ecf = NewlySigned();
 
-        ecf.MarkAccepted(Now, conditional: false, Messages, sequenceUsable: true).IsError.ShouldBeFalse();
+        ecf.MarkAccepted(Now, Verdict(1)).IsError.ShouldBeFalse();
 
         ecf.Status.ShouldBe(EcfStatus.Accepted);
     }
@@ -86,10 +91,12 @@ public class IssuedEcfTransitionsTests
     {
         var ecf = Submitted();
 
-        ecf.MarkRejected(Now, [new DgiiMessage(11, "Firma inválida")], sequenceUsable: false).IsError.ShouldBeFalse();
+        ecf.MarkRejected(Now, new DgiiVerdict(2, "Rechazado", [new DgiiMessage(11, "Firma inválida")], false, null))
+            .IsError.ShouldBeFalse();
 
         ecf.Status.ShouldBe(EcfStatus.Rejected);
         ecf.DgiiStatusCode.ShouldBe(2);
+        ecf.DgiiStatusText.ShouldBe("Rechazado");
         ecf.SequenceUsable.ShouldBe(false);
         ecf.DgiiMessages[0].Value.ShouldBe("Firma inválida");
     }
@@ -126,7 +133,7 @@ public class IssuedEcfTransitionsTests
     public void RequeueForRetry_from_a_terminal_state_is_rejected()
     {
         var ecf = Submitted();
-        ecf.MarkAccepted(Now, conditional: false, Messages, sequenceUsable: true);
+        ecf.MarkAccepted(Now, Verdict(1));
 
         ecf.RequeueForRetry().FirstError.Code.ShouldBe("IssuedEcf.NotRetriable");
     }

@@ -36,7 +36,9 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
         track_id               AS "TrackId",
         submitted_at           AS "SubmittedAt",
         dgii_processed_at      AS "DgiiProcessedAt",
+        dgii_received_at       AS "DgiiReceivedAt",
         dgii_status_code       AS "DgiiStatusCode",
+        dgii_status_text       AS "DgiiStatusText",
         sequence_usable        AS "SequenceUsed",
         dgii_messages          AS "DgiiMessages"
         """;
