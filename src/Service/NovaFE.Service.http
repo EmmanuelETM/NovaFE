@@ -123,8 +123,26 @@ Content-Type: application/json
 ###
 
 # ============================================================================
+#  Sandbox de desarrollo — onboarding en un paso (solo Development)
+#  Deja un contribuyente listo para emitir contra el simulador de la DGII.
+#  Ver docs/local-e2e.md.
+# ============================================================================
+
+### Onboarding: registra tenant + perfil + secuencias + certificado autofirmado
+POST {{Service_HostAddress}}/api/v1/dev/sandbox
+Content-Type: application/json
+
+{}
+
+### Solo el certificado autofirmado (por si prefieres subirlo a mano)
+GET {{Service_HostAddress}}/api/v1/dev/sandbox/certificate?rnc=130862346
+
+###
+
+# ============================================================================
 #  Modulo 12 — emision de e-CF (POST /api/v1/ecf)
 #  Requiere: tenant registrado + perfil de emisor + certificado + rango de secuencias.
+#  (o corre el sandbox de arriba y usa el tenantId que devuelve)
 # ============================================================================
 
 @tenantId = 00000000-0000-0000-0000-000000000000

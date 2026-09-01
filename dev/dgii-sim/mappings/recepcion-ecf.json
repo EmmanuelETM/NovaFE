@@ -1,0 +1,16 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/[^/]+/recepcion/api/facturaselectronicas"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": {
+      "trackId": "SIM-TRACK-0001",
+      "error": "",
+      "mensaje": "Recibido por el simulador"
+    }
+  }
+}

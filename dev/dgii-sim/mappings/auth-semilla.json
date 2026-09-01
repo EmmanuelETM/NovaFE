@@ -1,0 +1,12 @@
+{
+  "priority": 1,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/[^/]+/autenticacion/api/autenticacion/semilla"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/xml" },
+    "body": "<SemillaModel><valor>0xSIMULADOR-SEMILLA-0001</valor><fecha>2026-01-01T00:00:00-04:00</fecha></SemillaModel>"
+  }
+}

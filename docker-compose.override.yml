@@ -15,6 +15,11 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
+      # Simulador de la DGII: por defecto apunta a la DGII real; con un .env
+      # (ver .env.dgii-sim.example) apunta al servicio dgii-sim de abajo.
+      - Dgii__EcfBaseUrl=${DGII_ECF_URL:-https://ecf.dgii.gov.do}
+      - Dgii__FcBaseUrl=${DGII_FC_URL:-https://fc.dgii.gov.do}
+      - EcfSubmission__FirstPollDelaySeconds=${ECF_FIRST_POLL_SECONDS:-30}
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
@@ -25,6 +30,23 @@ services:
     ports:
       # Expuesto al host para conectarse con psql, DBeaver, DataGrip, etc.
       - "5432:5432"
+
+  # ---- Simulador de la DGII (perfil "dgii-sim") ----------------------------
+  # Stubbea semilla, validarsemilla, recepción (e-CF y RFCE) y consulta de
+  # resultado. Arranca con `docker compose --profile dgii-sim up` + un .env que
+  # apunte Dgii__*BaseUrl a http://dgii-sim:8080 (ver .env.dgii-sim.example).
+  # Mappings editables en dev/dgii-sim/mappings/ — tras editarlos:
+  #   docker compose restart dgii-sim
+
+  dgii-sim:
+    image: wiremock/wiremock:3.9.1
+    profiles: ["dgii-sim"]
+    command: ["--port", "8080", "--verbose", "--disable-banner"]
+    volumes:
+      - ./dev/dgii-sim/mappings:/home/wiremock/mappings:ro
+    ports:
+      - "8088:8080"
+    restart: unless-stopped
 
   # ---- Herramientas de inspección (perfil "tools") --------------------------
 
