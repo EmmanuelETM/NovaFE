@@ -25,7 +25,10 @@ public sealed record RepresentationModel(
 /// <param name="Encf">e-NCF de 13 caracteres.</param>
 /// <param name="IssueDate">Fecha de emisión.</param>
 /// <param name="SequenceExpiresOn">Vencimiento de la secuencia; ausente en los tipos 32 y 34.</param>
+/// <param name="InternalNumber">Número de factura interna (<c>NumeroFacturaInterna</c>), si el emisor lo puso.</param>
 /// <param name="IncomeType">Etiqueta del tipo de ingreso, si el comprobante lo lleva.</param>
+/// <param name="Currency">Moneda de facturación (<c>TipoMoneda</c>) cuando no es DOP; <c>null</c> si es DOP.</param>
+/// <param name="ExchangeRate">Tipo de cambio a DOP, cuando hay <see cref="Currency"/>.</param>
 /// <param name="SignedAtText">El <c>&lt;FechaHoraFirma&gt;</c> tal cual va en el XML (hora dominicana, <c>dd-MM-yyyy HH:mm:ss</c>).</param>
 public sealed record RepresentationDocumentInfo(
     string TypeCode,
@@ -33,7 +36,10 @@ public sealed record RepresentationDocumentInfo(
     string Encf,
     DateOnly IssueDate,
     DateOnly? SequenceExpiresOn,
+    string? InternalNumber,
     string? IncomeType,
+    string? Currency,
+    decimal? ExchangeRate,
     string SignedAtText);
 
 /// <summary>Un participante del comprobante (emisor o comprador).</summary>
@@ -67,6 +73,11 @@ public sealed record RepresentationPaymentMethod(string Label, decimal Amount);
 /// <summary>Una línea de detalle.</summary>
 /// <param name="Kind">"Bien" / "Servicio".</param>
 /// <param name="TaxLabel">"18%" / "16%" / "0%" / "Exento" — según el <c>IndicadorFacturacion</c>.</param>
+/// <param name="TaxRate">Tasa aplicada (0.18 / 0.16 / 0) para derivar el importe con impuesto.</param>
+/// <param name="Amount">
+/// <c>&lt;MontoItem&gt;</c>: el neto de la línea (cantidad × precio − descuento + recargo),
+/// <b>antes</b> del ITBIS.
+/// </param>
 public sealed record RepresentationLine(
     int Number,
     string Name,
@@ -77,9 +88,14 @@ public sealed record RepresentationLine(
     decimal? Discount,
     decimal? Surcharge,
     string? TaxLabel,
+    decimal TaxRate,
     decimal Amount,
     decimal? ItbisWithheld,
-    decimal? IsrWithheld);
+    decimal? IsrWithheld)
+{
+    /// <summary>Importe de la línea <b>con</b> el ITBIS que le corresponde — lo que se paga por ese ítem.</summary>
+    public decimal GrossAmount => Math.Round(Amount * (1m + TaxRate), 2, MidpointRounding.AwayFromZero);
+}
 
 /// <summary>
 /// Totalizadores del encabezado. Todos anulables salvo <see cref="MontoTotal"/>:

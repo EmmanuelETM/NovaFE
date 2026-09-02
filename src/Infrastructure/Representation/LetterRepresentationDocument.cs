@@ -9,11 +9,11 @@ namespace NovaFE.Infrastructure.Representation;
 using T = RepresentationTheme;
 
 /// <summary>
-/// Representación Impresa en tamaño Carta. Un documento fiscal que se lee como una
-/// pieza de producto: rótulo del comprobante arriba a la derecha, partes en dos
-/// columnas, tabla de líneas con reglas finas, panel de totales alineado a la
-/// derecha, y el timbre (QR + código de seguridad) en el pie. Todas las páginas
-/// repiten cabecera y pie; el detalle pagina solo.
+/// Representación Impresa en tamaño Carta. Se lee como una pieza de producto:
+/// cabecera de dos columnas (emisor a la izquierda, identidad fiscal del
+/// comprobante a la derecha), fila de comprador + condiciones, tabla de líneas
+/// con reglas finas, panel de totales a la derecha, y el timbre (QR + código de
+/// seguridad + sello DGII) tras los totales. Cabecera y pie se repiten al paginar.
 /// </summary>
 internal sealed class LetterRepresentationDocument(RepresentationModel model) : IDocument
 {
@@ -23,6 +23,8 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
         NumberDecimalSeparator = ".",
         NumberDecimalDigits = 2,
     };
+
+    private const float RightColumn = 236f;
 
     private readonly bool _anyDiscount = model.Lines.Any(l => l.Discount is > 0m);
 
@@ -39,52 +41,82 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
         page.MarginVertical(T.PageMarginY);
         page.MarginHorizontal(T.PageMarginX);
         page.DefaultTextStyle(x => x
-            .FontFamily(RepresentationFonts.Sans).FontSize(T.Body).FontColor(T.Ink).LineHeight(1.3f));
+            .FontFamily(RepresentationFonts.Sans).FontSize(T.Body).FontColor(T.Ink).LineHeight(1.28f));
 
         page.Header().Element(Header);
         page.Content().Element(Content);
         page.Footer().Element(Footer);
     });
 
-    // ---- cabecera ----------------------------------------------------------
+    // ---- cabecera: emisor | identidad fiscal --------------------------------
 
     private void Header(IContainer container) => container.Column(col =>
     {
         col.Item().Row(row =>
         {
-            row.RelativeItem().PaddingTop(2).Column(c =>
-            {
-                c.Item().Text("REPRESENTACIÓN IMPRESA").Style(T.EyebrowStyle);
-                c.Item().PaddingTop(T.Unit).Text(model.Issuer.Name)
-                    .FontFamily(RepresentationFonts.Sans).FontSize(T.Title).SemiBold().FontColor(T.Ink);
-
-                if (model.Issuer.TradeName is { } trade && !trade.Equals(model.Issuer.Name, StringComparison.OrdinalIgnoreCase))
-                    c.Item().PaddingTop(1).Text(trade).FontSize(T.Small).FontColor(T.InkSoft);
-            });
-
-            row.ConstantItem(240).Column(c =>
-            {
-                c.Item().AlignRight().Text(model.Document.TypeName)
-                    .FontFamily(RepresentationFonts.Sans).FontSize(T.BodyStrong).Medium().FontColor(T.Ink);
-                c.Item().PaddingTop(T.Unit * 2).AlignRight().Text("e-NCF").Style(T.LabelStyle);
-                c.Item().PaddingTop(1).AlignRight().Text(model.Document.Encf)
-                    .FontFamily(RepresentationFonts.Mono).FontSize(T.Title * 0.72f).Medium().FontColor(T.Ink);
-            });
+            row.RelativeItem().Element(Issuer);
+            row.ConstantItem(T.Unit * 5);
+            row.ConstantItem(RightColumn).Element(FiscalIdentity);
         });
 
-        col.Item().PaddingTop(T.Unit * 3).LineHorizontal(1f).LineColor(T.Ink);
+        col.Item().PaddingTop(T.Unit * 2.5f).LineHorizontal(0.75f).LineColor(T.Ink);
+    });
+
+    private void Issuer(IContainer container) => container.Column(col =>
+    {
+        col.Item().Text("EMISOR").Style(T.EyebrowStyle).FontColor(T.InkSoft);
+        col.Item().PaddingTop(T.Unit).Text(model.Issuer.Name)
+            .FontFamily(RepresentationFonts.Sans).FontSize(T.Title).SemiBold().FontColor(T.Ink);
+
+        var p = model.Issuer;
+        if (p.TradeName is { } trade && !trade.Equals(p.Name, StringComparison.OrdinalIgnoreCase))
+            col.Item().Text(trade).FontSize(T.Small).FontColor(T.InkSoft);
+
+        if (p.Rnc is { } rnc)
+            col.Item().PaddingTop(2).Text($"RNC {rnc}")
+                .FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.InkSoft);
+
+        col.Item().PaddingTop(T.Unit * 1.5f).Column(lines =>
+        {
+            lines.Spacing(1);
+            SoftLine(lines, p.Address);
+            SoftLine(lines, p.Phones.Count > 0 ? string.Join(" · ", p.Phones) : null);
+            SoftLine(lines, p.Email);
+            SoftLine(lines, p.EconomicActivity);
+        });
+    });
+
+    private void FiscalIdentity(IContainer container) => container.Column(col =>
+    {
+        col.Item().Text("REPRESENTACIÓN IMPRESA").Style(T.EyebrowStyle);
+        col.Item().PaddingTop(T.Unit).Text(model.Document.TypeName)
+            .FontFamily(RepresentationFonts.Sans).FontSize(T.BodyStrong).Medium().FontColor(T.Ink);
+
+        var d = model.Document;
+        var rows = new List<(string Label, string Value)> { ("e-NCF", d.Encf) };
+
+        if (model.Reference is { } reference)
+            rows.Add(("e-NCF modificado", reference.ModifiedNcf));
+        if (d.SequenceExpiresOn is { } exp)
+            rows.Add(("Válida hasta", D(exp)));
+        if (d.InternalNumber is { } internalNumber)
+            rows.Add(("N° interno", internalNumber));
+        rows.Add(("Fecha de emisión", D(d.IssueDate)));
+        if (model.Reference?.Reason is { } reason)
+            rows.Add(("Modificación", reason));
+
+        col.Item().PaddingTop(T.Unit * 2).Element(c => DefList(c, rows));
     });
 
     // ---- contenido --------------------------------------------------------
 
     private void Content(IContainer container) => container.PaddingTop(T.Unit * 3).Column(col =>
     {
-        col.Spacing(T.Unit * 4);
+        col.Spacing(T.Unit * 3.5f);
 
-        col.Item().Element(MetaStrip);
-        col.Item().Element(Parties);
+        col.Item().Element(BuyerAndTerms);
         col.Item().Element(LineTable);
-        col.Item().Element(TotalsAndReference);
+        col.Item().Element(TotalsAndPayments);
 
         if (model.ContingencyNotice is { Length: > 0 } notice)
             col.Item().Element(c => Callout(c, "CONTINGENCIA", notice));
@@ -92,124 +124,70 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
         col.Item().PaddingTop(T.Unit * 3).Element(Timbre);
     });
 
-    // ---- timbre (QR + código de seguridad + estado DGII) ---------------
-
-    private void Timbre(IContainer container) => container.Column(col =>
+    private void BuyerAndTerms(IContainer container) => container.Column(outer =>
     {
-        col.Item().LineHorizontal(0.5f).LineColor(T.Hairline);
-        col.Item().PaddingTop(T.Unit * 2.5f).Row(row =>
+        outer.Item().Row(row =>
         {
-            row.ConstantItem(78).Height(78).Image(QrImage.Png(model.Verification.QrUrl));
-            row.ConstantItem(T.Unit * 4);
-
-            row.RelativeItem().Column(c =>
-            {
-                c.Item().Text("Código de seguridad").Style(T.LabelStyle);
-                c.Item().PaddingTop(1).Text(model.Verification.SecurityCode)
-                    .FontFamily(RepresentationFonts.Mono).FontSize(12).Medium().FontColor(T.Ink);
-                c.Item().PaddingTop(T.Unit * 1.5f).Text("Firmado").Style(T.LabelStyle);
-                c.Item().PaddingTop(1).Text(model.Document.SignedAtText)
-                    .FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.InkSoft);
-            });
-
-            row.ConstantItem(168).Column(c =>
-            {
-                if (model.Dgii is not { } dgii)
-                    return;
-
-                var (ink, bg) = StatusColors(dgii);
-                c.Item().AlignRight().Background(bg).PaddingVertical(3).PaddingHorizontal(T.Unit * 2)
-                    .Text(StatusLabel(dgii)).FontSize(T.Label).FontColor(ink).SemiBold().LetterSpacing(0.03f);
-                if (dgii.TrackId is { } track)
-                    c.Item().PaddingTop(T.Unit).AlignRight().Text($"TrackId {track}")
-                        .FontFamily(RepresentationFonts.Mono).FontSize(T.Label).FontColor(T.InkFaint);
-            });
-        });
-    });
-
-    private void MetaStrip(IContainer container)
-    {
-        var fields = new List<(string Label, string Value, bool Mono)>
-        {
-            ("Fecha de emisión", D(model.Document.IssueDate), true),
-        };
-        if (model.Document.SequenceExpiresOn is { } exp)
-            fields.Add(("Vence la secuencia", D(exp), true));
-        if (model.Document.IncomeType is { } income)
-            fields.Add(("Tipo de ingreso", income, false));
-        if (model.Payment.ConditionLabel is { } cond)
-            fields.Add(("Condición de pago", cond, false));
-        if (model.Payment.DueDate is { } due)
-            fields.Add(("Fecha límite de pago", D(due), true));
-
-        container
-            .BorderHorizontal(0.5f).BorderColor(T.Hairline)
-            .PaddingVertical(T.Unit * 2.5f)
-            .Column(col =>
-            {
-                col.Spacing(T.Unit * 2);
-                foreach (var chunk in fields.Chunk(3))
-                    col.Item().Row(row =>
-                    {
-                        row.Spacing(T.Unit * 3);
-                        foreach (var (label, value, mono) in chunk)
-                            Field(row.RelativeItem(), label, value, mono);
-                        for (var i = chunk.Length; i < 3; i++)
-                            row.RelativeItem();
-                    });
-            });
-    }
-
-    private static void Field(IContainer container, string label, string value, bool mono = false) =>
-        container.Column(c =>
-        {
-            c.Item().Text(label).Style(T.LabelStyle);
-            var t = c.Item().Text(value).FontSize(T.Small).FontColor(T.Ink);
-            if (mono)
-                t.FontFamily(RepresentationFonts.Mono);
+            row.RelativeItem().Element(Buyer);
+            row.ConstantItem(T.Unit * 5);
+            row.ConstantItem(RightColumn).Element(Terms);
         });
 
-    private void Parties(IContainer container) => container.Row(row =>
-    {
-        row.Spacing(T.Unit * 6);
-        row.RelativeItem().Element(c => Party(c, "EMISOR", model.Issuer));
-        row.RelativeItem().Element(c => Party(c, "COMPRADOR", model.Buyer));
+        outer.Item().PaddingTop(T.Unit * 3).LineHorizontal(0.5f).LineColor(T.Hairline);
     });
 
-    private static void Party(IContainer container, string heading, RepresentationParty? party) => container.Column(col =>
+    private void Buyer(IContainer container)
     {
-        col.Item().Text(heading).Style(T.EyebrowStyle).FontColor(T.InkSoft);
-        col.Item().PaddingTop(T.Unit).LineHorizontal(0.5f).LineColor(T.Hairline);
-        col.Item().PaddingTop(T.Unit * 1.5f);
-
-        if (party is null)
+        if (model.Buyer is not { } buyer)
         {
-            col.Item().Text("Sin identificación del comprador").FontSize(T.Small).FontColor(T.InkFaint).Italic();
+            container.Column(c =>
+            {
+                c.Item().Text("COMPRADOR").Style(T.EyebrowStyle).FontColor(T.InkSoft);
+                c.Item().PaddingTop(T.Unit).Text("Sin identificación del comprador")
+                    .FontSize(T.Small).FontColor(T.InkFaint);
+            });
             return;
         }
 
-        col.Item().Text(party.Name).FontSize(T.BodyStrong).Medium().FontColor(T.Ink);
-
-        if (party.TaxId is { } taxId)
+        container.Column(col =>
         {
-            var kind = party.Rnc is not null ? "RNC" : "ID";
-            col.Item().Text($"{kind} {taxId}").FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.InkSoft);
-        }
+            col.Item().Text("COMPRADOR").Style(T.EyebrowStyle).FontColor(T.InkSoft);
+            col.Item().PaddingTop(T.Unit).Text(buyer.Name)
+                .FontFamily(RepresentationFonts.Sans).FontSize(T.BodyStrong).Medium().FontColor(T.Ink);
 
-        col.Item().PaddingTop(T.Unit);
-        Line(col, party.Address);
-        Line(col, Join(party.Municipality, party.Province));
-        Line(col, party.Phones.Count > 0 ? string.Join(" · ", party.Phones) : null);
-        Line(col, party.Email);
-        Line(col, party.EconomicActivity);
-        Line(col, party.Contact is { } contact ? $"Contacto: {contact}" : null);
+            if (buyer.TaxId is { } taxId)
+                col.Item().PaddingTop(1).Text($"{(buyer.Rnc is not null ? "RNC" : "ID")} {taxId}")
+                    .FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.InkSoft);
 
-        static void Line(ColumnDescriptor col, string? value)
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-                col.Item().Text(value).FontSize(T.Small).FontColor(T.InkSoft);
-        }
-    });
+            col.Item().PaddingTop(T.Unit).Column(lines =>
+            {
+                lines.Spacing(1);
+                SoftLine(lines, buyer.Address);
+                SoftLine(lines, buyer.Email);
+                SoftLine(lines, buyer.Contact is { } contact ? $"Contacto: {contact}" : null);
+            });
+        });
+    }
+
+    private void Terms(IContainer container)
+    {
+        var d = model.Document;
+        var rows = new List<(string Label, string Value)>();
+
+        if (model.Payment.ConditionLabel is { } cond)
+            rows.Add(("Condición de pago", cond));
+        if (model.Payment.DueDate is { } due)
+            rows.Add(("Fecha límite de pago", D(due)));
+        if (d.IncomeType is { } income)
+            rows.Add(("Tipo de ingreso", income));
+        if (d.Currency is { } currency)
+            rows.Add(("Moneda", d.ExchangeRate is { } rate
+                ? $"{currency} · 1 {currency} = RD$ {rate.ToString("0.####", Pesos)}"
+                : currency));
+
+        if (rows.Count > 0)
+            container.Element(c => DefList(c, rows));
+    }
 
     // ---- tabla de líneas ------------------------------------------------
 
@@ -224,7 +202,7 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
             if (_anyDiscount)
                 cols.ConstantColumn(58); // descuento
             cols.ConstantColumn(42);   // itbis
-            cols.ConstantColumn(76);   // importe
+            cols.ConstantColumn(78);   // importe
         });
 
         table.Header(header =>
@@ -266,9 +244,9 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
             NumCell(table, Qty(line.Quantity));
             NumCell(table, Money(line.UnitPrice));
             if (_anyDiscount)
-                NumCell(table, line.Discount is > 0m and { } d ? Money(d) : "—");
+                NumCell(table, line.Discount is > 0m and { } disc ? Money(disc) : "—");
             BodyCell(table).AlignRight().Text(line.TaxLabel ?? "—").FontSize(T.Small).FontColor(T.InkSoft);
-            NumCell(table, Money(line.Amount), strong: true);
+            NumCell(table, Money(line.GrossAmount), strong: true);
         }
     });
 
@@ -291,47 +269,34 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
             text.Medium();
     }
 
-    // ---- totales + referencia -----------------------------------------
+    // ---- totales + formas de pago -------------------------------------
 
-    private void TotalsAndReference(IContainer container) => container.Row(row =>
+    private void TotalsAndPayments(IContainer container) => container.Row(row =>
     {
         row.RelativeItem().Column(c =>
         {
-            if (model.Reference is { } reference)
-                c.Item().Element(x => ReferencePanel(x, reference));
-
             if (model.Payment.Methods.Count > 0)
-                c.Item().PaddingTop(model.Reference is null ? 0 : T.Unit * 3).Element(PaymentMethods);
+                c.Item().Element(PaymentMethods);
         });
 
-        row.ConstantItem(T.Unit * 6);
-        row.ConstantItem(232).Element(TotalsPanel);
+        row.ConstantItem(T.Unit * 5);
+        row.ConstantItem(RightColumn).Element(TotalsPanel);
     });
 
     private void PaymentMethods(IContainer container) => container.Column(col =>
     {
         col.Item().Text("FORMAS DE PAGO").Style(T.EyebrowStyle).FontColor(T.InkSoft);
-        col.Item().PaddingTop(T.Unit);
-        foreach (var method in model.Payment.Methods)
-            col.Item().Row(r =>
-            {
-                r.RelativeItem().Text(method.Label).FontSize(T.Small).FontColor(T.InkSoft);
-                r.AutoItem().Text(Money(method.Amount)).FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.Ink);
-            });
-    });
-
-    private static void ReferencePanel(IContainer container, RepresentationReference reference) => container
-        .Background(T.Surface).Border(0.5f).BorderColor(T.Hairline)
-        .PaddingVertical(T.Unit * 2).PaddingHorizontal(T.Unit * 3).Column(c =>
+        col.Item().PaddingTop(T.Unit * 1.5f).Column(rows =>
         {
-            c.Item().Text("MODIFICA EL COMPROBANTE").Style(T.EyebrowStyle).FontColor(T.InkSoft);
-            c.Item().PaddingTop(T.Unit).Text(reference.ModifiedNcf)
-                .FontFamily(RepresentationFonts.Mono).FontSize(T.BodyStrong).FontColor(T.Ink);
-            if (reference.ModifiedDate is { } date)
-                c.Item().Text($"Emitido el {D(date)}").FontSize(T.Label).FontColor(T.InkSoft);
-            if (reference.Reason is { } reason)
-                c.Item().Text(reason).FontSize(T.Label).FontColor(T.InkSoft);
+            rows.Spacing(1);
+            foreach (var method in model.Payment.Methods)
+                rows.Item().Row(r =>
+                {
+                    r.RelativeItem().Text(method.Label).FontSize(T.Small).FontColor(T.InkSoft);
+                    r.AutoItem().Text(Money(method.Amount)).FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.Ink);
+                });
         });
+    });
 
     private void TotalsPanel(IContainer container) => container.Column(col =>
     {
@@ -352,7 +317,7 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
         col.Item().Row(r =>
         {
             r.RelativeItem().Text("MONTO TOTAL")
-                .FontFamily(RepresentationFonts.Sans).FontSize(T.Label).FontColor(T.Ink).LetterSpacing(0.1f).Bold();
+                .FontFamily(RepresentationFonts.Sans).FontSize(T.Label).FontColor(T.Ink).LetterSpacing(0.06f).SemiBold();
             r.AutoItem().Text(Money(t.MontoTotal))
                 .FontFamily(RepresentationFonts.Mono).FontSize(T.TotalValue).SemiBold().FontColor(T.Accent);
         });
@@ -388,6 +353,41 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
         });
     }
 
+    // ---- timbre -------------------------------------------------------
+
+    private void Timbre(IContainer container) => container.Column(col =>
+    {
+        col.Item().LineHorizontal(0.5f).LineColor(T.Hairline);
+        col.Item().PaddingTop(T.Unit * 2.5f).Row(row =>
+        {
+            row.ConstantItem(76).Height(76).Image(QrImage.Png(model.Verification.QrUrl));
+            row.ConstantItem(T.Unit * 4);
+
+            row.RelativeItem().Column(c =>
+            {
+                c.Item().Text("Código de seguridad").Style(T.LabelStyle);
+                c.Item().PaddingTop(1).Text(model.Verification.SecurityCode)
+                    .FontFamily(RepresentationFonts.Mono).FontSize(12).Medium().FontColor(T.Ink);
+                c.Item().PaddingTop(T.Unit * 1.5f).Text("Firmado").Style(T.LabelStyle);
+                c.Item().PaddingTop(1).Text(model.Document.SignedAtText)
+                    .FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.InkSoft);
+            });
+
+            row.ConstantItem(168).Column(c =>
+            {
+                if (model.Dgii is not { } dgii)
+                    return;
+
+                var (ink, bg) = StatusColors(dgii);
+                c.Item().AlignRight().Background(bg).PaddingVertical(3).PaddingHorizontal(T.Unit * 2)
+                    .Text(StatusLabel(dgii)).FontSize(T.Label).FontColor(ink).SemiBold().LetterSpacing(0.03f);
+                if (dgii.TrackId is { } track)
+                    c.Item().PaddingTop(T.Unit).AlignRight().Text($"TrackId {track}")
+                        .FontFamily(RepresentationFonts.Mono).FontSize(T.Label).FontColor(T.InkFaint);
+            });
+        });
+    });
+
     private static void Callout(IContainer container, string heading, string body) => container
         .Border(0.75f).BorderColor(T.Ink).PaddingVertical(T.Unit * 2).PaddingHorizontal(T.Unit * 3).Column(c =>
         {
@@ -395,7 +395,7 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
             c.Item().PaddingTop(T.Unit).Text(body).FontSize(T.Small).FontColor(T.Ink);
         });
 
-    // ---- pie -----------------------------------------------------------
+    // ---- pie ---------------------------------------------------------
 
     private void Footer(IContainer container) => container.PaddingTop(T.Unit * 2).Column(col =>
     {
@@ -421,19 +421,32 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
             .FontSize(T.Label).FontColor(T.InkFaint);
     });
 
-    // ---- helpers ------------------------------------------------------
+    // ---- helpers ----------------------------------------------------
+
+    private static void DefList(IContainer container, IEnumerable<(string Label, string Value)> rows) =>
+        container.Column(col =>
+        {
+            col.Spacing(2.5f);
+            foreach (var (label, value) in rows)
+                col.Item().Row(r =>
+                {
+                    r.ConstantItem(96).Text(label).Style(T.LabelStyle);
+                    r.RelativeItem().Text(value)
+                        .FontFamily(RepresentationFonts.Mono).FontSize(T.Small).FontColor(T.Ink);
+                });
+        });
+
+    private static void SoftLine(ColumnDescriptor col, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            col.Item().Text(value).FontSize(T.Small).FontColor(T.InkSoft);
+    }
 
     private static string Money(decimal value) => "RD$ " + value.ToString("N2", Pesos);
 
     private static string Qty(decimal value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 
     private static string D(DateOnly date) => date.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
-
-    private static string? Join(string? a, string? b)
-    {
-        var parts = new[] { a, b }.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray();
-        return parts.Length == 0 ? null : string.Join(", ", parts);
-    }
 
     private string VerificationEndpoint()
     {

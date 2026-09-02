@@ -33,7 +33,7 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
         var totales = header.Element("Totales") ?? new XElement("Totales");
 
         return new RepresentationModel(
-            Document: ReadDocument(idDoc, emisor, root),
+            Document: ReadDocument(idDoc, emisor, header, root),
             Issuer: ReadIssuer(emisor),
             Buyer: ReadBuyer(header.Element("Comprador")),
             Payment: ReadPayment(idDoc),
@@ -44,10 +44,11 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
             Dgii: dgii);
     }
 
-    private static RepresentationDocumentInfo ReadDocument(XElement idDoc, XElement emisor, XElement root)
+    private static RepresentationDocumentInfo ReadDocument(XElement idDoc, XElement emisor, XElement header, XElement root)
     {
         var code = Str(idDoc, "TipoeCF") ?? string.Empty;
         var type = int.TryParse(code, out var id) ? EcfType.FromCodeOrDefault(id) : null;
+        var otraMoneda = header.Element("OtraMoneda");
 
         return new RepresentationDocumentInfo(
             TypeCode: code,
@@ -55,7 +56,10 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
             Encf: Str(idDoc, "eNCF") ?? string.Empty,
             IssueDate: Date(emisor, "FechaEmision") ?? default,
             SequenceExpiresOn: Date(idDoc, "FechaVencimientoSecuencia"),
+            InternalNumber: Str(emisor, "NumeroFacturaInterna"),
             IncomeType: IncomeTypeLabel(Str(idDoc, "TipoIngresos")),
+            Currency: Str(otraMoneda, "TipoMoneda"),
+            ExchangeRate: Dec(otraMoneda, "TipoCambio"),
             SignedAtText: Str(root, "FechaHoraFirma") ?? string.Empty);
     }
 
@@ -123,6 +127,7 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
                 Discount: Dec(item, "DescuentoMonto"),
                 Surcharge: Dec(item, "RecargoMonto"),
                 TaxLabel: BillingIndicatorLabel(Str(item, "IndicadorFacturacion")),
+                TaxRate: BillingIndicatorRate(Str(item, "IndicadorFacturacion")),
                 Amount: Dec(item, "MontoItem") ?? 0m,
                 ItbisWithheld: Dec(retencion, "MontoITBISRetenido"),
                 IsrWithheld: Dec(retencion, "MontoISRRetenido"));
@@ -216,6 +221,13 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
         _ => null,
     };
 
+    private static decimal BillingIndicatorRate(string? code) => code switch
+    {
+        "1" => 0.18m,
+        "2" => 0.16m,
+        _ => 0m,
+    };
+
     private static string? IncomeTypeLabel(string? code) => code switch
     {
         "01" => "Operaciones (no financieras)",
@@ -229,9 +241,9 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
 
     private static string? ModificationReasonLabel(string? code) => code switch
     {
-        "1" => "Anula el comprobante referenciado",
-        "2" => "Corrige texto del comprobante",
-        "3" => "Corrige montos del comprobante",
+        "1" => "Anula el e-NCF modificado",
+        "2" => "Corrige el texto del e-NCF modificado",
+        "3" => "Corrige los montos del e-NCF modificado",
         "4" => "Reemplaza un comprobante de contingencia",
         "5" => "Referencia a una factura de consumo",
         _ => null,
