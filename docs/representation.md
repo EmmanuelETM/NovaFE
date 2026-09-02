@@ -49,11 +49,17 @@ un acento), escala tipográfica, unidad de espaciado. La jerarquía es por peso 
 tamaño, no por cajas. Geist Mono para el e-NCF, los códigos y los montos (cifras
 tabulares).
 
-El layout (`LetterRepresentationDocument`): rótulo + e-NCF arriba, tira de
-metadatos entre reglas finas, partes en dos columnas, tabla de líneas con
-separadores hairline, panel de totales a la derecha, y el timbre (QR + código de
-seguridad + sello de estado DGII) tras los totales. Cabecera y encabezado de
-columnas se repiten al paginar; "Página X de Y" en el pie.
+El layout (`LetterRepresentationDocument`): **cabecera de dos columnas** — emisor
+a la izquierda (nombre, RNC, dirección, teléfonos, correo, actividad), identidad
+fiscal del comprobante a la derecha como lista `etiqueta → valor` (`e-NCF`,
+`e-NCF modificado` para NC/ND, `Válida hasta`, `N° interno`, `Fecha de emisión`,
+`Modificación`). Debajo, una fila con el **comprador** a la izquierda y las
+**condiciones** a la derecha (condición y fecha límite de pago, tipo de ingreso,
+moneda si no es DOP). Luego la tabla de líneas con separadores hairline — la
+columna **Importe** es el neto **más el ITBIS** de esa línea (`GrossAmount`) —, el
+panel de totales a la derecha, y el timbre (QR + código de seguridad + sello de
+estado DGII) tras los totales. Cabecera y encabezado de columnas se repiten al
+paginar; "Página X de Y" en el pie.
 
 **Para ver el diseño:** el test `RepresentationRendererTests` vuelca PDF + PNG de
 muestra a `samples/representation/` (gitignored):
@@ -78,5 +84,6 @@ dotnet test tests/UnitTests/NovaFE.UnitTests.csproj --filter "FullyQualifiedName
 - **Leyenda de contingencia** verbatim (RF-09.5) — es Módulo 11; el
   `RepresentationModel` ya lleva un `ContingencyNotice?` opcional que el renderer
   imprime si está.
-- Catálogo de unidades de medida (hoy no se muestra); accent color / logo por
-  tenant (tema neutro fijo); conformidad PDF/A.
+- Catálogos de **Tabla III** (municipios/provincias — hoy no se muestran, son
+  códigos) y de **unidades de medida**; accent color / logo por tenant (tema
+  neutro fijo); conformidad PDF/A.
