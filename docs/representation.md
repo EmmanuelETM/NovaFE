@@ -1,12 +1,11 @@
 # Representación Impresa (Módulo 9)
 
-**Estado: implementado (formato Carta).** `GET /api/v1/ecf/{id}/representation`
-devuelve el PDF de la Representación Impresa de un comprobante emitido, con el
-timbre QR y el código de seguridad visibles (Decreto 254-06, Norma 06-2018,
-RF-09.x).
+**Estado: implementado (formatos Carta y POS 80 mm).**
+`GET /api/v1/ecf/{id}/representation` devuelve el PDF de la Representación Impresa
+de un comprobante emitido, con el timbre QR y el código de seguridad visibles
+(Decreto 254-06, Norma 06-2018, RF-09.x).
 
-El formato **POS 80 mm** (RF-09.6) y el **envío por correo** al comprador
-(RF-09.7) son slices posteriores.
+El **envío por correo** al comprador (RF-09.7) es un slice posterior.
 
 ---
 
@@ -32,9 +31,10 @@ GET /api/v1/ecf/{id}/representation?layout=letter&download=false
 X-Tenant-Id: <guid>
 ```
 
-- `layout` — `letter` (por defecto). `pos` responde `400` por ahora.
+- `layout` — `letter` (por defecto) o `pos` (rollo térmico de 80 mm).
 - `download=true` → `Content-Disposition: attachment` (descarga); sin él, `inline`
-  (se abre en el navegador). El nombre de archivo es `{e-NCF}.pdf`.
+  (se abre en el navegador). El nombre de archivo es `{e-NCF}.pdf` (`{e-NCF}-pos.pdf`
+  para el formato POS).
 - `404` si el comprobante no existe para el tenant.
 - `EcfDto.links.representation` apunta a este endpoint.
 
@@ -47,9 +47,10 @@ vendorizada y embebida como recurso en `src/Infrastructure/Representation/Fonts/
 Tokens en `RepresentationTheme`: paleta corta (tinta casi negra, grises, hairline,
 un acento), escala tipográfica, unidad de espaciado. La jerarquía es por peso y
 tamaño, no por cajas. Geist Mono para el e-NCF, los códigos y los montos (cifras
-tabulares).
+tabulares). `RepresentationText` centraliza el formato (montos, cantidades,
+fechas, sello DGII, dominio de verificación) que comparten los dos layouts.
 
-El layout (`LetterRepresentationDocument`): **cabecera de dos columnas** — emisor
+**Carta** (`LetterRepresentationDocument`): **cabecera de dos columnas** — emisor
 a la izquierda (nombre, RNC, dirección, teléfonos, correo, actividad), identidad
 fiscal del comprobante a la derecha como lista `etiqueta → valor` (`e-NCF`,
 `e-NCF modificado` para NC/ND, `Válida hasta`, `N° interno`, `Fecha de emisión`,
@@ -60,6 +61,14 @@ columna **Importe** es el neto **más el ITBIS** de esa línea (`GrossAmount`) �
 panel de totales a la derecha, y el timbre (QR + código de seguridad + sello de
 estado DGII) tras los totales. Cabecera y encabezado de columnas se repiten al
 paginar; "Página X de Y" en el pie.
+
+**POS 80 mm** (`PosRepresentationDocument`): rollo térmico, **una sola columna** y
+**página continua** (la altura crece con el contenido, sin paginación). Mismos
+datos y misma paleta, tipografía un punto más grande (imprime a ~203 dpi) y montos
+en Geist Mono alineados a la derecha: emisor centrado, identidad fiscal como pares
+`etiqueta valor`, comprador, líneas (`n descripción` + `cant × precio … importe`),
+totales, formas de pago, y el timbre centrado (QR ~46 mm + código de seguridad +
+sello DGII). El nombre de archivo lleva el sufijo `-pos`.
 
 **Para ver el diseño:** el test `RepresentationRendererTests` vuelca PDF + PNG de
 muestra a `samples/representation/` (gitignored):
@@ -78,7 +87,6 @@ dotnet test tests/UnitTests/NovaFE.UnitTests.csproj --filter "FullyQualifiedName
 
 ## Fuera de alcance (por ahora)
 
-- Layout **POS 80 mm** (RF-09.6) — slice siguiente.
 - **Correo al comprador** con `<CorreoComprador>` (RF-09.7) — necesita infra de
   correo; su propio slice.
 - **Leyenda de contingencia** verbatim (RF-09.5) — es Módulo 11; el

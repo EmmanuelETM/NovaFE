@@ -33,11 +33,6 @@ public sealed class GetEcfRepresentationUseCase(
         if (currentTenant.TenantId is not { } tenantId)
             return Errors.Auth.TenantNotResolved;
 
-        if (request.Layout != RepresentationLayout.Letter)
-            return Error.Validation(
-                "Ecf.Representation.LayoutUnavailable",
-                $"El formato de Representación Impresa '{request.Layout}' todavía no está disponible.");
-
         var dto = await ecf.GetByIdAsync(request.Id, tenantId, ct);
         if (dto is null)
             return EcfErrors.NotFound(request.Id);
@@ -54,6 +49,7 @@ public sealed class GetEcfRepresentationUseCase(
         var model = reader.Read(xml, verification, dgii);
         var pdf = renderer.Render(model, request.Layout);
 
-        return new EcfRepresentationResult(pdf, $"{dto.Encf}.pdf");
+        var suffix = request.Layout == RepresentationLayout.Pos ? "-pos" : string.Empty;
+        return new EcfRepresentationResult(pdf, $"{dto.Encf}{suffix}.pdf");
     }
 }

@@ -17,13 +17,6 @@ using T = RepresentationTheme;
 /// </summary>
 internal sealed class LetterRepresentationDocument(RepresentationModel model) : IDocument
 {
-    private static readonly NumberFormatInfo Pesos = new()
-    {
-        NumberGroupSeparator = ",",
-        NumberDecimalSeparator = ".",
-        NumberDecimalDigits = 2,
-    };
-
     private const float RightColumn = 236f;
 
     private readonly bool _anyDiscount = model.Lines.Any(l => l.Discount is > 0m);
@@ -182,7 +175,7 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
             rows.Add(("Tipo de ingreso", income));
         if (d.Currency is { } currency)
             rows.Add(("Moneda", d.ExchangeRate is { } rate
-                ? $"{currency} · 1 {currency} = RD$ {rate.ToString("0.####", Pesos)}"
+                ? $"{currency} · 1 {currency} = RD$ {RepresentationText.Rate(rate)}"
                 : currency));
 
         if (rows.Count > 0)
@@ -442,36 +435,15 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
             col.Item().Text(value).FontSize(T.Small).FontColor(T.InkSoft);
     }
 
-    private static string Money(decimal value) => "RD$ " + value.ToString("N2", Pesos);
+    private static string Money(decimal value) => RepresentationText.Money(value);
 
-    private static string Qty(decimal value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+    private static string Qty(decimal value) => RepresentationText.Qty(value);
 
-    private static string D(DateOnly date) => date.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
+    private static string D(DateOnly date) => RepresentationText.Date(date);
 
-    private string VerificationEndpoint()
-    {
-        if (!Uri.TryCreate(model.Verification.QrUrl, UriKind.Absolute, out var uri))
-            return "dgii.gov.do";
+    private string VerificationEndpoint() => RepresentationText.VerificationEndpoint(model.Verification.QrUrl);
 
-        var page = uri.Segments.LastOrDefault()?.Trim('/');
-        return string.IsNullOrEmpty(page) ? uri.Host : $"{uri.Host}/{page}";
-    }
+    private static string StatusLabel(RepresentationDgiiStatus dgii) => RepresentationText.StatusLabel(dgii);
 
-    private static string StatusLabel(RepresentationDgiiStatus dgii) => dgii.Status switch
-    {
-        "accepted" => "ACEPTADO POR LA DGII",
-        "accepted_conditional" => "ACEPTADO CONDICIONAL",
-        "rejected" => "RECHAZADO POR LA DGII",
-        "review" => "EN REVISIÓN",
-        "submitted" => "EN PROCESO EN LA DGII",
-        "failed" => "ENVÍO PENDIENTE",
-        _ => "PENDIENTE DE ENVÍO",
-    };
-
-    private static (string Ink, string Bg) StatusColors(RepresentationDgiiStatus dgii) => dgii.Status switch
-    {
-        "accepted" or "accepted_conditional" => (T.OkInk, T.OkBg),
-        "rejected" => (T.BadInk, T.BadBg),
-        _ => (T.WaitInk, T.WaitBg),
-    };
+    private static (string Ink, string Bg) StatusColors(RepresentationDgiiStatus dgii) => RepresentationText.StatusColors(dgii);
 }

@@ -92,10 +92,40 @@ public class RepresentationRendererTests
     }
 
     [Fact]
-    public void The_pos_layout_is_not_implemented_yet()
+    public void Renders_a_valid_pos_pdf_for_each_type()
     {
-        Should.Throw<NotSupportedException>(() =>
-            Renderer.Render(Model(EcfTestData.CreditoFiscal()), RepresentationLayout.Pos));
+        var accepted = new RepresentationDgiiStatus("accepted", 1, "Aceptado", "TRACK-2026-0042");
+        var cases = new (string Name, EcfDocument Doc, RepresentationDgiiStatus? Dgii)[]
+        {
+            ("01-credito-fiscal", EcfTestData.CreditoFiscal(), accepted),
+            ("02-credito-fiscal-multi-tasa", EcfTestData.CreditoFiscal(
+                EcfTestData.Line(1, ItbisRate.Eighteen, unitPrice: 1000m, name: "Licencia de software (anual)"),
+                EcfTestData.Line(2, ItbisRate.Sixteen, unitPrice: 500m, name: "Servicio de instalación"),
+                EcfTestData.Line(3, ItbisRate.Exempt, unitPrice: 300m, name: "Material impreso")), accepted),
+            ("03-consumo", EcfTestData.Consumo(), new RepresentationDgiiStatus("submitted", null, null, "TRACK-2026-0101")),
+            ("05-nota-credito", EcfTestData.NotaCredito(), accepted),
+            ("06-compras-retencion", EcfTestData.Compras(), accepted),
+            ("07-gastos-menores", EcfTestData.GastosMenores(), null),
+        };
+
+        var folder = Path.Combine(RepoRoot(), "samples", "representation", "pos");
+        Directory.CreateDirectory(folder);
+
+        foreach (var (name, doc, dgii) in cases)
+        {
+            var model = Model(doc, dgii);
+            var pdf = Renderer.Render(model, RepresentationLayout.Pos);
+
+            pdf.Length.ShouldBeGreaterThan(3000, name);
+            Encoding.ASCII.GetString(pdf, 0, 5).ShouldBe("%PDF-", name);
+
+            File.WriteAllBytes(Path.Combine(folder, name + ".pdf"), pdf);
+
+            var png = new PosRepresentationDocument(model)
+                .GenerateImages(new QuestPDF.Infrastructure.ImageGenerationSettings { RasterDpi = 192 })
+                .First();
+            File.WriteAllBytes(Path.Combine(folder, name + ".png"), png);
+        }
     }
 
     private static string RepoRoot()
