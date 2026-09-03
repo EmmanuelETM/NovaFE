@@ -271,11 +271,13 @@ el **PDF** de la RI (Decreto 254-06, RF-09). `IEcfRepresentationReader` proyecta
 `<ECF>` firmado que ya se guarda (fuente única, ignora `<Signature>`) a
 `RepresentationModel`; `IRepresentationRenderer` / `QuestPdfRepresentationRenderer`
 lo pinta con **QuestPDF** (Skia embebido; licencia Community &lt; US$1M) y la fuente
-**Geist** (OFL, vendorizada y embebida). Solo formato **Carta** por ahora — `pos`
-(80 mm) y el envío por correo (RF-09.7) son slices posteriores. La RI siempre se
-arma del `<ECF>` completo, aun para un tipo 32 que fue como RFCE. `?download=true`
-adjunta; si no, `inline`. `EcfDto.links.representation`. El Dockerfile instala
-`libfontconfig1`. No cambiar sin leer `docs/representation.md`.
+**Geist** (OFL, vendorizada y embebida). Dos layouts: **Carta**
+(`LetterRepresentationDocument`, por defecto) y **POS 80 mm**
+(`PosRepresentationDocument`, `?layout=pos`, página continua); `RepresentationText`
+comparte el formato. El envío por correo (RF-09.7) es un slice posterior. La RI
+siempre se arma del `<ECF>` completo, aun para un tipo 32 que fue como RFCE.
+`?download=true` adjunta; si no, `inline`. `EcfDto.links.representation`. El
+Dockerfile instala `libfontconfig1`. No cambiar sin leer `docs/representation.md`.
 
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.

@@ -18,6 +18,7 @@ internal sealed class QuestPdfRepresentationRenderer : IRepresentationRenderer
         return layout switch
         {
             RepresentationLayout.Letter => new LetterRepresentationDocument(model).GeneratePdf(),
+            RepresentationLayout.Pos => new PosRepresentationDocument(model).GeneratePdf(),
             _ => throw new NotSupportedException(
                 $"El formato de Representación Impresa '{layout}' todavía no está implementado."),
         };

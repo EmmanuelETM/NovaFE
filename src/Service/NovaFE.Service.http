@@ -210,6 +210,10 @@ X-Tenant-Id: {{tenantId}}
 GET {{Service_HostAddress}}/api/v1/ecf/00000000-0000-0000-0000-000000000000/representation
 X-Tenant-Id: {{tenantId}}
 
+### 4c. Representación Impresa para rollo térmico de 80 mm (punto de venta)
+GET {{Service_HostAddress}}/api/v1/ecf/00000000-0000-0000-0000-000000000000/representation?layout=pos
+X-Tenant-Id: {{tenantId}}
+
 ### 5. Listar los comprobantes del tenant (paginado, filtros opcionales)
 GET {{Service_HostAddress}}/api/v1/ecf?page=1&pageSize=20&type=31&search=E31
 X-Tenant-Id: {{tenantId}}

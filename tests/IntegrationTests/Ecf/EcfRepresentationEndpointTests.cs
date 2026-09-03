@@ -61,13 +61,18 @@ public sealed class EcfRepresentationEndpointTests(DatabaseFixture database) : I
     }
 
     [RequiresDockerFact]
-    public async Task The_pos_layout_is_a_400_for_now()
+    public async Task Serves_the_pos_layout()
     {
         var id = await IssueOneAsync();
 
         var response = await Client.GetAsync($"/api/v1/ecf/{id}/representation?layout=pos");
 
-        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe("application/pdf");
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        Encoding.ASCII.GetString(bytes, 0, 5).ShouldBe("%PDF-");
+        (response.Content.Headers.ContentDisposition!.FileName ?? "").Trim('"').ShouldEndWith("-pos.pdf");
     }
 
     private sealed record SandboxResponse(Guid TenantId);

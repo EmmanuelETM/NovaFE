@@ -6,7 +6,7 @@ public enum RepresentationLayout
     /// <summary>Carta (8.5 × 11 in). El formato por defecto.</summary>
     Letter = 0,
 
-    /// <summary>Rollo térmico de 80 mm (punto de venta). Pendiente — ver <c>docs/representation.md</c>.</summary>
+    /// <summary>Rollo térmico de 80 mm (punto de venta); página continua.</summary>
     Pos = 1,
 }
 
