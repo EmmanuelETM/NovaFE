@@ -48,7 +48,9 @@ Tokens en `RepresentationTheme`: paleta corta (tinta casi negra, grises, hairlin
 un acento), escala tipográfica, unidad de espaciado. La jerarquía es por peso y
 tamaño, no por cajas. Geist Mono para el e-NCF, los códigos y los montos (cifras
 tabulares). `RepresentationText` centraliza el formato (montos, cantidades,
-fechas, sello DGII, dominio de verificación) que comparten los dos layouts.
+fechas, sello DGII, dominio de verificación) que comparten los dos layouts, más
+la atribución del pie (`Con tecnología de Nemus Systems` — el proveedor
+tecnológico, no el emisor; en gris tenue, subordinada a los datos fiscales).
 
 **Carta** (`LetterRepresentationDocument`): **cabecera de dos columnas** — emisor
 a la izquierda (nombre, RNC, dirección, teléfonos, correo, actividad), identidad

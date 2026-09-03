@@ -10,6 +10,13 @@ namespace NovaFE.Infrastructure.Representation;
 /// </summary>
 internal static class RepresentationText
 {
+    /// <summary>Proveedor de la solución de facturación electrónica.</summary>
+    public const string Vendor = "Nemus Systems";
+
+    /// <summary>Atribución discreta para el pie de la RI ("powered by"). Nemus es
+    /// el proveedor tecnológico, no el emisor del comprobante.</summary>
+    public const string PoweredBy = "Con tecnología de " + Vendor;
+
     private static readonly NumberFormatInfo Pesos = new()
     {
         NumberGroupSeparator = ",",

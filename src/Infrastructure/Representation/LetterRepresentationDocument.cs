@@ -25,6 +25,7 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
     {
         Title = $"Representación Impresa {model.Document.Encf}",
         Author = "NovaFE",
+        Creator = $"NovaFE · {RepresentationText.Vendor}",
         Subject = model.Document.TypeName,
     };
 
@@ -409,9 +410,15 @@ internal sealed class LetterRepresentationDocument(RepresentationModel model) : 
             });
         });
 
-        col.Item().PaddingTop(2).Text(
-            "Representación impresa de un Comprobante Fiscal Electrónico (e-CF). El documento con validez fiscal es el archivo XML firmado.")
-            .FontSize(T.Label).FontColor(T.InkFaint);
+        col.Item().PaddingTop(2).Row(row =>
+        {
+            row.RelativeItem().Text(
+                "Representación impresa de un Comprobante Fiscal Electrónico (e-CF). El documento con validez fiscal es el archivo XML firmado.")
+                .FontSize(T.Label).FontColor(T.InkFaint);
+            row.ConstantItem(T.Unit * 4);
+            row.AutoItem().AlignBottom().Text(RepresentationText.PoweredBy)
+                .FontSize(T.Label).FontColor(T.InkFaint);
+        });
     });
 
     // ---- helpers ----------------------------------------------------

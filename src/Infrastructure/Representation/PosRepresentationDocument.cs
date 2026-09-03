@@ -33,6 +33,7 @@ internal sealed class PosRepresentationDocument(RepresentationModel model) : IDo
     {
         Title = $"Representación Impresa {model.Document.Encf}",
         Author = "NovaFE",
+        Creator = $"NovaFE · {RepresentationText.Vendor}",
         Subject = model.Document.TypeName,
     };
 
@@ -323,10 +324,15 @@ internal sealed class PosRepresentationDocument(RepresentationModel model) : IDo
         }
     });
 
-    private static void Legal(IContainer container) => container.AlignCenter().Text(
-        "Representación impresa de un Comprobante Fiscal Electrónico (e-CF). "
-        + "El documento con validez fiscal es el archivo XML firmado.")
-        .FontSize(Micro).FontColor(T.InkFaint);
+    private static void Legal(IContainer container) => container.Column(col =>
+    {
+        col.Item().AlignCenter().Text(
+            "Representación impresa de un Comprobante Fiscal Electrónico (e-CF). "
+            + "El documento con validez fiscal es el archivo XML firmado.")
+            .FontSize(Micro).FontColor(T.InkFaint);
+        col.Item().PaddingTop(1).AlignCenter().Text(RepresentationText.PoweredBy)
+            .FontSize(Micro).FontColor(T.InkFaint);
+    });
 
     private static void Note(IContainer container, string heading, string body) => container.Column(c =>
     {
