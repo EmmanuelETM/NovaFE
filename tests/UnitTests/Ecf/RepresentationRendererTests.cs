@@ -78,8 +78,9 @@ public class RepresentationRendererTests
             .Select(i => EcfTestData.Line(i, ItbisRate.Eighteen, unitPrice: 100m + i, name: $"Artículo de catálogo #{i:000}"))
             .ToArray();
 
-        var pdf = Renderer.Render(Model(EcfTestData.CreditoFiscal(lines)), RepresentationLayout.Letter);
         var folder = Path.Combine(RepoRoot(), "samples", "representation");
+
+        var pdf = Renderer.Render(Model(EcfTestData.CreditoFiscal(lines)), RepresentationLayout.Letter);
         File.WriteAllBytes(Path.Combine(folder, "99-paginado.pdf"), pdf);
 
         var images = new LetterRepresentationDocument(Model(EcfTestData.CreditoFiscal(lines)))
@@ -89,6 +90,20 @@ public class RepresentationRendererTests
             File.WriteAllBytes(Path.Combine(folder, $"99-paginado-p{i + 1}.png"), images[i]);
 
         images.Count.ShouldBeGreaterThanOrEqualTo(2);
+
+        // POS: la misma factura larga en el rollo continuo (una sola página que crece).
+        var posFolder = Path.Combine(folder, "pos");
+        Directory.CreateDirectory(posFolder);
+        var posPdf = Renderer.Render(Model(EcfTestData.CreditoFiscal(lines)), RepresentationLayout.Pos);
+        File.WriteAllBytes(Path.Combine(posFolder, "99-paginado.pdf"), posPdf);
+
+        var posImages = new PosRepresentationDocument(Model(EcfTestData.CreditoFiscal(lines)))
+            .GenerateImages(new QuestPDF.Infrastructure.ImageGenerationSettings { RasterDpi = 192 })
+            .ToList();
+        for (var i = 0; i < posImages.Count; i++)
+            File.WriteAllBytes(Path.Combine(posFolder, $"99-paginado-p{i + 1}.png"), posImages[i]);
+
+        Encoding.ASCII.GetString(posPdf, 0, 5).ShouldBe("%PDF-");
     }
 
     [Fact]
