@@ -117,11 +117,11 @@ public sealed class CertificatesEndpointsTests(DatabaseFixture database) : Integ
     }
 
     [RequiresDockerFact]
-    public async Task Certificate_endpoints_require_a_tenant_header()
+    public async Task Certificate_endpoints_require_a_credential()
     {
         var response = await Client.GetAsync("/api/v1/certificates");
 
-        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     private sealed record CertificateResponse(

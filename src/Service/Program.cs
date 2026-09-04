@@ -105,32 +105,11 @@ try
     // ==========================================
     //     6. Authentication & Authorization
     // ==========================================
-    // HUECO INTENCIONAL: cada servicio decide su esquema de autenticación.
-    //
-    // Para habilitar JWT:
-    //   1. Agrega el paquete Microsoft.AspNetCore.Authentication.JwtBearer.
-    //   2. Descomenta este bloque y completa Authority/Audience desde configuración.
-    //   3. Descomenta app.UseAuthentication() en el pipeline (sección 9).
-    //
-    // builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    //     .AddJwtBearer(options =>
-    //     {
-    //         options.Authority = builder.Configuration["Jwt:Authority"];
-    //         options.Audience = builder.Configuration["Jwt:Audience"];
-    //         options.TokenValidationParameters = new TokenValidationParameters
-    //         {
-    //             ValidateIssuer = true,
-    //             ValidateAudience = true,
-    //             ValidateLifetime = true,
-    //             ValidateIssuerSigningKey = true,
-    //             ClockSkew = TimeSpan.FromSeconds(30)
-    //         };
-    //     });
-    //
-    // Nota: ICurrentUser ya lee los claims, así que los casos de uso NO cambian
-    // cuando se habilite la autenticación.
-
-    builder.Services.AddAuthorization();
+    // Clientes: API key (header X-API-Key) → el tenant sale de la key.
+    // Operador: admin key estática (header X-Admin-Key).
+    // Development: además se acepta X-Tenant-Id sin credencial (sandbox, tests).
+    // Ver src/Service/Security/ y docs/api-auth.md.
+    builder.Services.AddApiSecurity(builder.Environment, builder.Configuration);
 
     // ==========================================
     //              7. CORS
@@ -183,6 +162,15 @@ try
 
     var app = builder.Build();
 
+    // Fuera de Development, los endpoints de operador exigen Security:AdminApiKey.
+    // Sin ella el AdminKeyAuthenticationHandler rechaza todo — se avisa fuerte.
+    if (!app.Environment.IsDevelopment()
+        && string.IsNullOrWhiteSpace(app.Configuration[$"{NovaFE.Service.Configuration.SecurityOptions.SectionName}:AdminApiKey"]))
+    {
+        Log.Warning(
+            "Security:AdminApiKey no está configurada: los endpoints de operador rechazarán toda petición.");
+    }
+
     // Migraciones + seeds al arrancar, solo si Database:MigrateOnStartup está
     // activo (por defecto: on en Development, off en el resto). Corre antes de
     // aceptar tráfico.
@@ -198,10 +186,6 @@ try
 
     // Antes que todo lo demás para que el TraceId aparezca en cada log y respuesta.
     app.UseMiddleware<TraceIdMiddleware>();
-
-    // Resuelve el tenant de la petición (header X-Tenant-Id por ahora) y lo deja
-    // disponible en ICurrentTenant para los casos de uso y la persistencia.
-    app.UseMiddleware<TenantResolutionMiddleware>();
 
     app.UseSerilogRequestLogging(options =>
     {
@@ -230,10 +214,19 @@ try
     app.UseHttpsRedirection();
 
     app.UseCors(CorsOptions.PolicyName);
+
+    app.UseAuthentication();
+
+    // Después de autenticar el esquema por defecto (API key): así el limitador
+    // puede particionar por contribuyente y no solo por IP.
     app.UseRateLimiter();
 
-    //app.UseAuthentication();
     app.UseAuthorization();
+
+    // Después de autorizar (que ya autenticó los esquemas de la política y pobló
+    // HttpContext.User): pasa el claim tenant_id del principal a ICurrentTenant,
+    // que consumen los casos de uso y la persistencia (filtro de EF, RLS).
+    app.UseMiddleware<TenantResolutionMiddleware>();
 
     app.MapControllers();
     app.MapHealthCheckEndpoints();

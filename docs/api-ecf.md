@@ -59,7 +59,7 @@ POST   /api/v1/ecf/{id}/retry      reencolar el envío (solo failed / review) �
 
 | | |
 |---|---|
-| **Auth** | Header `X-Tenant-Id` (API keys llegan con Módulo 14 — la key llevará el ambiente) |
+| **Auth** | Header `X-API-Key` con un token `nfe_…` del contribuyente (el tenant sale de la key). En Development también sirve `X-Tenant-Id`. Ver `docs/api-auth.md`. |
 | **`Idempotency-Key`** (header, opcional) | Reintento seguro del `POST`. Misma clave + mismo cuerpo → **`200`** con la respuesta original. Misma clave + cuerpo distinto → **`409`**. Petición en curso → **`409`**. Tabla `idempotency_keys` en PostgreSQL. |
 | **`internalNumber`** (body → `<NumeroFacturaInterna>`) | Dedup de negocio: un comprobante por `(tenant, internalNumber)` (índice único parcial). Repetido → **`200`** con el existente. |
 

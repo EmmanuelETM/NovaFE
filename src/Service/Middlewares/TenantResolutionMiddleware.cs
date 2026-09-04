@@ -1,27 +1,27 @@
+using System.Security.Claims;
 using NovaFE.Service.Common;
+using NovaFE.Service.Security;
 
 namespace NovaFE.Service.Middlewares;
 
 /// <summary>
-/// Resuelve el tenant de la petición y lo publica en <c>ICurrentTenant</c>.
+/// Pasa el tenant del principal autenticado a <c>ICurrentTenant</c>, que consumen
+/// los casos de uso y la persistencia (filtro global de EF, RLS).
 /// <para>
-/// Hoy lee el header <c>X-Tenant-Id</c> (un GUID). No bloquea las peticiones sin
-/// tenant: los endpoints de operador (registrar contribuyentes, health, docs) no
-/// lo necesitan, y los casos de uso que sí lo requieren fallan con un error
-/// claro. La exigencia por ruta llegará junto con la autenticación por API key.
+/// El contribuyente lo pone el esquema de autenticación en el claim
+/// <c>tenant_id</c>: de la API key en producción, o del header <c>X-Tenant-Id</c>
+/// en Development. Corre <b>después</b> de <c>UseAuthentication</c>. No bloquea las
+/// peticiones sin tenant: la autorización (<c>[Authorize]</c>) es la que exige
+/// credencial por ruta.
 /// </para>
 /// </summary>
 internal sealed class TenantResolutionMiddleware(RequestDelegate next)
 {
-    public const string HeaderName = "X-Tenant-Id";
-
     public async Task InvokeAsync(HttpContext context, CurrentTenant currentTenant)
     {
-        if (context.Request.Headers.TryGetValue(HeaderName, out var raw)
-            && Guid.TryParse(raw, out var tenantId))
-        {
+        var raw = context.User.FindFirstValue(SecuritySchemes.TenantClaim);
+        if (Guid.TryParse(raw, out var tenantId))
             currentTenant.Set(tenantId);
-        }
 
         await next(context);
     }

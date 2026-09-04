@@ -149,8 +149,8 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     }
 
     [RequiresDockerFact]
-    public async Task Sequence_endpoints_require_a_tenant_header()
-        => (await Client.GetAsync("/api/v1/sequences")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    public async Task Sequence_endpoints_require_a_credential()
+        => (await Client.GetAsync("/api/v1/sequences")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 
     private sealed record SequenceResponse(
         Guid Id, string Environment, int Type, string TypeName, string Series,

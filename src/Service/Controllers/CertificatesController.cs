@@ -5,16 +5,19 @@ using NovaFE.Application.Certificates.RevokeCertificate;
 using NovaFE.Application.Certificates.UploadCertificate;
 using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
+using NovaFE.Service.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace NovaFE.Service.Controllers;
 
 /// <summary>
-/// Certificados digitales del contribuyente. Recurso <b>por tenant</b>: la
-/// petición debe traer el header <c>X-Tenant-Id</c>.
+/// Certificados digitales del contribuyente. Recurso <b>por contribuyente</b>: la
+/// petición se autentica con una API key (header <c>X-API-Key</c>).
 /// </summary>
 [ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
+[Authorize(Policy = SecurityPolicies.TenantClient)]
 public sealed class CertificatesController(
     UploadCertificateUseCase upload,
     GetCertificateUseCase get,
