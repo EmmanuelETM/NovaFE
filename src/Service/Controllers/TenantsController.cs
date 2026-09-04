@@ -84,7 +84,7 @@ public sealed class TenantsController(
         [FromBody] CreateApiKeyBody? body,
         CancellationToken ct)
         => (await createApiKey.Execute(
-                new CreateApiKeyCommand(id, body?.Label, body?.ExpiresAt), ct))
+                new CreateApiKeyCommand(id, body?.Label, body?.Environment, body?.ExpiresAt), ct))
             .Match(
                 created => CreatedAtAction(nameof(ListApiKeys), new { id, version = "1" }, created),
                 Problem);
@@ -113,6 +113,9 @@ public sealed class TenantsController(
         string? EconomicActivity,
         string DefaultEnvironment);
 
-    /// <summary>Cuerpo del <c>POST .../api-keys</c>; todo opcional.</summary>
-    public sealed record CreateApiKeyBody(string? Label, DateTimeOffset? ExpiresAt);
+    /// <summary>
+    /// Cuerpo del <c>POST .../api-keys</c>; todo opcional. <c>environment</c> por
+    /// defecto es el del perfil de emisor.
+    /// </summary>
+    public sealed record CreateApiKeyBody(string? Label, string? Environment, DateTimeOffset? ExpiresAt);
 }

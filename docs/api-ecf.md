@@ -59,7 +59,7 @@ POST   /api/v1/ecf/{id}/retry      reencolar el envío (solo failed / review) �
 
 | | |
 |---|---|
-| **Auth** | Header `X-API-Key` con un token `nfe_…` del contribuyente (el tenant sale de la key). En Development también sirve `X-Tenant-Id`. Ver `docs/api-auth.md`. |
+| **Auth** | Header `X-API-Key` con un token `sk_nfe_…` del contribuyente (el tenant **y el ambiente** salen de la key). En Development también sirve `X-Tenant-Id`. Ver `docs/api-auth.md`. |
 | **`Idempotency-Key`** (header, opcional) | Reintento seguro del `POST`. Misma clave + mismo cuerpo → **`200`** con la respuesta original. Misma clave + cuerpo distinto → **`409`**. Petición en curso → **`409`**. Tabla `idempotency_keys` en PostgreSQL. |
 | **`internalNumber`** (body → `<NumeroFacturaInterna>`) | Dedup de negocio: un comprobante por `(tenant, internalNumber)` (índice único parcial). Repetido → **`200`** con el existente. |
 
@@ -91,7 +91,6 @@ aceptan el **nombre** (`"credit"`, `"check_transfer"`) o el **código DGII**
 | `pricesIncludeTax` | bool opc. | `IndicadorMontoGravado` | `true` = el precio ya trae ITBIS; se puede sobrescribir por línea |
 | `deferredDelivery` | bool opc. | `IndicadorEnvioDiferido` | Solo autorizados |
 | `nonInvoiceableAmount` | decimal opc. | `MontoNoFacturable` | Reembolsos, propina voluntaria. Puede ser negativo |
-| `environment` | string opc. | — | `"Test"` / `"Cert"` / `"Production"`. Si se omite, el `defaultEnvironment` del `EmitterProfile` |
 | `internalNumber` | string opc. | `NumeroFacturaInterna` | Clave de dedup de negocio |
 | `sellerCode` | string opc. | `CodigoVendedor` | |
 | `additionalInfo.issuer` / `.buyer` | string opc. | `InformacionAdicional*` | Texto libre para la RI |
@@ -392,7 +391,9 @@ Cuerpo del `PUT`:
 ```
 
 `municipality`/`province` son códigos de la Tabla III (6 dígitos).
-`defaultEnvironment` es el ambiente DGII en el que emite el contribuyente por
-defecto (`Test` durante el onboarding, `Production` tras certificar); el payload
-de emisión puede sobrescribirlo con `environment`. Sin perfil configurado,
-`POST /ecf` devuelve `400`.
+`defaultEnvironment` es el ambiente DGII por defecto del contribuyente (`Test`
+durante el onboarding, `Production` tras certificar): es el valor que hereda una
+API key al acuñarse si no se le pasa uno, y el que se usa en el camino
+`X-Tenant-Id` de Development. En una petición autenticada con API key el ambiente
+lo fija la key, no el payload ni el perfil. Sin perfil configurado, `POST /ecf`
+devuelve `400`.

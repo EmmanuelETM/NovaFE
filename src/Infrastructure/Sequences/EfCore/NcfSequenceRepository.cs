@@ -19,6 +19,13 @@ internal sealed class NcfSequenceRepository(AppDbContext context) : INcfSequence
         => context.NcfSequences.AnyAsync(
             s => s.Environment == environment && s.Type == type && s.Series == series && s.Active, ct);
 
+    public Task<bool> HasAnyActiveRangeForTenantAsync(
+        Guid tenantId,
+        DgiiEnvironment environment,
+        CancellationToken ct = default)
+        => context.NcfSequences.IgnoreQueryFilters().AnyAsync(
+            s => s.TenantId == tenantId && !s.IsDeleted && s.Environment == environment && s.Active, ct);
+
     public async Task AddAsync(NcfSequence sequence, CancellationToken ct = default)
     {
         await context.NcfSequences.AddAsync(sequence, ct);

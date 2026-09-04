@@ -1,4 +1,5 @@
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Domain.Common;
 
 namespace NovaFE.IntegrationTests.Fixtures;
 
@@ -11,6 +12,8 @@ internal sealed class NullCurrentTenant : ICurrentTenant
     public static readonly NullCurrentTenant Instance = new();
 
     public Guid? TenantId => null;
+
+    public DgiiEnvironment? Environment => null;
 
     public bool HasValue => false;
 

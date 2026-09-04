@@ -31,4 +31,8 @@ public static class ApiKeyErrors
     public static Error AlreadyRevoked => Error.Conflict(
         code: "ApiKey.AlreadyRevoked",
         description: "La credencial ya estaba revocada.");
+
+    public static Error EnvironmentNotReady(string environment, IEnumerable<string> missing) => Error.Validation(
+        code: "ApiKey.EnvironmentNotReady",
+        description: $"El contribuyente todavía no puede facturar en el ambiente '{environment}': falta {string.Join(", ", missing)}.");
 }

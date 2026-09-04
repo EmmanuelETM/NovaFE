@@ -33,7 +33,7 @@ rangos de secuencia (tipos 31/32/33/34) y le sube un certificado autofirmado.
 Devuelve:
 
 ```json
-{ "tenantId": "0194...", "rnc": "512345678", "environment": "Test", "apiKey": "nfe_…", ... }
+{ "tenantId": "0194...", "rnc": "512345678", "environment": "Test", "apiKey": "sk_nfe_test_…", ... }
 ```
 
 Guarda el `tenantId` y el `apiKey`. Para emitir usa el header `X-API-Key: <apiKey>`

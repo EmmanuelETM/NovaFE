@@ -18,6 +18,9 @@ internal static class SecuritySchemes
 
     /// <summary>Claim que lleva el id del contribuyente en el principal autenticado.</summary>
     public const string TenantClaim = "tenant_id";
+
+    /// <summary>Claim con el ambiente de la DGII de la API key (<c>Test</c> / <c>Cert</c> / <c>Production</c>).</summary>
+    public const string EnvironmentClaim = "dgii_environment";
 }
 
 /// <summary>Nombres de políticas de autorización.</summary>

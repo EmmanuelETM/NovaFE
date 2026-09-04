@@ -54,9 +54,9 @@ public sealed class IssueEcfUseCase(
         if (profile is null)
             return NovaFE.Domain.Tenants.EmitterProfileErrors.NotConfigured;
 
-        var environment = ResolveEnvironment(request.Environment, profile.DefaultEnvironment);
-        if (environment is null)
-            return EcfErrors.EnvironmentNotResolvable;
+        // El ambiente lo trae la API key (currentTenant.Environment). El camino
+        // X-Tenant-Id de Development no lo lleva → cae al default del emisor.
+        var environment = currentTenant.Environment ?? profile.DefaultEnvironment;
 
         var key = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
         var requestHash = HashRequest(request);
@@ -148,15 +148,6 @@ public sealed class IssueEcfUseCase(
         return dto is null
             ? EcfErrors.NotFound(id)
             : new IssueEcfResult(dto, WasCreated: false);
-    }
-
-    private static DgiiEnvironment? ResolveEnvironment(string? requested, DgiiEnvironment fallback)
-    {
-        if (string.IsNullOrWhiteSpace(requested))
-            return fallback;
-
-        return DgiiEnvironment.GetAll()
-            .FirstOrDefault(e => string.Equals(e.Name, requested.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     private static string HashRequest(IssueEcfCommand request)

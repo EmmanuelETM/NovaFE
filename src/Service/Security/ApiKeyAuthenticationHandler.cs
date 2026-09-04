@@ -46,6 +46,7 @@ internal sealed class ApiKeyAuthenticationHandler(
                 new Claim(ClaimTypes.NameIdentifier, $"apikey:{identity.KeyId}"),
                 new Claim(ClaimTypes.Name, identity.TenantId.ToString()),
                 new Claim(SecuritySchemes.TenantClaim, identity.TenantId.ToString()),
+                new Claim(SecuritySchemes.EnvironmentClaim, identity.Environment),
             ],
             SecuritySchemes.ApiKey);
 

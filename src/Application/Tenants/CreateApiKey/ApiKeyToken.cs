@@ -1,25 +1,30 @@
 using System.Security.Cryptography;
 using System.Text;
+using NovaFE.Domain.Common;
 
 namespace NovaFE.Application.Tenants.CreateApiKey;
 
 /// <summary>
 /// Genera y hashea los tokens de API key. El token en claro es
-/// <c>nfe_</c> + 43 caracteres base64url (32 bytes de RNG criptográfico). Solo se
-/// persiste su SHA-256 en hex, que también es la clave de búsqueda O(1) al
-/// autenticar.
+/// <c>sk_nfe_&lt;test|cert|prod&gt;_</c> + 43 caracteres base64url (32 bytes de RNG
+/// criptográfico) — el segmento de ambiente hace evidente de un vistazo con qué
+/// key estás trabajando. Solo se persiste su SHA-256 en hex, que también es la
+/// clave de búsqueda O(1) al autenticar.
 /// </summary>
 public static class ApiKeyToken
 {
-    /// <summary>Prefijo de todo token, para poder distinguirlo de otros secretos.</summary>
-    public const string Prefix = "nfe_";
+    /// <summary>Prefijo común de todo token, para distinguirlo de otros secretos.</summary>
+    public const string Prefix = "sk_nfe_";
 
     /// <summary>Cuántos caracteres del token se guardan en claro para mostrar en un listado.</summary>
-    public const int DisplayPrefixLength = 12;
+    public const int DisplayPrefixLength = 16;
 
-    /// <summary>Un token nuevo en claro. Solo se enseña una vez.</summary>
-    public static string Generate() =>
-        Prefix + Base64Url(RandomNumberGenerator.GetBytes(32));
+    /// <summary>Un token nuevo en claro para el ambiente dado. Solo se enseña una vez.</summary>
+    public static string Generate(DgiiEnvironment environment)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        return $"{Prefix}{environment.Slug}_{Base64Url(RandomNumberGenerator.GetBytes(32))}";
+    }
 
     /// <summary>SHA-256 del token en hex minúscula (64 caracteres).</summary>
     public static string Hash(string token)

@@ -14,17 +14,15 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     private const string ApiKeyHeader = "X-API-Key";
     private const string AdminKeyHeader = "X-Admin-Key";
 
-    private async Task<(Guid TenantId, Guid KeyId, string Token)> MintKeyAsync(string rnc = "130862346")
+    /// <summary>Deja un contribuyente listo (perfil + cert + secuencias) y devuelve su tenant + API key de Test.</summary>
+    private async Task<(Guid TenantId, string Token)> OnboardAsync()
     {
-        var tenantId = await RegisterTenantAsync(rnc);
+        var setup = await Client.PostAsJsonAsync("/api/v1/dev/sandbox", new { });
+        setup.StatusCode.ShouldBe(HttpStatusCode.OK, await setup.Content.ReadAsStringAsync());
 
-        var create = await Client.PostAsJsonAsync(
-            $"/api/v1/tenants/{tenantId}/api-keys", new { label = "Pruebas" });
-        create.StatusCode.ShouldBe(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
-
-        var created = await LeerAsync<ApiKeyCreatedResponse>(create);
-        created!.Token.ShouldStartWith("nfe_");
-        return (tenantId, created.Key.Id, created.Token);
+        var sandbox = await LeerAsync<SandboxResponse>(setup);
+        sandbox!.ApiKey.ShouldStartWith("sk_nfe_test_");
+        return (sandbox.TenantId, sandbox.ApiKey);
     }
 
     private void UseApiKey(string? token)
@@ -38,7 +36,7 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     [RequiresDockerFact]
     public async Task A_valid_api_key_authenticates_a_tenant_request()
     {
-        var (_, _, token) = await MintKeyAsync();
+        var (_, token) = await OnboardAsync();
         UseApiKey(token);
 
         var response = await Client.GetAsync("/api/v1/ecf");
@@ -47,9 +45,30 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     }
 
     [RequiresDockerFact]
+    public async Task An_api_key_of_Test_issues_in_Test()
+    {
+        var (_, token) = await OnboardAsync();
+        UseApiKey(token);
+
+        var post = await Client.PostAsJsonAsync("/api/v1/ecf", new
+        {
+            type = 31,
+            incomeType = "01",
+            buyer = new { name = "Cliente SRL", rnc = "131880681" },
+            payment = new { condition = "cash", methods = new[] { new { type = "cash", amount = 2360m } } },
+            lines = new[] { new { name = "Consultoría", kind = "service", quantity = 1, unitPrice = 2000m, itbisRate = 1 } },
+        });
+        post.StatusCode.ShouldBe(HttpStatusCode.Created, await post.Content.ReadAsStringAsync());
+
+        var issued = await LeerAsync<EcfResponse>(post);
+        // El timbre QR lleva el segmento del ambiente de la key.
+        issued!.QrUrl.ShouldContain("/testecf/");
+    }
+
+    [RequiresDockerFact]
     public async Task A_request_with_no_credential_is_401()
     {
-        await MintKeyAsync();
+        await OnboardAsync();
         UseApiKey(null);
 
         var response = await Client.GetAsync("/api/v1/ecf");
@@ -60,7 +79,7 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     [RequiresDockerFact]
     public async Task A_malformed_api_key_is_401()
     {
-        await MintKeyAsync();
+        await OnboardAsync();
         UseApiKey("not-a-real-key");
 
         var response = await Client.GetAsync("/api/v1/ecf");
@@ -71,13 +90,16 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     [RequiresDockerFact]
     public async Task A_revoked_api_key_stops_authenticating()
     {
-        var (tenantId, keyId, token) = await MintKeyAsync();
+        var (tenantId, token) = await OnboardAsync();
 
         UseApiKey(token);
         (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        // La revocación es un recurso de operador; en el entorno de test no exige admin key.
+        // Recupera el id de la key y revócala (recurso de operador; en test no exige admin key).
         Client.DefaultRequestHeaders.Remove(ApiKeyHeader);
+        var keys = await LeerAsync<ApiKeyView[]>(await Client.GetAsync($"/api/v1/tenants/{tenantId}/api-keys"));
+        var keyId = keys!.Single().Id;
+
         var revoke = await Client.DeleteAsync($"/api/v1/tenants/{tenantId}/api-keys/{keyId}");
         revoke.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
@@ -88,15 +110,26 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     [RequiresDockerFact]
     public async Task Repeated_failed_attempts_lock_out_the_caller()
     {
-        var (_, _, token) = await MintKeyAsync();
+        var (_, token) = await OnboardAsync();
 
-        UseApiKey("nfe_wrong_wrong_wrong_wrong_wrong_wrong_x");
+        UseApiKey("sk_nfe_test_wrong_wrong_wrong_wrong_wrong_x");
         for (var i = 0; i < 5; i++)
             (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 
         // Con el origen bloqueado, ni siquiera la credencial buena pasa.
         UseApiKey(token);
         (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [RequiresDockerFact]
+    public async Task Minting_a_key_for_an_unready_environment_is_a_400()
+    {
+        var tenantId = await RegisterTenantAsync("130999888");
+
+        var create = await Client.PostAsJsonAsync(
+            $"/api/v1/tenants/{tenantId}/api-keys", new { label = "Prod", environment = "Production" });
+
+        create.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [RequiresDockerFact]
@@ -133,7 +166,9 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
         withKey.StatusCode.ShouldBe(HttpStatusCode.Created);
     }
 
-    private sealed record ApiKeyCreatedResponse(ApiKeyView Key, string Token);
+    private sealed record SandboxResponse(Guid TenantId, string ApiKey);
 
-    private sealed record ApiKeyView(Guid Id, Guid TenantId, string Prefix, string Label);
+    private sealed record ApiKeyView(Guid Id, Guid TenantId, string Prefix, string Label, string Environment);
+
+    private sealed record EcfResponse(Guid Id, string Encf, string QrUrl);
 }

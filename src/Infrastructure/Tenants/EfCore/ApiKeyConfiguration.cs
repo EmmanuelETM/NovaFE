@@ -1,3 +1,4 @@
+using NovaFE.Domain.Common;
 using NovaFE.Domain.Tenants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -23,6 +24,11 @@ internal sealed class ApiKeyConfiguration : IEntityTypeConfiguration<ApiKey>
         builder.Property(k => k.KeyHash).HasMaxLength(64).IsRequired();
         builder.Property(k => k.Prefix).HasMaxLength(20).IsRequired();
         builder.Property(k => k.Label).HasMaxLength(ApiKey.MaxLabelLength).IsRequired();
+
+        builder.Property(k => k.Environment)
+            .HasConversion(environment => environment.Name, name => DgiiEnvironment.FromName(name))
+            .HasMaxLength(20)
+            .IsRequired();
 
         builder.Property(k => k.CreatedBy).HasMaxLength(256);
         builder.Property(k => k.UpdatedBy).HasMaxLength(256);

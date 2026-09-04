@@ -6,7 +6,7 @@
 #  - Cliente (POST /ecf, secuencias, certificados): header X-API-Key con un token nfe_...
 #    En Development todavía sirve X-Tenant-Id sin credencial.
 @adminKey =
-@apiKey = nfe_pon-aqui-el-token-que-devuelve-POST-/tenants/{id}/api-keys
+@apiKey = sk_nfe_test_pon-aqui-el-token-que-devuelve-POST-/tenants/{id}/api-keys
 
 ### Register a tenant
 POST {{Service_HostAddress}}/api/v1/tenants
@@ -21,11 +21,12 @@ X-Admin-Key: {{adminKey}}
 }
 
 ### Acuñar una API key para el contribuyente (recurso de operador; el token se ve una sola vez)
+# environment por defecto = el del perfil de emisor. Requiere perfil + cert + secuencias de ese ambiente.
 POST {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/api-keys
 Content-Type: application/json
 X-Admin-Key: {{adminKey}}
 
-{ "label": "Local" }
+{ "label": "Local", "environment": "Test" }
 
 ### Listar / revocar API keys del contribuyente
 GET {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/api-keys

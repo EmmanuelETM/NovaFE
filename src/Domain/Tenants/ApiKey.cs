@@ -1,4 +1,5 @@
 using ErrorOr;
+using NovaFE.Domain.Common;
 using NovaFE.Domain.Common.Entities;
 
 namespace NovaFE.Domain.Tenants;
@@ -19,18 +20,32 @@ public sealed class ApiKey : Entity<Guid>, IAuditableEntity, ISoftDeletable
     {
     }
 
-    private ApiKey(Guid id, Guid tenantId, string keyHash, string prefix, string label, DateTimeOffset? expiresAt)
+    private ApiKey(
+        Guid id,
+        Guid tenantId,
+        string keyHash,
+        string prefix,
+        string label,
+        DgiiEnvironment environment,
+        DateTimeOffset? expiresAt)
         : base(id)
     {
         TenantId = tenantId;
         KeyHash = keyHash;
         Prefix = prefix;
         Label = label;
+        Environment = environment;
         ExpiresAt = expiresAt;
     }
 
     /// <summary>El contribuyente al que pertenece esta credencial.</summary>
     public Guid TenantId { get; private set; }
+
+    /// <summary>
+    /// El ambiente de la DGII en el que emite esta credencial. La key <b>es</b> el
+    /// selector de ambiente: una petición autenticada con ella siempre va a este.
+    /// </summary>
+    public DgiiEnvironment Environment { get; private set; } = null!;
 
     /// <summary>SHA-256 del token en hex minúscula (64 caracteres). Único.</summary>
     public string KeyHash { get; private set; } = null!;
@@ -73,8 +88,11 @@ public sealed class ApiKey : Entity<Guid>, IAuditableEntity, ISoftDeletable
         string keyHash,
         string prefix,
         string? label,
+        DgiiEnvironment environment,
         DateTimeOffset? expiresAt)
     {
+        ArgumentNullException.ThrowIfNull(environment);
+
         if (tenantId == Guid.Empty)
             return ApiKeyErrors.TenantRequired;
 
@@ -85,7 +103,7 @@ public sealed class ApiKey : Entity<Guid>, IAuditableEntity, ISoftDeletable
         if (cleanLabel.Length > MaxLabelLength)
             return ApiKeyErrors.LabelTooLong;
 
-        return new ApiKey(Guid.CreateVersion7(), tenantId, keyHash, prefix, cleanLabel, expiresAt);
+        return new ApiKey(Guid.CreateVersion7(), tenantId, keyHash, prefix, cleanLabel, environment, expiresAt);
     }
 
     /// <summary>Revoca la credencial. Idempotencia estricta: revocar dos veces es un error.</summary>
