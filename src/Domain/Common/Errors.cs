@@ -39,7 +39,15 @@ public static partial class Errors
     {
         public static Error TenantNotResolved => Error.Validation(
             code: "Auth.TenantNotResolved",
-            description: "La petición no identifica un contribuyente. Incluye el header X-Tenant-Id.");
+            description: "La petición no identifica un contribuyente.");
+
+        public static Error MissingApiKey => Error.Unauthorized(
+            code: "Auth.MissingApiKey",
+            description: "La petición no trae credencial. Incluye el header X-API-Key.");
+
+        public static Error InvalidApiKey => Error.Unauthorized(
+            code: "Auth.InvalidApiKey",
+            description: "La credencial de la petición no es válida, está revocada o venció.");
     }
 
     public static class Http

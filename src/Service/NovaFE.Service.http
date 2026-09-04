@@ -1,8 +1,17 @@
 @Service_HostAddress = http://localhost:5071
 
+# Autenticación (Modulo 14). Ver docs/api-auth.md.
+#  - Operador (alta de tenants, API keys): header X-Admin-Key contra Security:AdminApiKey.
+#    Vacío en Development => los endpoints /tenants quedan abiertos.
+#  - Cliente (POST /ecf, secuencias, certificados): header X-API-Key con un token nfe_...
+#    En Development todavía sirve X-Tenant-Id sin credencial.
+@adminKey =
+@apiKey = nfe_pon-aqui-el-token-que-devuelve-POST-/tenants/{id}/api-keys
+
 ### Register a tenant
 POST {{Service_HostAddress}}/api/v1/tenants
 Content-Type: application/json
+X-Admin-Key: {{adminKey}}
 
 {
   "rnc": "101672919",
@@ -10,6 +19,17 @@ Content-Type: application/json
   "tradeName": "Prueba",
   "plan": "Developer"
 }
+
+### Acuñar una API key para el contribuyente (recurso de operador; el token se ve una sola vez)
+POST {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/api-keys
+Content-Type: application/json
+X-Admin-Key: {{adminKey}}
+
+{ "label": "Local" }
+
+### Listar / revocar API keys del contribuyente
+GET {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/api-keys
+X-Admin-Key: {{adminKey}}
 
 ### List tenants
 GET {{Service_HostAddress}}/api/v1/tenants?page=1&pageSize=20&search=Prueba
@@ -142,7 +162,8 @@ GET {{Service_HostAddress}}/api/v1/dev/sandbox/certificate?rnc=130862346
 # ============================================================================
 #  Modulo 12 — emision de e-CF (POST /api/v1/ecf)
 #  Requiere: tenant registrado + perfil de emisor + certificado + rango de secuencias.
-#  (o corre el sandbox de arriba y usa el tenantId que devuelve)
+#  (o corre el sandbox de arriba: devuelve tenantId y apiKey)
+#  Auth: header X-API-Key con {{apiKey}}, o X-Tenant-Id en Development.
 # ============================================================================
 
 @tenantId = 00000000-0000-0000-0000-000000000000
@@ -150,6 +171,7 @@ GET {{Service_HostAddress}}/api/v1/dev/sandbox/certificate?rnc=130862346
 ### 0. Perfil fiscal del emisor (recurso de operador; una sola vez por contribuyente)
 PUT {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/emitter-profile
 Content-Type: application/json
+X-Admin-Key: {{adminKey}}
 
 {
   "address": "Av. 27 de Febrero 100, Santo Domingo",

@@ -7,16 +7,20 @@ using NovaFE.Application.Ecf.Representation;
 using NovaFE.Application.Ecf.RetrySubmission;
 using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
+using NovaFE.Service.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace NovaFE.Service.Controllers;
 
 /// <summary>
 /// Emisión y consulta de comprobantes fiscales electrónicos. Recurso <b>por
-/// tenant</b>: la petición debe traer el header <c>X-Tenant-Id</c>.
+/// contribuyente</b>: la petición se autentica con una API key (header
+/// <c>X-API-Key</c>).
 /// </summary>
 [ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
+[Authorize(Policy = SecurityPolicies.TenantClient)]
 public sealed class EcfController(
     IssueEcfUseCase issue,
     GetEcfUseCase get,

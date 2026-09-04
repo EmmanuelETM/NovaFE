@@ -152,7 +152,9 @@ La mayoría de las tablas son de un tenant. Ver `docs/multi-tenancy.md`. En cort
 - Entidad con datos de cliente → implementa `ITenantOwned` (`Guid TenantId { get; private set; }`).
   `Tenant` **no** lo es: es la raíz.
 - `ICurrentTenant` (Application) da el tenant de la petición; lo llena
-  `TenantResolutionMiddleware` (hoy del header `X-Tenant-Id`).
+  `TenantResolutionMiddleware` desde el claim `tenant_id` del principal (de la
+  API key en producción; del header `X-Tenant-Id` solo en Development). Ver
+  **Autenticación** más abajo y `docs/api-auth.md`.
 - Aislamiento en 3 capas: filtro global de EF (`"Tenant"`, siempre), interceptor
   de escritura (`TenantStampingInterceptor`), y RLS en Postgres (producción; un
   superusuario la ignora, por eso el filtro de EF es la garantía en local/tests).
@@ -278,6 +280,21 @@ comparte el formato. El envío por correo (RF-09.7) es un slice posterior. La RI
 siempre se arma del `<ECF>` completo, aun para un tipo 32 que fue como RFCE.
 `?download=true` adjunta; si no, `inline`. `EcfDto.links.representation`. El
 Dockerfile instala `libfontconfig1`. No cambiar sin leer `docs/representation.md`.
+
+**Autenticación de la API (Módulo 14)** (`src/Service/Security/`,
+`src/Application/Tenants/*ApiKey*`): dos audiencias. Los **clientes**
+(contribuyentes) usan **API key** — header `X-API-Key`, token `nfe_…` cuyo SHA-256
+se guarda en `api_keys` (entidad `ApiKey`, operator-managed, sin RLS); el
+`ApiKeyAuthenticationHandler` publica el claim `tenant_id` y de ahí sale
+`ICurrentTenant`. Los **operadores** usan una clave estática — header
+`X-Admin-Key` contra `Security:AdminApiKey`. Controllers por contribuyente
+(`Ecf`, `Sequences`, `Certificates`, `Dgii`) llevan
+`[Authorize(Policy = SecurityPolicies.TenantClient)]`; `TenantsController` lleva
+`[Authorize(Policy = SecurityPolicies.Operator)]`. **Solo en Development** el
+esquema `DevTenantHeader` acepta `X-Tenant-Id` sin credencial (sandbox, tests).
+`TenantResolutionMiddleware` corre **después** de `UseAuthorization`. RBAC de
+roles y auditoría inmutable son slices posteriores. No cambiar sin leer
+`docs/api-auth.md`.
 
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.

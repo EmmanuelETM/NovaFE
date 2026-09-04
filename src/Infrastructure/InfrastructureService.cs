@@ -26,6 +26,7 @@ using NovaFE.Infrastructure.Security;
 using NovaFE.Infrastructure.Sequences.EfCore;
 using NovaFE.Infrastructure.Sequences.Sql;
 using NovaFE.Infrastructure.Signing;
+using NovaFE.Infrastructure.Tenants;
 using NovaFE.Infrastructure.Tenants.EfCore;
 using NovaFE.Infrastructure.Tenants.Sql;
 using Microsoft.Extensions.Configuration;
@@ -129,6 +130,9 @@ public static class InfrastructureService
         services.AddScoped<ITenantReadRepository, TenantReadRepository>();
         services.AddScoped<IEmitterProfileRepository, EmitterProfileRepository>();
         services.AddScoped<IEmitterProfileReadRepository, EmitterProfileReadRepository>();
+        services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
+        services.AddScoped<IApiKeyReadRepository, ApiKeyReadRepository>();
+        services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
         services.AddScoped<ICertificateRepository, CertificateRepository>();
         services.AddScoped<ICertificateReadRepository, CertificateReadRepository>();
         services.AddScoped<INcfSequenceRepository, NcfSequenceRepository>();

@@ -33,10 +33,13 @@ rangos de secuencia (tipos 31/32/33/34) y le sube un certificado autofirmado.
 Devuelve:
 
 ```json
-{ "tenantId": "0194...", "rnc": "512345678", "environment": "TestEcf", ... }
+{ "tenantId": "0194...", "rnc": "512345678", "environment": "TestEcf", "apiKey": "nfe_…", ... }
 ```
 
-Guarda el `tenantId`. (Opcional: `{"rnc":"...","environment":"CertEcf","sequenceTypes":[31]}`.)
+Guarda el `tenantId` y el `apiKey`. Para emitir usa el header `X-API-Key: <apiKey>`
+(o, en local, `X-Tenant-Id: <tenantId>` — ver `docs/api-auth.md`). Los ejemplos de
+abajo usan `X-Tenant-Id` por brevedad. (Opcional:
+`{"rnc":"...","environment":"CertEcf","sequenceTypes":[31]}`.)
 
 ## 3. Emitir un e-CF
 

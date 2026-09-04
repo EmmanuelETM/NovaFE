@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using NovaFE.Application.Certificates.UploadCertificate;
 using NovaFE.Application.Sequences.RegisterSequenceRange;
+using NovaFE.Application.Tenants.CreateApiKey;
 using NovaFE.Application.Tenants.RegisterTenant;
 using NovaFE.Application.Tenants.SetEmitterProfile;
 using NovaFE.Service.Common;
@@ -27,7 +28,8 @@ public sealed class SandboxController(
     RegisterTenantUseCase registerTenant,
     SetEmitterProfileUseCase setEmitterProfile,
     RegisterSequenceRangeUseCase registerSequence,
-    UploadCertificateUseCase uploadCertificate) : ApiController
+    UploadCertificateUseCase uploadCertificate,
+    CreateApiKeyUseCase createApiKey) : ApiController
 {
     private static readonly int[] DefaultSequenceTypes = [31, 32, 33, 34];
 
@@ -79,13 +81,19 @@ public sealed class SandboxController(
         if (certificate.IsError)
             return Problem(certificate.Errors);
 
+        var apiKey = await createApiKey.Execute(
+            new CreateApiKeyCommand(tenant.Value, "Sandbox", ExpiresAt: null), ct);
+        if (apiKey.IsError)
+            return Problem(apiKey.Errors);
+
         return Ok(new
         {
             tenantId = tenant.Value,
             rnc,
             environment,
             sequenceTypes = types,
-            note = "Usa tenantId como header X-Tenant-Id en POST /api/v1/ecf.",
+            apiKey = apiKey.Value.Token,
+            note = "Usa apiKey como header X-API-Key (o tenantId como X-Tenant-Id) en POST /api/v1/ecf.",
         });
     }
 

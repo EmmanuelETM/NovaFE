@@ -24,6 +24,9 @@ public class AppDbContext(
 
     public DbSet<EmitterProfile> EmitterProfiles => Set<EmitterProfile>();
 
+    /// <summary>Credenciales de acceso a la API, por contribuyente (tabla <c>api_keys</c>).</summary>
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+
     public DbSet<Certificate> Certificates => Set<Certificate>();
 
     public DbSet<NcfSequence> NcfSequences => Set<NcfSequence>();
