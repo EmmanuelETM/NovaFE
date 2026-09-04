@@ -15,6 +15,16 @@ public interface INcfSequenceRepository
         char series,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// ¿El contribuyente <paramref name="tenantId"/> tiene algún rango activo (de
+    /// cualquier tipo) en ese ambiente? Consulta fuera del scope de tenant (la usa
+    /// el operador al acuñar API keys): ignora los filtros globales.
+    /// </summary>
+    Task<bool> HasAnyActiveRangeForTenantAsync(
+        Guid tenantId,
+        DgiiEnvironment environment,
+        CancellationToken ct = default);
+
     Task AddAsync(NcfSequence sequence, CancellationToken ct = default);
 
     Task UpdateAsync(NcfSequence sequence, CancellationToken ct = default);

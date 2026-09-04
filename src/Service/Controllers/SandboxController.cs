@@ -82,7 +82,7 @@ public sealed class SandboxController(
             return Problem(certificate.Errors);
 
         var apiKey = await createApiKey.Execute(
-            new CreateApiKeyCommand(tenant.Value, "Sandbox", ExpiresAt: null), ct);
+            new CreateApiKeyCommand(tenant.Value, "Sandbox", environment, ExpiresAt: null), ct);
         if (apiKey.IsError)
             return Problem(apiKey.Errors);
 

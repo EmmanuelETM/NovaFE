@@ -19,6 +19,13 @@ internal sealed class CertificateRepository(AppDbContext context) : ICertificate
         => context.Certificates.AnyAsync(
             c => c.Environment == environment && c.Status == CertificateStatus.Active, ct);
 
+    public Task<bool> HasActiveForTenantAsync(Guid tenantId, DgiiEnvironment environment, CancellationToken ct = default)
+        => context.Certificates.IgnoreQueryFilters().AnyAsync(
+            c => c.TenantId == tenantId
+                 && !c.IsDeleted
+                 && c.Environment == environment
+                 && c.Status == CertificateStatus.Active, ct);
+
     public async Task AddAsync(Certificate certificate, CancellationToken ct = default)
     {
         await context.Certificates.AddAsync(certificate, ct);

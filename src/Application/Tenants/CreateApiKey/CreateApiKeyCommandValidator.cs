@@ -1,4 +1,5 @@
 using FluentValidation;
+using NovaFE.Domain.Common;
 using NovaFE.Domain.Tenants;
 
 namespace NovaFE.Application.Tenants.CreateApiKey;
@@ -20,8 +21,17 @@ public sealed class CreateApiKeyCommandValidator : AbstractValidator<CreateApiKe
             .MaximumLength(ApiKey.MaxLabelLength)
             .WithMessage($"La etiqueta admite hasta {ApiKey.MaxLabelLength} caracteres.");
 
+        RuleFor(x => x.Environment)
+            .Must(BeAKnownEnvironment)
+            .When(x => !string.IsNullOrWhiteSpace(x.Environment))
+            .WithMessage($"Ambiente desconocido. Valores válidos: {string.Join(", ", DgiiEnvironment.GetAll().Select(e => e.Name))}.");
+
         RuleFor(x => x.ExpiresAt)
             .Must(expiresAt => expiresAt is null || expiresAt > timeProvider.GetUtcNow())
             .WithMessage("La fecha de vencimiento debe ser futura.");
     }
+
+    private static bool BeAKnownEnvironment(string? environment) =>
+        DgiiEnvironment.GetAll()
+            .Any(e => string.Equals(e.Name, environment?.Trim(), StringComparison.OrdinalIgnoreCase));
 }

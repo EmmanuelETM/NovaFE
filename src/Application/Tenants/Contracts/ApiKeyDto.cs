@@ -6,6 +6,7 @@ public sealed record ApiKeyDto(
     Guid TenantId,
     string Prefix,
     string Label,
+    string Environment,
     DateTimeOffset? ExpiresAt,
     DateTimeOffset? RevokedAt,
     DateTimeOffset? LastUsedAt,

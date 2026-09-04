@@ -29,12 +29,6 @@ public sealed record IssueEcfCommand
     /// <summary><c>&lt;MontoNoFacturable&gt;</c> — reembolsos, propina voluntaria. Puede ser negativo.</summary>
     public decimal NonInvoiceableAmount { get; init; }
 
-    /// <summary>
-    /// Ambiente de la DGII para esta emisión. Si se omite, el del perfil del emisor
-    /// (<c>EmitterProfile.DefaultEnvironment</c>).
-    /// </summary>
-    public string? Environment { get; init; }
-
     /// <summary><c>&lt;NumeroFacturaInterna&gt;</c> — clave de dedup de negocio.</summary>
     public string? InternalNumber { get; init; }
 

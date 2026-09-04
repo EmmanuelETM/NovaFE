@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
 
@@ -21,7 +22,13 @@ internal sealed class TenantResolutionMiddleware(RequestDelegate next)
     {
         var raw = context.User.FindFirstValue(SecuritySchemes.TenantClaim);
         if (Guid.TryParse(raw, out var tenantId))
-            currentTenant.Set(tenantId);
+        {
+            var environment = context.User.FindFirstValue(SecuritySchemes.EnvironmentClaim) is { Length: > 0 } name
+                ? DgiiEnvironment.FromName(name)
+                : null;
+
+            currentTenant.Set(tenantId, environment);
+        }
 
         await next(context);
     }
