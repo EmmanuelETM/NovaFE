@@ -16,7 +16,7 @@ public class IssuedEcfTransitionsTests
         EcfTestData.CreditoFiscal(),
         new SignedEcf(EcfTestData.SignedAt, "<ECF/>", null, "aB3xZ9KkLlMm", "aB3xZ9", new string('a', 64),
             "https://ecf.dgii.gov.do/testecf/consultatimbre?x=1"),
-        DgiiEnvironment.TestEcf);
+        DgiiEnvironment.Test);
 
     private static IssuedEcf Submitted()
     {

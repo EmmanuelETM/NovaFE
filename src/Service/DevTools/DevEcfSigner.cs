@@ -61,7 +61,7 @@ public sealed class DevEcfSigner(
             DocumentHash: Convert.ToHexStringLower(
                 SHA256.HashData(Encoding.UTF8.GetBytes(ecfSigned.Xml))),
             QrUrl: EcfVerificationUrl.For(
-                document, DgiiEnvironment.TestEcf, ecfSigned.SecurityCode, EcfSampleCatalog.SignedAt));
+                document, DgiiEnvironment.Test, ecfSigned.SecurityCode, EcfSampleCatalog.SignedAt));
     }
 
     private static X509Certificate2 CreateEphemeralCertificate()

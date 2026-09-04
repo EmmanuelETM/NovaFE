@@ -27,7 +27,7 @@ public class SetEmitterProfileUseCaseTests : UseCaseTestBase
 
     private static SetEmitterProfileCommand Command() => new(
         TenantId, "Av. 27 de Febrero 100", "010100", "01",
-        ["809-555-0100"], "facturacion@acme.do", "Comercio", "TestEcf");
+        ["809-555-0100"], "facturacion@acme.do", "Comercio", "Test");
 
     [Fact]
     public async Task Creates_the_profile_when_the_tenant_has_none()
@@ -38,7 +38,7 @@ public class SetEmitterProfileUseCaseTests : UseCaseTestBase
 
         result.IsError.ShouldBeFalse();
         result.Value.Address.ShouldBe("Av. 27 de Febrero 100");
-        result.Value.DefaultEnvironment.ShouldBe("TestEcf");
+        result.Value.DefaultEnvironment.ShouldBe("Test");
         await _profiles.Received(1).AddAsync(
             Arg.Is<EmitterProfile>(p => p.TenantId == TenantId && p.Address == "Av. 27 de Febrero 100"),
             Arg.Any<CancellationToken>());
@@ -49,7 +49,7 @@ public class SetEmitterProfileUseCaseTests : UseCaseTestBase
     public async Task Updates_the_existing_profile()
     {
         var existing = EmitterProfile.Create(
-            TenantId, "Old", null, null, null, null, null, DgiiEnvironment.TestEcf).Value;
+            TenantId, "Old", null, null, null, null, null, DgiiEnvironment.Test).Value;
         _profiles.GetByTenantAsync(TenantId, Arg.Any<CancellationToken>()).Returns(existing);
 
         var result = await Sut().Execute(Command() with { Address = "New", DefaultEnvironment = "Production" });
@@ -74,7 +74,7 @@ public class SetEmitterProfileUseCaseTests : UseCaseTestBase
     }
 
     [Theory]
-    [InlineData("", "TestEcf")]         // blank address
+    [InlineData("", "Test")]         // blank address
     [InlineData("Calle 1", "eCF")]      // unknown environment name
     public async Task Rejects_invalid_input(string address, string environment)
     {

@@ -44,7 +44,7 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
 
         _profiles.GetByTenantAsync(TenantId, Arg.Any<CancellationToken>())
             .Returns(EmitterProfile.Create(TenantId, "Av. 27 de Febrero 100", "010100", "01",
-                ["809-555-0100"], "f@almax.do", "Comercio", DgiiEnvironment.TestEcf).Value);
+                ["809-555-0100"], "f@almax.do", "Comercio", DgiiEnvironment.Test).Value);
 
         _idempotency.BeginAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new IdempotencyOutcome(IdempotencyDecision.Proceed));
@@ -112,7 +112,7 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
         await _queue.Received(1).EnqueueSubmitAsync(
             Arg.Is<Guid>(id => id == result.Value.Ecf.Id),
             TenantId,
-            Arg.Is<DgiiEnvironment>(e => e == DgiiEnvironment.TestEcf),
+            Arg.Is<DgiiEnvironment>(e => e == DgiiEnvironment.Test),
             Arg.Any<CancellationToken>());
         await _uow.Received(1).ExecuteInTransactionAsync(
             Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>());
@@ -207,7 +207,7 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
     }
 
     private static EcfDto StubDto(Guid id) => new(
-        id, "signed", "E310000000001", 31, "TestEcf", null, new DateOnly(2026, 1, 10),
+        id, "signed", "E310000000001", 31, "Test", null, new DateOnly(2026, 1, 10),
         new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero),
         "aB3xZ9", "https://x", false, null, null);
 }

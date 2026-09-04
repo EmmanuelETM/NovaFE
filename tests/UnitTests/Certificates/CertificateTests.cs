@@ -24,11 +24,11 @@ public class CertificateTests
     [Fact]
     public void Issue_succeeds_when_everything_matches()
     {
-        var result = Certificate.Issue("101672919", DgiiEnvironment.TestEcf, Details(), "vault-ref", Now);
+        var result = Certificate.Issue("101672919", DgiiEnvironment.Test, Details(), "vault-ref", Now);
 
         result.IsError.ShouldBeFalse();
         result.Value.Status.ShouldBe(CertificateStatus.Active);
-        result.Value.Environment.ShouldBe(DgiiEnvironment.TestEcf);
+        result.Value.Environment.ShouldBe(DgiiEnvironment.Test);
         result.Value.VaultReference.ShouldBe("vault-ref");
         result.Value.IsUsable(Now).ShouldBeTrue();
     }
@@ -43,28 +43,28 @@ public class CertificateTests
 
     [Fact]
     public void Issue_rejects_a_certificate_without_a_private_key()
-        => Certificate.Issue("101672919", DgiiEnvironment.TestEcf, Details(hasKey: false), "ref", Now)
+        => Certificate.Issue("101672919", DgiiEnvironment.Test, Details(hasKey: false), "ref", Now)
             .FirstError.Code.ShouldBe("Certificate.NoPrivateKey");
 
     [Fact]
     public void Issue_rejects_an_expired_certificate()
-        => Certificate.Issue("101672919", DgiiEnvironment.TestEcf, Details(to: Now.AddDays(-1)), "ref", Now)
+        => Certificate.Issue("101672919", DgiiEnvironment.Test, Details(to: Now.AddDays(-1)), "ref", Now)
             .FirstError.Code.ShouldBe("Certificate.Expired");
 
     [Fact]
     public void Issue_rejects_a_not_yet_valid_certificate()
-        => Certificate.Issue("101672919", DgiiEnvironment.TestEcf, Details(from: Now.AddDays(1)), "ref", Now)
+        => Certificate.Issue("101672919", DgiiEnvironment.Test, Details(from: Now.AddDays(1)), "ref", Now)
             .FirstError.Code.ShouldBe("Certificate.NotYetValid");
 
     [Fact]
     public void Issue_rejects_a_holder_that_is_not_the_tenant_rnc()
-        => Certificate.Issue("101672919", DgiiEnvironment.TestEcf, Details(holder: "130000001"), "ref", Now)
+        => Certificate.Issue("101672919", DgiiEnvironment.Test, Details(holder: "130000001"), "ref", Now)
             .FirstError.Code.ShouldBe("Certificate.RncMismatch");
 
     [Fact]
     public void Revoke_moves_status_and_is_idempotent_only_once()
     {
-        var certificate = Certificate.Issue("101672919", DgiiEnvironment.TestEcf, Details(), "ref", Now).Value;
+        var certificate = Certificate.Issue("101672919", DgiiEnvironment.Test, Details(), "ref", Now).Value;
 
         certificate.Revoke(Now).IsError.ShouldBeFalse();
         certificate.Status.ShouldBe(CertificateStatus.Revoked);
@@ -78,7 +78,7 @@ public class CertificateTests
     public void IsUsable_is_false_outside_the_validity_window()
     {
         var certificate = Certificate.Issue(
-            "101672919", DgiiEnvironment.TestEcf, Details(from: Now.AddYears(-2), to: Now.AddDays(10)), "ref", Now).Value;
+            "101672919", DgiiEnvironment.Test, Details(from: Now.AddYears(-2), to: Now.AddDays(10)), "ref", Now).Value;
 
         certificate.IsUsable(Now.AddDays(20)).ShouldBeFalse();
     }

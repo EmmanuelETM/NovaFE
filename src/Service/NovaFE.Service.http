@@ -180,7 +180,7 @@ X-Admin-Key: {{adminKey}}
   "phones": ["809-555-0100"],
   "email": "facturacion@almax.do",
   "economicActivity": "Comercio al por menor",
-  "defaultEnvironment": "TestEcf"
+  "defaultEnvironment": "Test"
 }
 
 ### 1. Emitir un Credito Fiscal (tipo 31)

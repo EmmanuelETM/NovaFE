@@ -45,7 +45,7 @@ public sealed class SandboxController(
         var rnc = string.IsNullOrWhiteSpace(request.Rnc)
             ? Random.Shared.Next(100_000_000, 1_000_000_000).ToString(System.Globalization.CultureInfo.InvariantCulture)
             : request.Rnc.Trim();
-        var environment = string.IsNullOrWhiteSpace(request.Environment) ? "TestEcf" : request.Environment.Trim();
+        var environment = string.IsNullOrWhiteSpace(request.Environment) ? "Test" : request.Environment.Trim();
         var types = request.SequenceTypes is { Count: > 0 } ? request.SequenceTypes : DefaultSequenceTypes;
 
         var tenant = await registerTenant.Execute(

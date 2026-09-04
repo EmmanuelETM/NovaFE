@@ -27,18 +27,18 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
             phones = Phones,
             email = "facturacion@almax.do",
             economicActivity = "Comercio",
-            defaultEnvironment = "TestEcf",
+            defaultEnvironment = "Test",
         })).EnsureSuccessStatusCode();
 
         (await Client.PostAsync("/api/v1/certificates",
-            CertificateForm(TestPkcs12.Generate(holderIdentifier: Rnc), TestPkcs12.DefaultPassword, "TestEcf")))
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: Rnc), TestPkcs12.DefaultPassword, "Test")))
             .EnsureSuccessStatusCode();
 
         foreach (var typeCode in SequenceTypes)
         {
             (await Client.PostAsJsonAsync("/api/v1/sequences", new
             {
-                environment = "TestEcf",
+                environment = "Test",
                 type = typeCode,
                 series = "E",
                 rangeFrom = 1,

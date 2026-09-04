@@ -37,13 +37,13 @@ public class EcfSubmissionProcessorTests
             doc,
             new SignedEcf(Now, "<ECF/>", rfce ? "<RFCE/>" : null, "aB3xZ9KkLlMm", "aB3xZ9", new string('a', 64),
                 "https://ecf.dgii.gov.do/testecf/consultatimbre?x=1"),
-            DgiiEnvironment.TestEcf);
+            DgiiEnvironment.Test);
         _ecfRepo.GetByIdAsync(ecf.Id, Arg.Any<CancellationToken>()).Returns(ecf);
         return ecf;
     }
 
     private static EcfSubmissionWorkItem Item(IssuedEcf ecf, EcfSubmissionKind kind, int attempts = 0, string? trackId = null)
-        => new(Guid.NewGuid(), ecf.Id, ecf.TenantId, DgiiEnvironment.TestEcf, kind, attempts, trackId);
+        => new(Guid.NewGuid(), ecf.Id, ecf.TenantId, DgiiEnvironment.Test, kind, attempts, trackId);
 
     [Fact]
     public async Task Submit_success_records_the_track_id_and_schedules_a_poll()

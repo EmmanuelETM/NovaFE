@@ -7,7 +7,7 @@ namespace NovaFE.IntegrationTests.Sequences;
 public sealed class SequencesEndpointsTests(DatabaseFixture database) : IntegrationTestBase(database)
 {
     private static object Range(
-        string environment = "TestEcf",
+        string environment = "Test",
         int type = 31,
         string series = "E",
         long rangeFrom = 1,
@@ -59,7 +59,7 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
 
         var response = await Client.PostAsJsonAsync("/api/v1/sequences", new
         {
-            environment = "TestEcf", type = 31, series = "E", rangeFrom = 1L, rangeTo = 10L,
+            environment = "Test", type = 31, series = "E", rangeFrom = 1L, rangeTo = 10L,
             authorizedOn = new DateOnly(2099, 12, 31),
         });
 
@@ -72,7 +72,7 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
         await RegisterAndActAsTenantAsync("130000038");
 
         var response = await Client.PostAsJsonAsync("/api/v1/sequences",
-            Range(environment: "CertEcf", type: 31, series: "E", rangeFrom: 5, rangeTo: 100));
+            Range(environment: "Cert", type: 31, series: "E", rangeFrom: 5, rangeTo: 100));
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -109,9 +109,9 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
             .EnsureSuccessStatusCode();
 
         var first = await LeerAsync<AllocatedResponse>(
-            await Client.PostAsJsonAsync("/api/v1/sequences/allocate", new { environment = "TestEcf", type = 31 }));
+            await Client.PostAsJsonAsync("/api/v1/sequences/allocate", new { environment = "Test", type = 31 }));
         var second = await LeerAsync<AllocatedResponse>(
-            await Client.PostAsJsonAsync("/api/v1/sequences/allocate", new { environment = "TestEcf", type = 31 }));
+            await Client.PostAsJsonAsync("/api/v1/sequences/allocate", new { environment = "Test", type = 31 }));
 
         first!.Encf.ShouldBe("E310000000001");
         second!.Encf.ShouldBe("E310000000002");
@@ -123,7 +123,7 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
         await RegisterAndActAsTenantAsync("130000036");
 
         var response = await Client.PostAsJsonAsync(
-            "/api/v1/sequences/allocate", new { environment = "TestEcf", type = 41 });
+            "/api/v1/sequences/allocate", new { environment = "Test", type = 41 });
 
         response.StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
     }

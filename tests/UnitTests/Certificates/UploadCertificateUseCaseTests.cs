@@ -35,7 +35,7 @@ public class UploadCertificateUseCaseTests : UseCaseTestBase
     private UploadCertificateUseCase Sut() => new(
         LoggerFactory, new UploadCertificateCommandValidator(), Clock, _tenant, _tenants, _certificates, _vault);
 
-    private static UploadCertificateCommand Command(string? holderRnc = null, string environment = "TestEcf")
+    private static UploadCertificateCommand Command(string? holderRnc = null, string environment = "Test")
         => new(TestPkcs12.Generate(holderIdentifier: holderRnc ?? TenantRnc), TestPkcs12.DefaultPassword, environment);
 
     [Fact]

@@ -33,7 +33,7 @@ esperan y toman el resultado.
 
 ## Endpoint
 
-`GET /api/v1/dgii/connection?environment=TestEcf` (por tenant) — fuerza el flujo
+`GET /api/v1/dgii/connection?environment=Test` (por tenant) — fuerza el flujo
 y responde `{ connected, environment, issuedAt, expiresAt }`. **No devuelve el
 token.** Es lo que el operador usa para verificar el onboarding de un cliente.
 

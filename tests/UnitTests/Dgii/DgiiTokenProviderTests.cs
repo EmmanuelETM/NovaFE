@@ -16,7 +16,7 @@ namespace NovaFE.UnitTests.Dgii;
 public class DgiiTokenProviderTests : UseCaseTestBase
 {
     private static readonly Guid TenantId = Guid.NewGuid();
-    private static readonly DgiiEnvironment Env = DgiiEnvironment.TestEcf;
+    private static readonly DgiiEnvironment Env = DgiiEnvironment.Test;
 
     private readonly ICurrentTenant _tenant = Substitute.For<ICurrentTenant>();
     private readonly IDgiiTokenCache _cache = Substitute.For<IDgiiTokenCache>();

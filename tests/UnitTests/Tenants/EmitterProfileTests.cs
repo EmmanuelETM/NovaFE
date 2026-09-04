@@ -19,7 +19,7 @@ public class EmitterProfileTests
             phones: ["  809-555-0100 ", "", "  "],
             email: " facturacion@acme.do ",
             economicActivity: " Comercio ",
-            DgiiEnvironment.TestEcf);
+            DgiiEnvironment.Test);
 
         result.IsError.ShouldBeFalse();
         var profile = result.Value;
@@ -30,14 +30,14 @@ public class EmitterProfileTests
         profile.Phones.ShouldBe(["809-555-0100"]);   // blancos descartados
         profile.Email.ShouldBe("facturacion@acme.do");
         profile.EconomicActivity.ShouldBe("Comercio");
-        profile.DefaultEnvironment.ShouldBe(DgiiEnvironment.TestEcf);
+        profile.DefaultEnvironment.ShouldBe(DgiiEnvironment.Test);
     }
 
     [Fact]
     public void Create_rejects_a_blank_address()
     {
         var result = EmitterProfile.Create(
-            TenantId, "   ", null, null, null, null, null, DgiiEnvironment.TestEcf);
+            TenantId, "   ", null, null, null, null, null, DgiiEnvironment.Test);
 
         result.IsError.ShouldBeTrue();
         result.FirstError.Code.ShouldBe("EmitterProfile.AddressRequired");
@@ -50,7 +50,7 @@ public class EmitterProfileTests
         var result = EmitterProfile.Create(
             TenantId, "Calle 1", null, null,
             phones: ["1", "2", "3", "4"],
-            null, null, DgiiEnvironment.TestEcf);
+            null, null, DgiiEnvironment.Test);
 
         result.IsError.ShouldBeTrue();
         result.FirstError.Code.ShouldBe("EmitterProfile.TooManyPhones");
@@ -61,7 +61,7 @@ public class EmitterProfileTests
     {
         var profile = EmitterProfile.Create(
             TenantId, "Calle 1", "010100", "01", ["809-000-0000"], "a@a.do", "Old",
-            DgiiEnvironment.TestEcf).Value;
+            DgiiEnvironment.Test).Value;
 
         var updated = profile.Update(
             "Calle 2", null, null, [], null, null, DgiiEnvironment.Production);
@@ -79,9 +79,9 @@ public class EmitterProfileTests
     public void Update_rejects_a_blank_address_and_keeps_the_old_state()
     {
         var profile = EmitterProfile.Create(
-            TenantId, "Calle 1", null, null, null, null, null, DgiiEnvironment.TestEcf).Value;
+            TenantId, "Calle 1", null, null, null, null, null, DgiiEnvironment.Test).Value;
 
-        var updated = profile.Update("", null, null, null, null, null, DgiiEnvironment.TestEcf);
+        var updated = profile.Update("", null, null, null, null, null, DgiiEnvironment.Test);
 
         updated.IsError.ShouldBeTrue();
         profile.Address.ShouldBe("Calle 1");

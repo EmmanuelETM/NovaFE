@@ -22,12 +22,12 @@ public static class SequenceErrors
         code: "Sequence.InvalidRange",
         description: $"El rango [{rangeFrom.ToString(CultureInfo.InvariantCulture)}, {rangeTo.ToString(CultureInfo.InvariantCulture)}] no es válido: 'desde' debe ser mayor o igual a 1 y menor o igual a 'hasta'.");
 
-    public static Error CertEcfMustStartAtOne => Error.Validation(
-        code: "Sequence.CertEcfMustStartAtOne",
+    public static Error CertMustStartAtOne => Error.Validation(
+        code: "Sequence.CertMustStartAtOne",
         description: "En CerteCF las secuencias siempre empiezan en 1.");
 
-    public static Error CertEcfRangeTooLarge(long maximum) => Error.Validation(
-        code: "Sequence.CertEcfRangeTooLarge",
+    public static Error CertRangeTooLarge(long maximum) => Error.Validation(
+        code: "Sequence.CertRangeTooLarge",
         description: $"En CerteCF el rango por tipo no puede exceder {maximum.ToString("N0", CultureInfo.InvariantCulture)} secuencias.");
 
     public static Error UnknownType(int code) => Error.Validation(

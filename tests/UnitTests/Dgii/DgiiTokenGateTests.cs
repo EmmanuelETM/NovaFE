@@ -13,9 +13,9 @@ public class DgiiTokenGateTests
     {
         var gate = new DgiiTokenGate();
 
-        var first = await gate.EnterAsync(TenantA, DgiiEnvironment.TestEcf, CancellationToken.None);
+        var first = await gate.EnterAsync(TenantA, DgiiEnvironment.Test, CancellationToken.None);
 
-        var second = gate.EnterAsync(TenantA, DgiiEnvironment.TestEcf, CancellationToken.None);
+        var second = gate.EnterAsync(TenantA, DgiiEnvironment.Test, CancellationToken.None);
         second.IsCompleted.ShouldBeFalse();
 
         first.Dispose();
@@ -28,9 +28,9 @@ public class DgiiTokenGateTests
     {
         var gate = new DgiiTokenGate();
 
-        using var a = await gate.EnterAsync(TenantA, DgiiEnvironment.TestEcf, CancellationToken.None);
-        using var b = await gate.EnterAsync(TenantB, DgiiEnvironment.TestEcf, CancellationToken.None);
-        using var aCert = await gate.EnterAsync(TenantA, DgiiEnvironment.CertEcf, CancellationToken.None);
+        using var a = await gate.EnterAsync(TenantA, DgiiEnvironment.Test, CancellationToken.None);
+        using var b = await gate.EnterAsync(TenantB, DgiiEnvironment.Test, CancellationToken.None);
+        using var aCert = await gate.EnterAsync(TenantA, DgiiEnvironment.Cert, CancellationToken.None);
 
         // No debe colgarse.
     }
@@ -39,11 +39,11 @@ public class DgiiTokenGateTests
     public async Task Releaser_is_idempotent()
     {
         var gate = new DgiiTokenGate();
-        var entry = await gate.EnterAsync(TenantA, DgiiEnvironment.TestEcf, CancellationToken.None);
+        var entry = await gate.EnterAsync(TenantA, DgiiEnvironment.Test, CancellationToken.None);
 
         entry.Dispose();
         entry.Dispose(); // no debe lanzar ni sobre-liberar
 
-        using var reacquired = await gate.EnterAsync(TenantA, DgiiEnvironment.TestEcf, CancellationToken.None);
+        using var reacquired = await gate.EnterAsync(TenantA, DgiiEnvironment.Test, CancellationToken.None);
     }
 }

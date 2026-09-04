@@ -33,13 +33,13 @@ rangos de secuencia (tipos 31/32/33/34) y le sube un certificado autofirmado.
 Devuelve:
 
 ```json
-{ "tenantId": "0194...", "rnc": "512345678", "environment": "TestEcf", "apiKey": "nfe_…", ... }
+{ "tenantId": "0194...", "rnc": "512345678", "environment": "Test", "apiKey": "nfe_…", ... }
 ```
 
 Guarda el `tenantId` y el `apiKey`. Para emitir usa el header `X-API-Key: <apiKey>`
 (o, en local, `X-Tenant-Id: <tenantId>` — ver `docs/api-auth.md`). Los ejemplos de
 abajo usan `X-Tenant-Id` por brevedad. (Opcional:
-`{"rnc":"...","environment":"CertEcf","sequenceTypes":[31]}`.)
+`{"rnc":"...","environment":"Cert","sequenceTypes":[31]}`.)
 
 ## 3. Emitir un e-CF
 
@@ -103,7 +103,7 @@ docker compose --profile dgii-sim down -v   # borra también los volúmenes
 
 - `POST /api/v1/dev/sandbox` y `GET /api/v1/dev/sandbox/certificate?rnc=…` solo
   existen en `Development` (`[DevelopmentOnly]`).
-- El certificado autofirmado sirve para cualquier ambiente (`TestEcf` / `CertEcf`
+- El certificado autofirmado sirve para cualquier ambiente (`Test` / `Cert`
   / `Production`) porque el simulador no valida la firma. Contra la DGII real hace
   falta el certificado emitido por una CA autorizada y registrado en el portal.
 - Para apuntar a la DGII real otra vez: borra el `.env` y `docker compose up`.
