@@ -15,7 +15,7 @@ public class NcfSequenceTests
         long from = 1,
         long to = 100)
         => NcfSequence.Authorize(
-            environment ?? DgiiEnvironment.TestEcf,
+            environment ?? DgiiEnvironment.Test,
             type ?? EcfType.CreditoFiscal,
             series, from, to, AuthorizedOn).Value;
 
@@ -44,25 +44,25 @@ public class NcfSequenceTests
     [InlineData('P')]
     [InlineData('A')]
     public void Authorize_rejects_an_invalid_series(char series)
-        => NcfSequence.Authorize(DgiiEnvironment.TestEcf, EcfType.Consumo, series, 1, 10, AuthorizedOn)
+        => NcfSequence.Authorize(DgiiEnvironment.Test, EcfType.Consumo, series, 1, 10, AuthorizedOn)
             .FirstError.Code.ShouldBe("Sequence.InvalidSeries");
 
     [Theory]
     [InlineData(0, 10)]
     [InlineData(50, 40)]
     public void Authorize_rejects_an_invalid_range(long from, long to)
-        => NcfSequence.Authorize(DgiiEnvironment.TestEcf, EcfType.Consumo, 'E', from, to, AuthorizedOn)
+        => NcfSequence.Authorize(DgiiEnvironment.Test, EcfType.Consumo, 'E', from, to, AuthorizedOn)
             .FirstError.Code.ShouldBe("Sequence.InvalidRange");
 
     [Fact]
     public void Authorize_forces_cert_ecf_to_start_at_one()
-        => NcfSequence.Authorize(DgiiEnvironment.CertEcf, EcfType.CreditoFiscal, 'E', 5, 100, AuthorizedOn)
-            .FirstError.Code.ShouldBe("Sequence.CertEcfMustStartAtOne");
+        => NcfSequence.Authorize(DgiiEnvironment.Cert, EcfType.CreditoFiscal, 'E', 5, 100, AuthorizedOn)
+            .FirstError.Code.ShouldBe("Sequence.CertMustStartAtOne");
 
     [Fact]
     public void Authorize_caps_the_cert_ecf_range_at_ten_million()
-        => NcfSequence.Authorize(DgiiEnvironment.CertEcf, EcfType.CreditoFiscal, 'E', 1, 10_000_001, AuthorizedOn)
-            .FirstError.Code.ShouldBe("Sequence.CertEcfRangeTooLarge");
+        => NcfSequence.Authorize(DgiiEnvironment.Cert, EcfType.CreditoFiscal, 'E', 1, 10_000_001, AuthorizedOn)
+            .FirstError.Code.ShouldBe("Sequence.CertRangeTooLarge");
 
     [Fact]
     public void Allocate_hands_out_consecutive_numbers_and_advances_the_pointer()

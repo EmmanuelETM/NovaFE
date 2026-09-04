@@ -31,12 +31,12 @@ public sealed class DgiiConnectionTests(DatabaseFixture database) : IntegrationT
 
         await OnboardTenantWithCertificateAsync("130862346");
 
-        var response = await Client.GetAsync("/api/v1/dgii/connection?environment=TestEcf");
+        var response = await Client.GetAsync("/api/v1/dgii/connection?environment=Test");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var status = await LeerAsync<ConnectionStatus>(response);
         status!.Connected.ShouldBeTrue();
-        status.Environment.ShouldBe("TestEcf");
+        status.Environment.ShouldBe("Test");
         status.ExpiresAt.ShouldBeGreaterThan(DateTimeOffset.UtcNow);
     }
 
@@ -57,7 +57,7 @@ public sealed class DgiiConnectionTests(DatabaseFixture database) : IntegrationT
         Reconfigure(new Dictionary<string, string?> { ["Dgii:EcfBaseUrl"] = dgii.BaseUrl });
         await OnboardTenantWithCertificateAsync("130111222");
 
-        (await Client.GetAsync("/api/v1/dgii/connection?environment=TestEcf")).EnsureSuccessStatusCode();
+        (await Client.GetAsync("/api/v1/dgii/connection?environment=Test")).EnsureSuccessStatusCode();
 
         var requests = dgii.Server.LogEntries
             .Select(e => e.RequestMessage!)
@@ -81,7 +81,7 @@ public sealed class DgiiConnectionTests(DatabaseFixture database) : IntegrationT
         Reconfigure(new Dictionary<string, string?> { ["Dgii:EcfBaseUrl"] = dgii.BaseUrl });
         await OnboardTenantWithCertificateAsync("130333444");
 
-        var response = await Client.GetAsync("/api/v1/dgii/connection?environment=TestEcf");
+        var response = await Client.GetAsync("/api/v1/dgii/connection?environment=Test");
 
         response.IsSuccessStatusCode.ShouldBeFalse();
     }
@@ -95,7 +95,7 @@ public sealed class DgiiConnectionTests(DatabaseFixture database) : IntegrationT
         Reconfigure(new Dictionary<string, string?> { ["Dgii:EcfBaseUrl"] = dgii.BaseUrl });
         await RegisterAndActAsTenantAsync("130555666"); // sin certificado
 
-        var response = await Client.GetAsync("/api/v1/dgii/connection?environment=TestEcf");
+        var response = await Client.GetAsync("/api/v1/dgii/connection?environment=Test");
 
         response.IsSuccessStatusCode.ShouldBeFalse();
     }
@@ -112,7 +112,7 @@ public sealed class DgiiConnectionTests(DatabaseFixture database) : IntegrationT
     {
         await RegisterAndActAsTenantAsync(rnc);
         (await Client.PostAsync("/api/v1/certificates",
-            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf")))
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "Test")))
             .EnsureSuccessStatusCode();
     }
 

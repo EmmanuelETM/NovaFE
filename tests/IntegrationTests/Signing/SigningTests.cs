@@ -18,7 +18,7 @@ public sealed class SigningTests(DatabaseFixture database) : IntegrationTestBase
         var tenantId = await RegisterAndActAsTenantAsync(rnc);
 
         (await Client.PostAsync("/api/v1/certificates",
-            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "TestEcf")))
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: rnc), TestPkcs12.DefaultPassword, "Test")))
             .EnsureSuccessStatusCode();
 
         using var scope = Factory.Services.CreateScope();
@@ -26,7 +26,7 @@ public sealed class SigningTests(DatabaseFixture database) : IntegrationTestBase
         var signer = scope.ServiceProvider.GetRequiredService<ICertificateSigner>();
         var xmlSigner = scope.ServiceProvider.GetRequiredService<IXmlSigner>();
 
-        var result = await signer.SignAsync(SampleEcf, DgiiEnvironment.TestEcf);
+        var result = await signer.SignAsync(SampleEcf, DgiiEnvironment.Test);
 
         result.IsError.ShouldBeFalse();
         result.Value.SecurityCode.Length.ShouldBe(6);

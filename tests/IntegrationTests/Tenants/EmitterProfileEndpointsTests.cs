@@ -18,7 +18,7 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
         return (await LeerAsync<IdResponse>(register))!.Id;
     }
 
-    private static object ProfileBody(string address = "Av. 27 de Febrero 100", string environment = "TestEcf") => new
+    private static object ProfileBody(string address = "Av. 27 de Febrero 100", string environment = "Test") => new
     {
         address,
         municipality = "010100",
@@ -44,7 +44,7 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
         profile!.TenantId.ShouldBe(tenantId);
         profile.Address.ShouldBe("Av. 27 de Febrero 100");
         profile.Phones.ShouldBe(["809-555-0100", "809-555-0101"]);
-        profile.DefaultEnvironment.ShouldBe("TestEcf");
+        profile.DefaultEnvironment.ShouldBe("Test");
     }
 
     [RequiresDockerFact]

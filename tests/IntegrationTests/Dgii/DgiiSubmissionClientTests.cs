@@ -39,7 +39,7 @@ public sealed class DgiiSubmissionClientTests(DatabaseFixture database) : Integr
         using (scope)
         {
             var result = await client.SubmitEcfAsync(
-                DgiiEnvironment.TestEcf, "bearer-xyz", "<ECF><x/></ECF>", "E310000000001");
+                DgiiEnvironment.Test, "bearer-xyz", "<ECF><x/></ECF>", "E310000000001");
 
             result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
             result.Value.TrackId.ShouldBe("TRACK-ABC-123");
@@ -70,7 +70,7 @@ public sealed class DgiiSubmissionClientTests(DatabaseFixture database) : Integr
         using (scope)
         {
             var result = await client.SubmitEcfAsync(
-                DgiiEnvironment.TestEcf, "t", "<ECF/>", "E310000000001");
+                DgiiEnvironment.Test, "t", "<ECF/>", "E310000000001");
 
             result.IsError.ShouldBeTrue();
             result.FirstError.Code.ShouldBe("Dgii.Submission.NoTrackId");
@@ -91,7 +91,7 @@ public sealed class DgiiSubmissionClientTests(DatabaseFixture database) : Integr
         using (scope)
         {
             var result = await client.SubmitEcfAsync(
-                DgiiEnvironment.TestEcf, "t", "<ECF/>", "E310000000001");
+                DgiiEnvironment.Test, "t", "<ECF/>", "E310000000001");
 
             result.IsError.ShouldBeTrue();
         }
@@ -118,7 +118,7 @@ public sealed class DgiiSubmissionClientTests(DatabaseFixture database) : Integr
         using (scope)
         {
             var result = await client.SubmitRfceAsync(
-                DgiiEnvironment.TestEcf, "t", "<RFCE/>", "E320000000001");
+                DgiiEnvironment.Test, "t", "<RFCE/>", "E320000000001");
 
             result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
             result.Value.Codigo.ShouldBe(1);
@@ -151,7 +151,7 @@ public sealed class DgiiSubmissionClientTests(DatabaseFixture database) : Integr
         var client = Resolve(out var scope);
         using (scope)
         {
-            var result = await client.GetResultAsync(DgiiEnvironment.TestEcf, "t", "TRACK-1");
+            var result = await client.GetResultAsync(DgiiEnvironment.Test, "t", "TRACK-1");
 
             result.IsError.ShouldBeFalse(result.IsError ? result.FirstError.Description : "");
             result.Value.Codigo.ShouldBe(2);

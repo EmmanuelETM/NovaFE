@@ -11,7 +11,7 @@ public class EcfVerificationUrlTests
     public void A_normal_ecf_points_to_consultatimbre_with_seven_parameters()
     {
         var url = EcfVerificationUrl.For(
-            EcfTestData.CreditoFiscal(), DgiiEnvironment.TestEcf, "aB3xZ9", SignedAt);
+            EcfTestData.CreditoFiscal(), DgiiEnvironment.Test, "aB3xZ9", SignedAt);
 
         url.ShouldBe(
             "https://ecf.dgii.gov.do/testecf/consultatimbre" +
@@ -30,7 +30,7 @@ public class EcfVerificationUrlTests
         var document = EcfTestData.Consumo();
         document.QualifiesForRfce.ShouldBeTrue();
 
-        var url = EcfVerificationUrl.For(document, DgiiEnvironment.TestEcf, "aB3xZ9", SignedAt);
+        var url = EcfVerificationUrl.For(document, DgiiEnvironment.Test, "aB3xZ9", SignedAt);
 
         url.ShouldBe(
             "https://fc.dgii.gov.do/testecf/consultatimbrefc" +
@@ -50,7 +50,7 @@ public class EcfVerificationUrlTests
 
         EcfVerificationUrl.For(document, DgiiEnvironment.Production, "aB3xZ9", SignedAt)
             .ShouldStartWith("https://ecf.dgii.gov.do/ecf/consultatimbre?");
-        EcfVerificationUrl.For(document, DgiiEnvironment.CertEcf, "aB3xZ9", SignedAt)
+        EcfVerificationUrl.For(document, DgiiEnvironment.Cert, "aB3xZ9", SignedAt)
             .ShouldStartWith("https://ecf.dgii.gov.do/certecf/consultatimbre?");
     }
 
@@ -58,7 +58,7 @@ public class EcfVerificationUrlTests
     public void The_security_code_keeps_its_case_and_base64_symbols_are_encoded()
     {
         var url = EcfVerificationUrl.For(
-            EcfTestData.CreditoFiscal(), DgiiEnvironment.TestEcf, "aB/x+Z", SignedAt);
+            EcfTestData.CreditoFiscal(), DgiiEnvironment.Test, "aB/x+Z", SignedAt);
 
         url.ShouldEndWith("&codigoseguridad=aB%2Fx%2BZ");
     }
@@ -68,7 +68,7 @@ public class EcfVerificationUrlTests
     {
         // Tipo 47: el comprador es un no residente (IdentificadorExtranjero).
         var url = EcfVerificationUrl.For(
-            EcfTestData.PagosExterior(), DgiiEnvironment.TestEcf, "aB3xZ9", SignedAt);
+            EcfTestData.PagosExterior(), DgiiEnvironment.Test, "aB3xZ9", SignedAt);
 
         url.ShouldContain("&rnccomprador=GB-882910&");
     }
@@ -77,6 +77,6 @@ public class EcfVerificationUrlTests
     public void An_empty_security_code_is_rejected()
     {
         Should.Throw<ArgumentException>(() => EcfVerificationUrl.For(
-            EcfTestData.CreditoFiscal(), DgiiEnvironment.TestEcf, "", SignedAt));
+            EcfTestData.CreditoFiscal(), DgiiEnvironment.Test, "", SignedAt));
     }
 }

@@ -92,7 +92,7 @@ public class EcfXmlGallery(ITestOutputHelper output)
         // pasado por EcfSigner. La validación XSD ya corre dentro del signer.
         foreach (var (name, description, doc) in SignedShowcase())
         {
-            var signed = Signer.SignAsync(doc, DgiiEnvironment.TestEcf).GetAwaiter().GetResult();
+            var signed = Signer.SignAsync(doc, DgiiEnvironment.Test).GetAwaiter().GetResult();
 
             ErrorOr<Success> validation = Result.Success;
             if (signed.IsError)

@@ -33,16 +33,16 @@ public sealed class EcfSubmissionOutboxTests(DatabaseFixture database) : Integra
             phones = Phones,
             email = "facturacion@almax.do",
             economicActivity = "Comercio",
-            defaultEnvironment = "TestEcf",
+            defaultEnvironment = "Test",
         })).EnsureSuccessStatusCode();
 
         (await Client.PostAsync("/api/v1/certificates",
-            CertificateForm(TestPkcs12.Generate(holderIdentifier: Rnc), TestPkcs12.DefaultPassword, "TestEcf")))
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: Rnc), TestPkcs12.DefaultPassword, "Test")))
             .EnsureSuccessStatusCode();
 
         (await Client.PostAsJsonAsync("/api/v1/sequences", new
         {
-            environment = "TestEcf", type = 31, series = "E", rangeFrom = 1, rangeTo = 100,
+            environment = "Test", type = 31, series = "E", rangeFrom = 1, rangeTo = 100,
         })).EnsureSuccessStatusCode();
 
         var post = await Client.PostAsJsonAsync("/api/v1/ecf", new

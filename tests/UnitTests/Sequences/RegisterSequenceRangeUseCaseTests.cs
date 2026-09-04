@@ -24,7 +24,7 @@ public class RegisterSequenceRangeUseCaseTests : UseCaseTestBase
         new(LoggerFactory, new RegisterSequenceRangeCommandValidator(Clock), Clock, _currentTenant, _sequences);
 
     private static RegisterSequenceRangeCommand Command(
-        string environment = "TestEcf",
+        string environment = "Test",
         int type = 31,
         string series = "E",
         long from = 1,
@@ -91,12 +91,12 @@ public class RegisterSequenceRangeUseCaseTests : UseCaseTestBase
 
     [Theory]
     [InlineData("Nope", 31, "E", 1, 100)]   // unknown environment
-    [InlineData("TestEcf", 99, "E", 1, 100)] // unknown type
-    [InlineData("TestEcf", 31, "P", 1, 100)] // excluded series
-    [InlineData("TestEcf", 31, "E", 0, 100)] // from < 1
-    [InlineData("TestEcf", 31, "E", 100, 1)] // to < from
-    [InlineData("CertEcf", 31, "E", 5, 100)] // CerteCF must start at 1
-    [InlineData("CertEcf", 31, "E", 1, 20_000_000)] // CerteCF over the 10M cap
+    [InlineData("Test", 99, "E", 1, 100)] // unknown type
+    [InlineData("Test", 31, "P", 1, 100)] // excluded series
+    [InlineData("Test", 31, "E", 0, 100)] // from < 1
+    [InlineData("Test", 31, "E", 100, 1)] // to < from
+    [InlineData("Cert", 31, "E", 5, 100)] // CerteCF must start at 1
+    [InlineData("Cert", 31, "E", 1, 20_000_000)] // CerteCF over the 10M cap
     public async Task Rejects_invalid_input_with_validation_errors(
         string environment, int type, string series, long from, long to)
     {

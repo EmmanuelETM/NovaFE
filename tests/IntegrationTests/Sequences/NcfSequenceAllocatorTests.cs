@@ -16,7 +16,7 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
         var tenantId = await RegisterAndActAsTenantAsync("130900001");
 
         (await Client.PostAsJsonAsync("/api/v1/sequences",
-                new { environment = "TestEcf", type = 31, series = "E", rangeFrom = 1L, rangeTo = 1000L }))
+                new { environment = "Test", type = 31, series = "E", rangeFrom = 1L, rangeTo = 1000L }))
             .EnsureSuccessStatusCode();
 
         var tasks = Enumerable.Range(0, concurrency).Select(_ => Task.Run(async () =>
@@ -25,7 +25,7 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
             scope.ServiceProvider.GetRequiredService<CurrentTenant>().Set(tenantId);
             var allocator = scope.ServiceProvider.GetRequiredService<INcfSequenceAllocator>();
 
-            return await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.CreditoFiscal);
+            return await allocator.AllocateAsync(DgiiEnvironment.Test, EcfType.CreditoFiscal);
         }));
 
         var results = await Task.WhenAll(tasks);
@@ -41,17 +41,17 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
         var tenantId = await RegisterAndActAsTenantAsync("130900002");
 
         (await Client.PostAsJsonAsync("/api/v1/sequences",
-                new { environment = "TestEcf", type = 33, series = "E", rangeFrom = 1L, rangeTo = 2L }))
+                new { environment = "Test", type = 33, series = "E", rangeFrom = 1L, rangeTo = 2L }))
             .EnsureSuccessStatusCode();
 
         using var scope = Factory.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<CurrentTenant>().Set(tenantId);
         var allocator = scope.ServiceProvider.GetRequiredService<INcfSequenceAllocator>();
 
-        (await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.NotaDebito)).IsError.ShouldBeFalse();
-        (await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.NotaDebito)).IsError.ShouldBeFalse();
+        (await allocator.AllocateAsync(DgiiEnvironment.Test, EcfType.NotaDebito)).IsError.ShouldBeFalse();
+        (await allocator.AllocateAsync(DgiiEnvironment.Test, EcfType.NotaDebito)).IsError.ShouldBeFalse();
 
-        var exhausted = await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.NotaDebito);
+        var exhausted = await allocator.AllocateAsync(DgiiEnvironment.Test, EcfType.NotaDebito);
         exhausted.IsError.ShouldBeTrue();
         exhausted.FirstError.Code.ShouldBe("Sequence.AllRangesExhausted");
     }
@@ -62,17 +62,17 @@ public sealed class NcfSequenceAllocatorTests(DatabaseFixture database) : Integr
         var tenantId = await RegisterAndActAsTenantAsync("130900003");
 
         (await Client.PostAsJsonAsync("/api/v1/sequences",
-                new { environment = "TestEcf", type = 31, series = "E", rangeFrom = 1L, rangeTo = 1L }))
+                new { environment = "Test", type = 31, series = "E", rangeFrom = 1L, rangeTo = 1L }))
             .EnsureSuccessStatusCode();
         (await Client.PostAsJsonAsync("/api/v1/sequences",
-                new { environment = "TestEcf", type = 31, series = "F", rangeFrom = 1L, rangeTo = 5L }))
+                new { environment = "Test", type = 31, series = "F", rangeFrom = 1L, rangeTo = 5L }))
             .EnsureSuccessStatusCode();
 
         using var scope = Factory.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<CurrentTenant>().Set(tenantId);
         var allocator = scope.ServiceProvider.GetRequiredService<INcfSequenceAllocator>();
 
-        (await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.CreditoFiscal)).Value.Encf.Value.ShouldBe("E310000000001");
-        (await allocator.AllocateAsync(DgiiEnvironment.TestEcf, EcfType.CreditoFiscal)).Value.Encf.Value.ShouldBe("F310000000001");
+        (await allocator.AllocateAsync(DgiiEnvironment.Test, EcfType.CreditoFiscal)).Value.Encf.Value.ShouldBe("E310000000001");
+        (await allocator.AllocateAsync(DgiiEnvironment.Test, EcfType.CreditoFiscal)).Value.Encf.Value.ShouldBe("F310000000001");
     }
 }

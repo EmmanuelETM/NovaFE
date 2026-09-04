@@ -25,7 +25,7 @@ public class RepresentationRendererTests
     private static RepresentationModel Model(EcfDocument document, RepresentationDgiiStatus? dgii = null)
     {
         var xml = Serializer.Serialize(document, EcfTestData.SignedAt);
-        var url = EcfVerificationUrl.For(document, Domain.Common.DgiiEnvironment.TestEcf, "aB3xZ9", EcfTestData.SignedAt);
+        var url = EcfVerificationUrl.For(document, Domain.Common.DgiiEnvironment.Test, "aB3xZ9", EcfTestData.SignedAt);
         return Reader.Read(xml, new RepresentationVerification("aB3xZ9", url), dgii);
     }
 

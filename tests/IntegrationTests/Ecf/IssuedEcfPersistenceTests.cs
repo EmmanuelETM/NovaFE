@@ -27,7 +27,7 @@ public sealed class IssuedEcfPersistenceTests(DatabaseFixture database) : Integr
     {
         var tenantId = await RegisterTenantAsync($"1{Random.Shared.NextInt64(10_000_000, 99_999_999)}");
         var document = EcfSampleCatalog.Find(slug)!.Document;
-        var ecf = IssuedEcf.FromSigned(document, Signed(document), DgiiEnvironment.TestEcf);
+        var ecf = IssuedEcf.FromSigned(document, Signed(document), DgiiEnvironment.Test);
 
         await using var scope = Factory.Services.CreateAsyncScope();
         scope.ServiceProvider.GetRequiredService<CurrentTenant>().Set(tenantId);

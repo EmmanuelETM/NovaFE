@@ -43,7 +43,7 @@ public class EcfSignerTests : UseCaseTestBase
     [Fact]
     public async Task Serializes_signs_validates_and_hashes_the_document()
     {
-        var result = await Sut().SignAsync(EcfTestData.CreditoFiscal(), DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(EcfTestData.CreditoFiscal(), DgiiEnvironment.Test);
 
         result.IsError.ShouldBeFalse();
         var signed = result.Value;
@@ -61,7 +61,7 @@ public class EcfSignerTests : UseCaseTestBase
     [Fact]
     public async Task Stamps_the_signing_instant_from_the_clock()
     {
-        var result = await Sut().SignAsync(EcfTestData.CreditoFiscal(), DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(EcfTestData.CreditoFiscal(), DgiiEnvironment.Test);
 
         result.Value.SignedAt.ShouldBe(Clock.GetUtcNow());
         // dd-MM-yyyy HH:mm:ss en hora dominicana (UTC-4): 2026-01-15 10:30 UTC → 06:30.
@@ -74,7 +74,7 @@ public class EcfSignerTests : UseCaseTestBase
         var document = EcfTestData.Consumo();
         document.QualifiesForRfce.ShouldBeTrue();
 
-        var result = await Sut().SignAsync(document, DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(document, DgiiEnvironment.Test);
 
         result.IsError.ShouldBeFalse();
         result.Value.SubmitsRfce.ShouldBeTrue();
@@ -89,7 +89,7 @@ public class EcfSignerTests : UseCaseTestBase
         result.Value.EcfXml.ShouldContain("<TipoeCF>32</TipoeCF>");
         // Dos firmas: una para el e-CF, otra para el RFCE.
         await _certificateSigner.Received(2).SignAsync(
-            Arg.Any<string>(), DgiiEnvironment.TestEcf, Arg.Any<CancellationToken>());
+            Arg.Any<string>(), DgiiEnvironment.Test, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class EcfSignerTests : UseCaseTestBase
             [EcfTestData.Line(unitPrice: 300_000m, name: "Equipo industrial")]).Value;
         document.QualifiesForRfce.ShouldBeFalse();
 
-        var result = await Sut().SignAsync(document, DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(document, DgiiEnvironment.Test);
 
         result.IsError.ShouldBeFalse();
         result.Value.SubmitsRfce.ShouldBeFalse();
@@ -132,7 +132,7 @@ public class EcfSignerTests : UseCaseTestBase
             .SignAsync(Arg.Any<string>(), Arg.Any<DgiiEnvironment>(), Arg.Any<CancellationToken>())
             .Returns(new SignedXmlResult("<ECF><Encabezado/></ECF>", StubSignatureValue, StubSecurityCode));
 
-        var result = await Sut().SignAsync(EcfTestData.CreditoFiscal(), DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(EcfTestData.CreditoFiscal(), DgiiEnvironment.Test);
 
         result.IsError.ShouldBeTrue();
         result.FirstError.Code.ShouldBe("Ecf.SignedDocumentFailedXsd");

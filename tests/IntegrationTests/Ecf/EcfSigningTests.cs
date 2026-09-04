@@ -23,7 +23,7 @@ public sealed class EcfSigningTests(DatabaseFixture database) : IntegrationTestB
         var (signer, xmlSigner) = await ArrangeSignerAsync();
 
         var result = await signer.SignAsync(
-            EcfSampleCatalog.Find("credito-fiscal")!.Document, DgiiEnvironment.TestEcf);
+            EcfSampleCatalog.Find("credito-fiscal")!.Document, DgiiEnvironment.Test);
 
         result.IsError.ShouldBeFalse();
         var signed = result.Value;
@@ -48,7 +48,7 @@ public sealed class EcfSigningTests(DatabaseFixture database) : IntegrationTestB
         var (signer, xmlSigner) = await ArrangeSignerAsync();
 
         var result = await signer.SignAsync(
-            EcfSampleCatalog.Find("consumo")!.Document, DgiiEnvironment.TestEcf);
+            EcfSampleCatalog.Find("consumo")!.Document, DgiiEnvironment.Test);
 
         result.IsError.ShouldBeFalse();
         var signed = result.Value;
@@ -83,7 +83,7 @@ public sealed class EcfSigningTests(DatabaseFixture database) : IntegrationTestB
         var tenantId = await RegisterAndActAsTenantAsync(Rnc);
 
         (await Client.PostAsync("/api/v1/certificates",
-            CertificateForm(TestPkcs12.Generate(holderIdentifier: Rnc), TestPkcs12.DefaultPassword, "TestEcf")))
+            CertificateForm(TestPkcs12.Generate(holderIdentifier: Rnc), TestPkcs12.DefaultPassword, "Test")))
             .EnsureSuccessStatusCode();
 
         var scope = Factory.Services.CreateScope();

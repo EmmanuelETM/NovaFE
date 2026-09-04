@@ -91,7 +91,7 @@ aceptan el **nombre** (`"credit"`, `"check_transfer"`) o el **código DGII**
 | `pricesIncludeTax` | bool opc. | `IndicadorMontoGravado` | `true` = el precio ya trae ITBIS; se puede sobrescribir por línea |
 | `deferredDelivery` | bool opc. | `IndicadorEnvioDiferido` | Solo autorizados |
 | `nonInvoiceableAmount` | decimal opc. | `MontoNoFacturable` | Reembolsos, propina voluntaria. Puede ser negativo |
-| `environment` | string opc. | — | `"TestEcf"` / `"CertEcf"` / `"Production"`. Si se omite, el `defaultEnvironment` del `EmitterProfile` |
+| `environment` | string opc. | — | `"Test"` / `"Cert"` / `"Production"`. Si se omite, el `defaultEnvironment` del `EmitterProfile` |
 | `internalNumber` | string opc. | `NumeroFacturaInterna` | Clave de dedup de negocio |
 | `sellerCode` | string opc. | `CodigoVendedor` | |
 | `additionalInfo.issuer` / `.buyer` | string opc. | `InformacionAdicional*` | Texto libre para la RI |
@@ -201,7 +201,7 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   "status": "accepted",
   "encf": "E310000000042",
   "type": 31,
-  "environment": "TestEcf",
+  "environment": "Test",
   "sequenceExpiresOn": "31-12-2027",
   "issueDate": "21-02-2026",
   "issuedAt": "2026-02-21T10:30:05-04:00",
@@ -387,12 +387,12 @@ Cuerpo del `PUT`:
   "phones": ["809-555-0100"],
   "email": "facturacion@almax.do",
   "economicActivity": "Comercio al por menor",
-  "defaultEnvironment": "TestEcf"
+  "defaultEnvironment": "Test"
 }
 ```
 
 `municipality`/`province` son códigos de la Tabla III (6 dígitos).
 `defaultEnvironment` es el ambiente DGII en el que emite el contribuyente por
-defecto (`TestEcf` durante el onboarding, `Production` tras certificar); el payload
+defecto (`Test` durante el onboarding, `Production` tras certificar); el payload
 de emisión puede sobrescribirlo con `environment`. Sin perfil configurado,
 `POST /ecf` devuelve `400`.

@@ -35,7 +35,7 @@ public class CertificateSignerTests : UseCaseTestBase
     private Certificate ActiveCertificate()
         => Certificate.Issue(
             "101672919",
-            DgiiEnvironment.TestEcf,
+            DgiiEnvironment.Test,
             new CertificateDetails(
                 "101672919", "CN=Test", "CN=Test", "ABC123",
                 Clock.GetUtcNow().AddYears(-1), Clock.GetUtcNow().AddYears(1), true),
@@ -45,10 +45,10 @@ public class CertificateSignerTests : UseCaseTestBase
     [Fact]
     public async Task Signs_with_the_active_certificate()
     {
-        _certificates.GetActiveAsync(DgiiEnvironment.TestEcf, Arg.Any<CancellationToken>())
+        _certificates.GetActiveAsync(DgiiEnvironment.Test, Arg.Any<CancellationToken>())
             .Returns(ActiveCertificate());
 
-        var result = await Sut().SignAsync(Xml, DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(Xml, DgiiEnvironment.Test);
 
         result.IsError.ShouldBeFalse();
         result.Value.SecurityCode.ShouldBe("AbCdEf");
@@ -62,7 +62,7 @@ public class CertificateSignerTests : UseCaseTestBase
         _certificates.GetActiveAsync(Arg.Any<DgiiEnvironment>(), Arg.Any<CancellationToken>())
             .Returns((Certificate?)null);
 
-        var result = await Sut().SignAsync(Xml, DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(Xml, DgiiEnvironment.Test);
 
         result.FirstError.Code.ShouldBe("Certificate.NoActiveCertificate");
     }
@@ -75,7 +75,7 @@ public class CertificateSignerTests : UseCaseTestBase
         _certificates.GetActiveAsync(Arg.Any<DgiiEnvironment>(), Arg.Any<CancellationToken>())
             .Returns(certificate);
 
-        var result = await Sut().SignAsync(Xml, DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(Xml, DgiiEnvironment.Test);
 
         result.FirstError.Code.ShouldBe("Certificate.NotUsable");
     }
@@ -85,7 +85,7 @@ public class CertificateSignerTests : UseCaseTestBase
     {
         _tenant.HasValue.Returns(false);
 
-        var result = await Sut().SignAsync(Xml, DgiiEnvironment.TestEcf);
+        var result = await Sut().SignAsync(Xml, DgiiEnvironment.Test);
 
         result.FirstError.Code.ShouldBe("Auth.TenantNotResolved");
     }

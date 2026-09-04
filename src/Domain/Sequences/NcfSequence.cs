@@ -21,7 +21,7 @@ public sealed class NcfSequence : Entity<Guid>, ITenantOwned, IAuditableEntity, 
     private const double LowStockFraction = 0.20;
 
     /// <summary>Tope de secuencias por tipo en CerteCF (RF-07 tabla por ambiente).</summary>
-    private const long CertEcfMaxSequential = 10_000_000;
+    private const long CertMaxSequential = 10_000_000;
 
     // Requerido por EF Core.
     private NcfSequence()
@@ -121,13 +121,13 @@ public sealed class NcfSequence : Entity<Guid>, ITenantOwned, IAuditableEntity, 
         if (rangeFrom < 1 || rangeTo < rangeFrom)
             return SequenceErrors.InvalidRange(rangeFrom, rangeTo);
 
-        if (environment == DgiiEnvironment.CertEcf)
+        if (environment == DgiiEnvironment.Cert)
         {
             if (rangeFrom != 1)
-                return SequenceErrors.CertEcfMustStartAtOne;
+                return SequenceErrors.CertMustStartAtOne;
 
-            if (rangeTo > CertEcfMaxSequential)
-                return SequenceErrors.CertEcfRangeTooLarge(CertEcfMaxSequential);
+            if (rangeTo > CertMaxSequential)
+                return SequenceErrors.CertRangeTooLarge(CertMaxSequential);
         }
 
         var expiresOn = type.HasSequenceExpiry

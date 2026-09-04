@@ -13,7 +13,7 @@ namespace NovaFE.Application.Sequences.RegisterSequenceRange;
 public sealed class RegisterSequenceRangeCommandValidator : AbstractValidator<RegisterSequenceRangeCommand>
 {
     /// <summary>Tope de secuencias por tipo en CerteCF (RF-07, tabla por ambiente).</summary>
-    private const long CertEcfMaxSequential = 10_000_000;
+    private const long CertMaxSequential = 10_000_000;
 
     private static readonly string KnownEnvironments =
         string.Join(", ", DgiiEnvironment.GetAll().Select(e => e.Name));
@@ -21,8 +21,8 @@ public sealed class RegisterSequenceRangeCommandValidator : AbstractValidator<Re
     private static readonly string KnownTypes =
         string.Join(", ", EcfType.GetAll().Select(t => t.Id));
 
-    private static readonly string CertEcfMaxSequentialText =
-        CertEcfMaxSequential.ToString("N0", CultureInfo.InvariantCulture);
+    private static readonly string CertMaxSequentialText =
+        CertMaxSequential.ToString("N0", CultureInfo.InvariantCulture);
 
     public RegisterSequenceRangeCommandValidator(TimeProvider timeProvider)
     {
@@ -54,14 +54,14 @@ public sealed class RegisterSequenceRangeCommandValidator : AbstractValidator<Re
             .WithMessage("La fecha de autorización no puede ser futura.");
 
         // En CerteCF el sistema siempre parte de 1 y el rango por tipo tiene tope.
-        When(IsCertEcf, () =>
+        When(IsCert, () =>
         {
             RuleFor(x => x.RangeFrom)
                 .Equal(1).WithMessage("En CerteCF las secuencias siempre empiezan en 1.");
 
             RuleFor(x => x.RangeTo)
-                .LessThanOrEqualTo(CertEcfMaxSequential)
-                .WithMessage($"En CerteCF el rango por tipo no puede exceder {CertEcfMaxSequentialText} secuencias.");
+                .LessThanOrEqualTo(CertMaxSequential)
+                .WithMessage($"En CerteCF el rango por tipo no puede exceder {CertMaxSequentialText} secuencias.");
         });
     }
 
@@ -69,6 +69,6 @@ public sealed class RegisterSequenceRangeCommandValidator : AbstractValidator<Re
         DgiiEnvironment.GetAll()
             .Any(e => string.Equals(e.Name, environment?.Trim(), StringComparison.OrdinalIgnoreCase));
 
-    private static bool IsCertEcf(RegisterSequenceRangeCommand command) =>
-        string.Equals(command.Environment?.Trim(), DgiiEnvironment.CertEcf.Name, StringComparison.OrdinalIgnoreCase);
+    private static bool IsCert(RegisterSequenceRangeCommand command) =>
+        string.Equals(command.Environment?.Trim(), DgiiEnvironment.Cert.Name, StringComparison.OrdinalIgnoreCase);
 }

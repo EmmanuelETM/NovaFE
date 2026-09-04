@@ -70,7 +70,7 @@ public sealed class EmitterProfile : Entity<Guid>, IAuditableEntity, ISoftDeleta
 
     /// <summary>
     /// El ambiente de la DGII en el que emite este contribuyente por defecto
-    /// (<c>TestEcf</c> durante el onboarding, <c>Production</c> tras certificar). El
+    /// (<c>Test</c> durante el onboarding, <c>Production</c> tras certificar). El
     /// payload de emisión puede sobrescribirlo por petición.
     /// </summary>
     public DgiiEnvironment DefaultEnvironment { get; private set; } = null!;

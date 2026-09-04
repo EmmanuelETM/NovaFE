@@ -19,11 +19,11 @@ public class IssuedEcfTests
     {
         var document = EcfTestData.CreditoFiscal();
 
-        var ecf = IssuedEcf.FromSigned(document, Signed(), DgiiEnvironment.TestEcf);
+        var ecf = IssuedEcf.FromSigned(document, Signed(), DgiiEnvironment.Test);
 
         ecf.Id.ShouldNotBe(Guid.Empty);
         ecf.Type.ShouldBe(document.Type);
-        ecf.Environment.ShouldBe(DgiiEnvironment.TestEcf);
+        ecf.Environment.ShouldBe(DgiiEnvironment.Test);
         ecf.Encf.ShouldBe(document.Header.Encf);
         ecf.IssueDate.ShouldBe(document.Header.IssueDate);
         ecf.SequenceExpiresOn.ShouldBe(document.Header.SequenceExpiresOn);
@@ -46,7 +46,7 @@ public class IssuedEcfTests
         var document = EcfTestData.Consumo();
         document.QualifiesForRfce.ShouldBeTrue();
 
-        var ecf = IssuedEcf.FromSigned(document, Signed(rfceXml: "<RFCE/>"), DgiiEnvironment.TestEcf);
+        var ecf = IssuedEcf.FromSigned(document, Signed(rfceXml: "<RFCE/>"), DgiiEnvironment.Test);
 
         ecf.SubmitsRfce.ShouldBeTrue();
         ecf.RfceXml.ShouldBe("<RFCE/>");

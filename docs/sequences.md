@@ -32,7 +32,7 @@ chequeo de vencimiento va **antes** que el de stock (RF-07.4).
 | Ambiente | Rango | |
 |---|---|---|
 | TesteCF | Configurable | — |
-| CerteCF | 1 a 10 000 000 por tipo | El rango **debe empezar en 1** (`Sequence.CertEcfMustStartAtOne`) |
+| Cert (CerteCF) | 1 a 10 000 000 por tipo | El rango **debe empezar en 1** (`Sequence.CertMustStartAtOne`) |
 | eCF (producción) | Según autorización DGII | — |
 
 ## Piezas
