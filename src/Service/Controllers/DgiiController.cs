@@ -13,7 +13,7 @@ namespace NovaFE.Service.Controllers;
 /// </summary>
 [ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize(Policy = SecurityPolicies.TenantClient)]
+[Authorize(Policy = SecurityPolicies.TenantConfig)]
 public sealed class DgiiController(CheckDgiiConnectionUseCase checkConnection) : ApiController
 {
     /// <summary>

@@ -30,6 +30,11 @@ internal sealed class ApiKeyConfiguration : IEntityTypeConfiguration<ApiKey>
             .HasMaxLength(20)
             .IsRequired();
 
+        builder.Property(k => k.Role)
+            .HasConversion(role => role.Name, name => ApiKeyRole.FromName(name))
+            .HasMaxLength(20)
+            .IsRequired();
+
         builder.Property(k => k.CreatedBy).HasMaxLength(256);
         builder.Property(k => k.UpdatedBy).HasMaxLength(256);
         builder.Property(k => k.DeletedBy).HasMaxLength(256);

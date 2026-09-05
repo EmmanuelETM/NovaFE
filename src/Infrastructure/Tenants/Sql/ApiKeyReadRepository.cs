@@ -21,6 +21,7 @@ internal sealed class ApiKeyReadRepository(IDbSession session) : IApiKeyReadRepo
                    prefix        AS "Prefix",
                    label         AS "Label",
                    environment   AS "Environment",
+                   role          AS "Role",
                    expires_at    AS "ExpiresAt",
                    revoked_at    AS "RevokedAt",
                    last_used_at  AS "LastUsedAt",
@@ -45,6 +46,7 @@ internal sealed class ApiKeyReadRepository(IDbSession session) : IApiKeyReadRepo
             SELECT id          AS "Id",
                    tenant_id   AS "TenantId",
                    environment AS "Environment",
+                   role        AS "Role",
                    expires_at  AS "ExpiresAt",
                    revoked_at  AS "RevokedAt"
             FROM api_keys

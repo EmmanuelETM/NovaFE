@@ -26,6 +26,17 @@ public sealed class CreateApiKeyCommandValidator : AbstractValidator<CreateApiKe
             .When(x => !string.IsNullOrWhiteSpace(x.Environment))
             .WithMessage($"Ambiente desconocido. Valores válidos: {string.Join(", ", DgiiEnvironment.GetAll().Select(e => e.Name))}.");
 
+        // Dos reglas separadas (no encadenadas): un `.When()` sobre una cadena
+        // aplica, por defecto, a *todos* los validadores anteriores de esa misma
+        // cadena — habría apagado el `NotEmpty()` de abajo también.
+        RuleFor(x => x.Role)
+            .NotEmpty().WithMessage($"El rol es obligatorio. Valores válidos: {string.Join(", ", ApiKeyRole.GetAll().Select(r => r.Name))}.");
+
+        RuleFor(x => x.Role)
+            .Must(BeAKnownApiKeyRole)
+            .When(x => !string.IsNullOrWhiteSpace(x.Role))
+            .WithMessage($"Rol desconocido. Valores válidos: {string.Join(", ", ApiKeyRole.GetAll().Select(r => r.Name))}.");
+
         RuleFor(x => x.ExpiresAt)
             .Must(expiresAt => expiresAt is null || expiresAt > timeProvider.GetUtcNow())
             .WithMessage("La fecha de vencimiento debe ser futura.");
@@ -34,4 +45,9 @@ public sealed class CreateApiKeyCommandValidator : AbstractValidator<CreateApiKe
     private static bool BeAKnownEnvironment(string? environment) =>
         DgiiEnvironment.GetAll()
             .Any(e => string.Equals(e.Name, environment?.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    // admin_sistema es exclusivo del operador (otro esquema de auth) — no es un
+    // rol válido para una API key de contribuyente.
+    private static bool BeAKnownApiKeyRole(string? role) =>
+        ApiKeyRole.GetAll().Any(r => string.Equals(r.Name, role?.Trim(), StringComparison.OrdinalIgnoreCase));
 }

@@ -25,6 +25,16 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
         return (sandbox.TenantId, sandbox.ApiKey);
     }
 
+    /// <summary>Acuña, para un tenant ya listo (perfil+cert+secuencias), una key adicional con un rol dado.</summary>
+    private async Task<string> MintRoleKeyAsync(Guid tenantId, string role)
+    {
+        var response = await Client.PostAsJsonAsync($"/api/v1/tenants/{tenantId}/api-keys", new { role });
+        response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+
+        var created = await LeerAsync<ApiKeyCreatedView>(response);
+        return created!.Token;
+    }
+
     private void UseApiKey(string? token)
     {
         Client.DefaultRequestHeaders.Remove(ApiKeyHeader);
@@ -122,12 +132,53 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     }
 
     [RequiresDockerFact]
+    public async Task A_consultor_key_can_read_but_not_issue()
+    {
+        var (tenantId, _) = await OnboardAsync();
+        UseApiKey(await MintRoleKeyAsync(tenantId, "consultor"));
+
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var post = await Client.PostAsJsonAsync("/api/v1/ecf", new
+        {
+            type = 31,
+            incomeType = "01",
+            buyer = new { name = "Cliente SRL", rnc = "131880681" },
+            payment = new { condition = "cash", methods = new[] { new { type = "cash", amount = 2360m } } },
+            lines = new[] { new { name = "Consultoría", kind = "service", quantity = 1, unitPrice = 2000m, itbisRate = 1 } },
+        });
+        post.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [RequiresDockerFact]
+    public async Task An_emisor_key_cannot_manage_certificates_or_sequences()
+    {
+        var (tenantId, _) = await OnboardAsync();
+        UseApiKey(await MintRoleKeyAsync(tenantId, "emisor"));
+
+        (await Client.GetAsync("/api/v1/certificates")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await Client.GetAsync("/api/v1/sequences")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [RequiresDockerFact]
+    public async Task An_admin_tenant_key_can_do_everything_a_tenant_client_can()
+    {
+        var (tenantId, _) = await OnboardAsync();
+        UseApiKey(await MintRoleKeyAsync(tenantId, "admin_tenant"));
+
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await Client.GetAsync("/api/v1/certificates")).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await Client.GetAsync("/api/v1/sequences")).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [RequiresDockerFact]
     public async Task Minting_a_key_for_an_unready_environment_is_a_400()
     {
         var tenantId = await RegisterTenantAsync("130999888");
 
         var create = await Client.PostAsJsonAsync(
-            $"/api/v1/tenants/{tenantId}/api-keys", new { label = "Prod", environment = "Production" });
+            $"/api/v1/tenants/{tenantId}/api-keys",
+            new { label = "Prod", environment = "Production", role = "admin_tenant" });
 
         create.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
@@ -167,6 +218,8 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     }
 
     private sealed record SandboxResponse(Guid TenantId, string ApiKey);
+
+    private sealed record ApiKeyCreatedView(string Token);
 
     private sealed record ApiKeyView(Guid Id, Guid TenantId, string Prefix, string Label, string Environment);
 

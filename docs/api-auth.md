@@ -1,8 +1,8 @@
 # Autenticación de la API (Módulo 14)
 
-**Estado: implementado (API keys + ambiente en la key).** La API distingue dos
-audiencias y las autentica por separado. RBAC por roles (RF-14.5) y auditoría
-inmutable (RF-14.4) son slices posteriores de M14.
+**Estado: implementado (API keys + ambiente + rol en la key).** La API distingue
+dos audiencias y las autentica por separado. Auditoría inmutable (RF-14.4) es un
+slice posterior de M14.
 
 | Audiencia | Recursos | Credencial |
 |---|---|---|
@@ -23,7 +23,7 @@ Health, `/openapi`, `/scalar` quedan anónimos. Los controllers `dev/**`
   un prefijo en claro para reconocerlo en un listado.
 - **Entidad** `ApiKey` (`src/Domain/Tenants/ApiKey.cs`) — pertenece a un `Tenant`,
   la administra el operador (como `EmitterProfile`: **no** es `ITenantOwned`,
-  **no** lleva RLS). Campos: `KeyHash`, `Prefix`, `Label`, `Environment`,
+  **no** lleva RLS). Campos: `KeyHash`, `Prefix`, `Label`, `Environment`, `Role`,
   `ExpiresAt?`, `RevokedAt?`, `LastUsedAt?`. Tabla `api_keys`.
 - **El tenant y el ambiente salen de la key.** El handler
   `ApiKeyAuthenticationHandler` publica un principal con los claims `tenant_id` y
@@ -49,6 +49,35 @@ Health, `/openapi`, `/scalar` quedan anónimos. Los controllers `dev/**`
 - **`LastUsedAt`**: lo escribe el autenticador best-effort, coalescido a 1×/5 min
   por key. Un fallo al escribirlo no niega el acceso.
 
+## RBAC (RF-14.5)
+
+El rol también vive en la API key — no hay usuarios/login todavía, así que el
+permiso se asigna por credencial, igual que el ambiente. `ApiKeyRole`
+(`src/Domain/Tenants/ApiKeyRole.cs`) tiene los 3 roles de contribuyente del Plan
+Técnico (`admin_sistema`, el cuarto rol, es exclusivo del operador y usa otro
+esquema de auth por completo):
+
+| Rol | Puede |
+|---|---|
+| `admin_tenant` | Certificados, secuencias, conexión DGII (`TenantConfig`) |
+| `emisor` | Emitir/reencolar e-CF (`EcfIssue`) + todo lo de `consultor` |
+| `consultor` | Consultar comprobantes y su estado (`EcfRead`) |
+
+- **Al acuñar una key el `role` es obligatorio** — a diferencia del ambiente, no
+  hay default: `POST .../api-keys` sin `role` es `400`. `admin_sistema` no es un
+  valor válido aquí (es del operador).
+- El handler de API key publica el rol como `ClaimTypes.Role`; las 3 políticas
+  (`TenantConfig`, `EcfIssue`, `EcfRead` en `SecuritySchemes.cs`) exigen tenant +
+  uno de los roles permitidos vía `RequireRole(...)`. `CertificatesController`,
+  `SequencesController` y `DgiiController` usan `TenantConfig` a nivel de clase;
+  `EcfController` mezcla `EcfIssue` (emitir, `retry`) y `EcfRead` (el resto) por
+  acción.
+- El camino `X-Tenant-Id` de Development (`DevTenantHeaderAuthenticationHandler`)
+  publica siempre `admin_tenant` — es un atajo de confianza que solo existe ahí,
+  no tiene sentido replicar el RBAC de las keys reales.
+- Para cambiar el rol de una key existente: se revoca y se acuña otra (mismo
+  patrón que cambiar de ambiente).
+
 ### Endpoints (operador)
 
 ```
@@ -57,9 +86,9 @@ GET    /api/v1/tenants/{id}/api-keys            → 200 [ { id, prefix, label, e
 DELETE /api/v1/tenants/{id}/api-keys/{keyid}    → 204                                            (revoca; deja de autenticar ya)
 ```
 
-Cuerpo del `POST` (todo opcional):
-`{ "label": "ERP contable", "environment": "Production", "expiresAt": "2027-01-01T00:00:00Z" }`.
-Para cambiar el ambiente de una key se revoca y se acuña otra.
+Cuerpo del `POST` (`role` obligatorio, el resto opcional):
+`{ "label": "ERP contable", "environment": "Production", "role": "emisor", "expiresAt": "2027-01-01T00:00:00Z" }`.
+Para cambiar el ambiente o el rol de una key se revoca y se acuña otra.
 
 ## Clave de operador
 
@@ -79,12 +108,12 @@ o sigue usando `tenantId` como `X-Tenant-Id`. Ver `docs/local-e2e.md`.
 
 ## Fuera de alcance (slices/módulos posteriores)
 
-- **RBAC** de los 4 roles de RF-14.5 (`admin_tenant`, `emisor`, `consultor`,
-  `admin_sistema`).
 - **Auditoría inmutable** append-only de RF-14.4.
-- **Auth de operador con usuarios** (login, panel).
+- **Auth de operador con usuarios** (login, panel) — hoy sigue siendo una sola
+  clave estática compartida por todo operador; RBAC de operador de verdad
+  necesita eso primero.
 - **Rate limiting por plan** (RF-12.3) — el limiter global ya particiona por
   tenant (el `Name` del principal); los topes por plan son otro slice.
-- **Scopes por key**, rotación con período de gracia, cambiar el ambiente de una
-  key existente, y el `X-API-Key` en los endpoints B2B (esos van por certificado,
-  y son el Módulo 5).
+- **Scopes por key** (más finos que el rol), rotación con período de gracia,
+  cambiar el ambiente o el rol de una key existente, y el `X-API-Key` en los
+  endpoints B2B (esos van por certificado, y son el Módulo 5).

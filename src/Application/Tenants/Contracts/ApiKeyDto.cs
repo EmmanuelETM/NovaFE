@@ -7,6 +7,7 @@ public sealed record ApiKeyDto(
     string Prefix,
     string Label,
     string Environment,
+    string Role,
     DateTimeOffset? ExpiresAt,
     DateTimeOffset? RevokedAt,
     DateTimeOffset? LastUsedAt,

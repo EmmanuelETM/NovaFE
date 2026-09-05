@@ -287,20 +287,25 @@ Dockerfile instala `libfontconfig1`. No cambiar sin leer `docs/representation.md
 `src/Application/Tenants/*ApiKey*`): dos audiencias. Los **clientes**
 (contribuyentes) usan **API key** — header `X-API-Key`, token
 `sk_nfe_<test|cert|prod>_…` cuyo SHA-256 se guarda en `api_keys` (entidad
-`ApiKey`, operator-managed, sin RLS). **La key ata su ambiente de la DGII**: el
-`ApiKeyAuthenticationHandler` publica los claims `tenant_id` y `dgii_environment`,
-y de ahí salen `ICurrentTenant.TenantId` / `.Environment` (el payload de emisión
-**no** lleva `environment`). Solo se acuña una key si el contribuyente ya puede
-facturar en ese ambiente (perfil + certificado activo + rango de secuencia). Los
-**operadores** usan una clave estática — header `X-Admin-Key` contra
-`Security:AdminApiKey`. Controllers por contribuyente (`Ecf`, `Sequences`,
-`Certificates`, `Dgii`) llevan `[Authorize(Policy = SecurityPolicies.TenantClient)]`;
-`TenantsController` lleva `[Authorize(Policy = SecurityPolicies.Operator)]`. **Solo
-en Development** el esquema `DevTenantHeader` acepta `X-Tenant-Id` sin credencial
-(sandbox, tests) — ahí el ambiente cae al `DefaultEnvironment` del perfil.
-`TenantResolutionMiddleware` corre **después** de `UseAuthorization`. RBAC de
-roles y auditoría inmutable son slices posteriores. No cambiar sin leer
-`docs/api-auth.md`.
+`ApiKey`, operator-managed, sin RLS). **La key ata su ambiente y su rol**: el
+`ApiKeyAuthenticationHandler` publica los claims `tenant_id`, `dgii_environment`
+y el rol (`ClaimTypes.Role`), y de ahí salen `ICurrentTenant.TenantId` /
+`.Environment` (el payload de emisión **no** lleva `environment`). Solo se acuña
+una key si el contribuyente ya puede facturar en ese ambiente (perfil +
+certificado activo + rango de secuencia). **RBAC (RF-14.5)**: `ApiKeyRole`
+(`admin_tenant`/`emisor`/`consultor` — `admin_sistema` es del operador, otro
+esquema) es **obligatorio** al acuñar, sin default. Políticas por rol en
+`SecuritySchemes.cs`: `TenantConfig` (`admin_tenant`; `Certificates`,
+`Sequences`, `Dgii` a nivel de clase), `EcfIssue` (`admin_tenant`+`emisor`;
+`POST /ecf`, `retry`), `EcfRead` (los 3 roles; el resto de `EcfController`, por
+acción). Los **operadores** usan una clave estática — header `X-Admin-Key`
+contra `Security:AdminApiKey`, rol fijo `admin_sistema`; `TenantsController`
+lleva `[Authorize(Policy = SecurityPolicies.Operator)]`. **Solo en Development**
+el esquema `DevTenantHeader` acepta `X-Tenant-Id` sin credencial (sandbox,
+tests) — ahí el ambiente cae al `DefaultEnvironment` del perfil y el rol es
+siempre `admin_tenant`. `TenantResolutionMiddleware` corre **después** de
+`UseAuthorization`. Auditoría inmutable (RF-14.4) es un slice posterior. No
+cambiar sin leer `docs/api-auth.md`.
 
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
