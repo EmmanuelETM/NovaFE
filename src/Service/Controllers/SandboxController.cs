@@ -4,6 +4,7 @@ using NovaFE.Application.Sequences.RegisterSequenceRange;
 using NovaFE.Application.Tenants.CreateApiKey;
 using NovaFE.Application.Tenants.RegisterTenant;
 using NovaFE.Application.Tenants.SetEmitterProfile;
+using NovaFE.Domain.Tenants;
 using NovaFE.Service.Common;
 using NovaFE.Service.DevTools;
 using Microsoft.AspNetCore.Mvc;
@@ -82,7 +83,8 @@ public sealed class SandboxController(
             return Problem(certificate.Errors);
 
         var apiKey = await createApiKey.Execute(
-            new CreateApiKeyCommand(tenant.Value, "Sandbox", environment, ExpiresAt: null), ct);
+            new CreateApiKeyCommand(tenant.Value, "Sandbox", environment, ApiKeyRole.AdminTenant.Name, ExpiresAt: null),
+            ct);
         if (apiKey.IsError)
             return Problem(apiKey.Errors);
 

@@ -84,7 +84,7 @@ public sealed class TenantsController(
         [FromBody] CreateApiKeyBody? body,
         CancellationToken ct)
         => (await createApiKey.Execute(
-                new CreateApiKeyCommand(id, body?.Label, body?.Environment, body?.ExpiresAt), ct))
+                new CreateApiKeyCommand(id, body?.Label, body?.Environment, body?.Role, body?.ExpiresAt), ct))
             .Match(
                 created => CreatedAtAction(nameof(ListApiKeys), new { id, version = "1" }, created),
                 Problem);
@@ -114,8 +114,9 @@ public sealed class TenantsController(
         string DefaultEnvironment);
 
     /// <summary>
-    /// Cuerpo del <c>POST .../api-keys</c>; todo opcional. <c>environment</c> por
-    /// defecto es el del perfil de emisor.
+    /// Cuerpo del <c>POST .../api-keys</c>. <c>environment</c> por defecto es el
+    /// del perfil de emisor; <c>role</c> (<c>admin_tenant</c> / <c>emisor</c> /
+    /// <c>consultor</c>, RF-14.5) es obligatorio — sin default.
     /// </summary>
-    public sealed record CreateApiKeyBody(string? Label, string? Environment, DateTimeOffset? ExpiresAt);
+    public sealed record CreateApiKeyBody(string? Label, string? Environment, string Role, DateTimeOffset? ExpiresAt);
 }

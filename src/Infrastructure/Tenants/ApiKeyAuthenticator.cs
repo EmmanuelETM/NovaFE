@@ -38,7 +38,7 @@ internal sealed class ApiKeyAuthenticator(
             return null;
 
         await TouchAsync(lookup.Id, now, ct);
-        return new ApiKeyIdentity(lookup.Id, lookup.TenantId, lookup.Environment);
+        return new ApiKeyIdentity(lookup.Id, lookup.TenantId, lookup.Environment, lookup.Role);
     }
 
     private async Task TouchAsync(Guid keyId, DateTimeOffset now, CancellationToken ct)

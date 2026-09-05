@@ -23,11 +23,23 @@ internal static class SecuritySchemes
     public const string EnvironmentClaim = "dgii_environment";
 }
 
-/// <summary>Nombres de políticas de autorización.</summary>
+/// <summary>
+/// Nombres de políticas de autorización. Las de contribuyente exigen, además del
+/// tenant, un rol de <c>ApiKeyRole</c> (RF-14.5) — el mapeo controller→política
+/// sigue la tabla del Plan Técnico: <c>admin_tenant</c> es dueño de configuración/
+/// certificados/secuencias, <c>emisor</c> puede emitir y consultar, <c>consultor</c>
+/// solo consulta.
+/// </summary>
 internal static class SecurityPolicies
 {
-    /// <summary>Recursos por contribuyente: API key (o, en Development, <c>X-Tenant-Id</c>).</summary>
-    public const string TenantClient = "TenantClient";
+    /// <summary>Certificados, secuencias, conexión DGII — solo <c>admin_tenant</c>.</summary>
+    public const string TenantConfig = "TenantConfig";
+
+    /// <summary>Emitir e-CF / reencolar envío — <c>admin_tenant</c> o <c>emisor</c>.</summary>
+    public const string EcfIssue = "EcfIssue";
+
+    /// <summary>Consultar comprobantes y su estado — cualquiera de los 3 roles.</summary>
+    public const string EcfRead = "EcfRead";
 
     /// <summary>Recursos de operador del SaaS: admin key.</summary>
     public const string Operator = "Operator";

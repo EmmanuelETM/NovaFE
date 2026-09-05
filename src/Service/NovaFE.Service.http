@@ -21,12 +21,13 @@ X-Admin-Key: {{adminKey}}
 }
 
 ### Acuñar una API key para el contribuyente (recurso de operador; el token se ve una sola vez)
-# environment por defecto = el del perfil de emisor. Requiere perfil + cert + secuencias de ese ambiente.
+# environment por defecto = el del perfil de emisor (requiere perfil + cert + secuencias de ese ambiente).
+# role es obligatorio: admin_tenant | emisor | consultor (RF-14.5).
 POST {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/api-keys
 Content-Type: application/json
 X-Admin-Key: {{adminKey}}
 
-{ "label": "Local", "environment": "Test" }
+{ "label": "Local", "environment": "Test", "role": "admin_tenant" }
 
 ### Listar / revocar API keys del contribuyente
 GET {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/api-keys

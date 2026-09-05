@@ -27,6 +27,7 @@ public sealed class ApiKey : Entity<Guid>, IAuditableEntity, ISoftDeletable
         string prefix,
         string label,
         DgiiEnvironment environment,
+        ApiKeyRole role,
         DateTimeOffset? expiresAt)
         : base(id)
     {
@@ -35,6 +36,7 @@ public sealed class ApiKey : Entity<Guid>, IAuditableEntity, ISoftDeletable
         Prefix = prefix;
         Label = label;
         Environment = environment;
+        Role = role;
         ExpiresAt = expiresAt;
     }
 
@@ -46,6 +48,13 @@ public sealed class ApiKey : Entity<Guid>, IAuditableEntity, ISoftDeletable
     /// selector de ambiente: una petición autenticada con ella siempre va a este.
     /// </summary>
     public DgiiEnvironment Environment { get; private set; } = null!;
+
+    /// <summary>
+    /// Rol de la credencial (RF-14.5): qué puede hacer con el tenant. Igual que
+    /// el ambiente, el rol lo fija la key — no hay concepto de usuario/login
+    /// todavía, así que el permiso se asigna por credencial.
+    /// </summary>
+    public ApiKeyRole Role { get; private set; } = null!;
 
     /// <summary>SHA-256 del token en hex minúscula (64 caracteres). Único.</summary>
     public string KeyHash { get; private set; } = null!;
@@ -89,9 +98,11 @@ public sealed class ApiKey : Entity<Guid>, IAuditableEntity, ISoftDeletable
         string prefix,
         string? label,
         DgiiEnvironment environment,
+        ApiKeyRole role,
         DateTimeOffset? expiresAt)
     {
         ArgumentNullException.ThrowIfNull(environment);
+        ArgumentNullException.ThrowIfNull(role);
 
         if (tenantId == Guid.Empty)
             return ApiKeyErrors.TenantRequired;
@@ -103,7 +114,7 @@ public sealed class ApiKey : Entity<Guid>, IAuditableEntity, ISoftDeletable
         if (cleanLabel.Length > MaxLabelLength)
             return ApiKeyErrors.LabelTooLong;
 
-        return new ApiKey(Guid.CreateVersion7(), tenantId, keyHash, prefix, cleanLabel, environment, expiresAt);
+        return new ApiKey(Guid.CreateVersion7(), tenantId, keyHash, prefix, cleanLabel, environment, role, expiresAt);
     }
 
     /// <summary>Revoca la credencial. Idempotencia estricta: revocar dos veces es un error.</summary>

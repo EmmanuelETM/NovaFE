@@ -20,7 +20,6 @@ namespace NovaFE.Service.Controllers;
 /// </summary>
 [ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize(Policy = SecurityPolicies.TenantClient)]
 public sealed class EcfController(
     IssueEcfUseCase issue,
     GetEcfUseCase get,
@@ -35,6 +34,7 @@ public sealed class EcfController(
     /// <c>internalNumber</c> ya se habían usado.
     /// </summary>
     [HttpPost]
+    [Authorize(Policy = SecurityPolicies.EcfIssue)]
     [ProducesResponseType(typeof(EcfDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(EcfDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -55,6 +55,7 @@ public sealed class EcfController(
 
     /// <summary>El comprobante emitido y su estado.</summary>
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = SecurityPolicies.EcfRead)]
     [ProducesResponseType(typeof(EcfDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
@@ -62,6 +63,7 @@ public sealed class EcfController(
 
     /// <summary>El XML firmado. <c>?rfce=true</c> devuelve el <c>&lt;RFCE&gt;</c> (tipo 32 &lt; DOP 250 k).</summary>
     [HttpGet("{id:guid}/xml")]
+    [Authorize(Policy = SecurityPolicies.EcfRead)]
     public async Task<IActionResult> GetXml(Guid id, [FromQuery] bool rfce, CancellationToken ct)
         => (await getXml.Execute(new GetEcfXmlQuery(id, rfce), ct))
             .Match(xml => Content(xml, "application/xml; charset=utf-8"), Problem);
@@ -71,6 +73,7 @@ public sealed class EcfController(
     /// <c>pos</c>; <c>?download=true</c> la descarga en vez de abrirla en el navegador.
     /// </summary>
     [HttpGet("{id:guid}/representation")]
+    [Authorize(Policy = SecurityPolicies.EcfRead)]
     [Produces("application/pdf")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -91,6 +94,7 @@ public sealed class EcfController(
 
     /// <summary>Listado paginado de comprobantes emitidos.</summary>
     [HttpGet]
+    [Authorize(Policy = SecurityPolicies.EcfRead)]
     [ProducesResponseType(typeof(PagedResult<EcfSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] ListEcfQuery query, CancellationToken ct)
         => (await list.Execute(query, ct)).Match(Ok, Problem);
@@ -101,6 +105,7 @@ public sealed class EcfController(
     /// <c>signed</c>; el worker retoma el envío.
     /// </summary>
     [HttpPost("{id:guid}/retry")]
+    [Authorize(Policy = SecurityPolicies.EcfIssue)]
     [ProducesResponseType(typeof(EcfDto), StatusCodes.Status202Accepted)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]

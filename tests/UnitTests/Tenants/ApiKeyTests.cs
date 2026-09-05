@@ -13,12 +13,14 @@ public class ApiKeyTests
     private static ApiKey NewKey(
         string? label = "ERP",
         DgiiEnvironment? environment = null,
+        ApiKeyRole? role = null,
         DateTimeOffset? expiresAt = null)
     {
         var env = environment ?? DgiiEnvironment.Test;
         var token = ApiKeyToken.Generate(env);
         return ApiKey.Create(
-            TenantId, ApiKeyToken.Hash(token), ApiKeyToken.DisplayPrefix(token), label, env, expiresAt).Value;
+            TenantId, ApiKeyToken.Hash(token), ApiKeyToken.DisplayPrefix(token), label, env,
+            role ?? ApiKeyRole.Emisor, expiresAt).Value;
     }
 
     [Theory]
@@ -44,9 +46,16 @@ public class ApiKeyTests
     }
 
     [Fact]
+    public void Create_binds_the_role()
+    {
+        NewKey(role: ApiKeyRole.Consultor).Role.ShouldBe(ApiKeyRole.Consultor);
+    }
+
+    [Fact]
     public void Create_rejects_a_blank_tenant()
     {
-        var result = ApiKey.Create(Guid.Empty, "hash", "sk_nfe_test_x", "x", DgiiEnvironment.Test, null);
+        var result = ApiKey.Create(
+            Guid.Empty, "hash", "sk_nfe_test_x", "x", DgiiEnvironment.Test, ApiKeyRole.Emisor, null);
 
         result.IsError.ShouldBeTrue();
         result.FirstError.Code.ShouldBe("ApiKey.TenantRequired");
@@ -56,7 +65,8 @@ public class ApiKeyTests
     public void Create_rejects_an_overlong_label()
     {
         var result = ApiKey.Create(
-            TenantId, "hash", "sk_nfe_test_x", new string('x', ApiKey.MaxLabelLength + 1), DgiiEnvironment.Test, null);
+            TenantId, "hash", "sk_nfe_test_x", new string('x', ApiKey.MaxLabelLength + 1), DgiiEnvironment.Test,
+            ApiKeyRole.Emisor, null);
 
         result.IsError.ShouldBeTrue();
         result.FirstError.Code.ShouldBe("ApiKey.LabelTooLong");

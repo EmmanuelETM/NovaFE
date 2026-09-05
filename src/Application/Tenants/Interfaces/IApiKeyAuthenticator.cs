@@ -16,4 +16,5 @@ public interface IApiKeyAuthenticator
 
 /// <summary>Identidad resuelta a partir de una API key válida.</summary>
 /// <param name="Environment">El nombre del ambiente de la DGII al que ata la key (<c>Test</c> / <c>Cert</c> / <c>Production</c>).</param>
-public sealed record ApiKeyIdentity(Guid KeyId, Guid TenantId, string Environment);
+/// <param name="Role">El rol de la key (<c>admin_tenant</c> / <c>emisor</c> / <c>consultor</c>).</param>
+public sealed record ApiKeyIdentity(Guid KeyId, Guid TenantId, string Environment, string Role);

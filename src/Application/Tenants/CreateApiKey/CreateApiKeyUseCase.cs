@@ -38,6 +38,7 @@ public sealed class CreateApiKeyUseCase(
         var environment = string.IsNullOrWhiteSpace(request.Environment)
             ? profile.DefaultEnvironment
             : DgiiEnvironment.FromName(request.Environment.Trim());
+        var role = ApiKeyRole.FromName(request.Role!.Trim());
 
         var readiness = await CheckReadinessAsync(request.TenantId, environment, ct);
         if (readiness.IsError)
@@ -51,6 +52,7 @@ public sealed class CreateApiKeyUseCase(
             ApiKeyToken.DisplayPrefix(token),
             request.Label,
             environment,
+            role,
             request.ExpiresAt);
         if (created.IsError)
             return created.Errors;
@@ -82,6 +84,7 @@ public sealed class CreateApiKeyUseCase(
         key.Prefix,
         key.Label,
         key.Environment.Name,
+        key.Role.Name,
         key.ExpiresAt,
         key.RevokedAt,
         key.LastUsedAt,
