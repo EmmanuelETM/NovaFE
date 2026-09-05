@@ -5,6 +5,7 @@ using NovaFE.Domain.Common.Entities;
 using NovaFE.Domain.Ecf;
 using NovaFE.Domain.Sequences;
 using NovaFE.Domain.Tenants;
+using NovaFE.Infrastructure.Persistence.Audit;
 using NovaFE.Infrastructure.Persistence.Idempotency;
 using NovaFE.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,9 @@ public class AppDbContext(
     internal DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 
     internal DbSet<EcfSubmissionOutboxRow> EcfSubmissionOutbox => Set<EcfSubmissionOutboxRow>();
+
+    /// <summary>Registro de auditoría inmutable (RF-14.4, tabla <c>audit_log</c>).</summary>
+    internal DbSet<AuditLogRow> AuditLog => Set<AuditLogRow>();
 
     /// <summary>
     /// Tenant de la petición en curso. Los filtros globales de consulta de las

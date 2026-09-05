@@ -217,6 +217,12 @@ try
 
     app.UseAuthentication();
 
+    // Antes de UseAuthorization a propósito (RF-14.4): su código posterior a
+    // `await next()` corre al final de todo el pipeline, así que ve el
+    // StatusCode final incluyendo los 401/403 que UseAuthorization() corta y que
+    // nunca llegarían a un middleware registrado después de ella.
+    app.UseMiddleware<AuditLoggingMiddleware>();
+
     // Después de autenticar el esquema por defecto (API key): así el limitador
     // puede particionar por contribuyente y no solo por IP.
     app.UseRateLimiter();

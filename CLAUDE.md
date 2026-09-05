@@ -304,8 +304,18 @@ lleva `[Authorize(Policy = SecurityPolicies.Operator)]`. **Solo en Development**
 el esquema `DevTenantHeader` acepta `X-Tenant-Id` sin credencial (sandbox,
 tests) — ahí el ambiente cae al `DefaultEnvironment` del perfil y el rol es
 siempre `admin_tenant`. `TenantResolutionMiddleware` corre **después** de
-`UseAuthorization`. Auditoría inmutable (RF-14.4) es un slice posterior. No
-cambiar sin leer `docs/api-auth.md`.
+`UseAuthorization`. No cambiar sin leer `docs/api-auth.md`.
+
+**Auditoría inmutable (Módulo 14, RF-14.4)** (`src/Service/Middlewares/AuditLoggingMiddleware.cs`,
+`src/Infrastructure/Persistence/Audit/`): una fila en `audit_log` por cada
+petición a un endpoint `[Authorize]`, éxito o no. El middleware se registra
+**antes** de `UseAuthorization` (no después) para ver el `StatusCode` final
+incluso de un `401`/`403` — que corta el pipeline ahí mismo y nunca llegaría a
+`TenantResolutionMiddleware`; por eso el `tenant_id` de la fila sale del claim
+directamente, no de `ICurrentTenant`. `AuditLogWriter` solo tiene `INSERT` (sin
+`UPDATE`/`DELETE`) — esa ausencia es la inmutabilidad a nivel de aplicación;
+tabla de sistema, sin RLS. Lectura: `GET /api/v1/tenants/{id}/audit-log`
+(operador, paginado). No cambiar sin leer `docs/audit-log.md`.
 
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.

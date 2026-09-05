@@ -33,6 +33,10 @@ X-Admin-Key: {{adminKey}}
 GET {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/api-keys
 X-Admin-Key: {{adminKey}}
 
+### Registro de auditoría del contribuyente (RF-14.4), paginado
+GET {{Service_HostAddress}}/api/v1/tenants/{{tenantId}}/audit-log?page=1&pageSize=20
+X-Admin-Key: {{adminKey}}
+
 ### List tenants
 GET {{Service_HostAddress}}/api/v1/tenants?page=1&pageSize=20&search=Prueba
 Accept: application/json
