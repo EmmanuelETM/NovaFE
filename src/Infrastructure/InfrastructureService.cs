@@ -1,3 +1,4 @@
+using NovaFE.Application.Audit.Interfaces;
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Dgii.Interfaces;
@@ -6,6 +7,7 @@ using NovaFE.Application.Ecf.Representation;
 using NovaFE.Application.Sequences.Interfaces;
 using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
+using NovaFE.Infrastructure.Audit.Sql;
 using NovaFE.Infrastructure.Caching;
 using NovaFE.Infrastructure.Certificates.EfCore;
 using NovaFE.Infrastructure.Certificates.Sql;
@@ -18,6 +20,7 @@ using NovaFE.Infrastructure.Ecf.Representation;
 using NovaFE.Infrastructure.Ecf.Sql;
 using NovaFE.Infrastructure.Http;
 using NovaFE.Infrastructure.Persistence;
+using NovaFE.Infrastructure.Persistence.Audit;
 using NovaFE.Infrastructure.Persistence.EfCore;
 using NovaFE.Infrastructure.Representation;
 using NovaFE.Infrastructure.Persistence.Idempotency;
@@ -142,6 +145,8 @@ public static class InfrastructureService
         services.AddScoped<IEcfReadRepository, EcfReadRepository>();
         services.AddScoped<IEcfSubmissionQueue, PostgresEcfSubmissionQueue>();
         services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
+        services.AddScoped<IAuditLogWriter, AuditLogWriter>();
+        services.AddScoped<IAuditLogReadRepository, AuditLogReadRepository>();
 
         // Los jsonb del comprobante emitido → tipos de dominio en las lecturas Dapper.
         SqlMapper.AddTypeHandler(new EcfTotalsSnapshotJsonHandler());

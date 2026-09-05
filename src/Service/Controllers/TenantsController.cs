@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using NovaFE.Application.Audit.ListAuditLog;
 using NovaFE.Application.Tenants.CreateApiKey;
 using NovaFE.Application.Tenants.GetEmitterProfile;
 using NovaFE.Application.Tenants.GetTenant;
@@ -30,7 +31,8 @@ public sealed class TenantsController(
     SetEmitterProfileUseCase setEmitterProfile,
     CreateApiKeyUseCase createApiKey,
     ListApiKeysUseCase listApiKeys,
-    RevokeApiKeyUseCase revokeApiKey) : ApiController
+    RevokeApiKeyUseCase revokeApiKey,
+    ListAuditLogUseCase listAuditLog) : ApiController
 {
     [HttpPost]
     public async Task<IActionResult> Register(
@@ -102,6 +104,16 @@ public sealed class TenantsController(
         CancellationToken ct)
         => (await revokeApiKey.Execute(new RevokeApiKeyCommand(id, keyId), ct))
             .Match(_ => NoContent(), Problem);
+
+    /// <summary>Registro de auditoría del contribuyente (RF-14.4), paginado.</summary>
+    [HttpGet("{id:guid}/audit-log")]
+    public async Task<IActionResult> GetAuditLog(
+        Guid id,
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        CancellationToken ct)
+        => (await listAuditLog.Execute(new ListAuditLogQuery(id) { Page = page, PageSize = pageSize }, ct))
+            .Match(Ok, Problem);
 
     /// <summary>Cuerpo del <c>PUT .../emitter-profile</c> (el contribuyente va en la ruta).</summary>
     public sealed record SetEmitterProfileBody(

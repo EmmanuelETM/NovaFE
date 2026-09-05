@@ -1,8 +1,8 @@
 # Autenticación de la API (Módulo 14)
 
-**Estado: implementado (API keys + ambiente + rol en la key).** La API distingue
-dos audiencias y las autentica por separado. Auditoría inmutable (RF-14.4) es un
-slice posterior de M14.
+**Estado: implementado (API keys + ambiente + rol en la key + auditoría).** La
+API distingue dos audiencias y las autentica por separado. La auditoría
+inmutable (RF-14.4) tiene su propio doc: `docs/audit-log.md`.
 
 | Audiencia | Recursos | Credencial |
 |---|---|---|
@@ -82,8 +82,9 @@ esquema de auth por completo):
 
 ```
 POST   /api/v1/tenants/{id}/api-keys            → 201 { key: {...}, token: "sk_nfe_test_…" }
-GET    /api/v1/tenants/{id}/api-keys            → 200 [ { id, prefix, label, environment, … } ]  (sin tokens)
+GET    /api/v1/tenants/{id}/api-keys            → 200 [ { id, prefix, label, environment, role, … } ]  (sin tokens)
 DELETE /api/v1/tenants/{id}/api-keys/{keyid}    → 204                                            (revoca; deja de autenticar ya)
+GET    /api/v1/tenants/{id}/audit-log           → 200 { items: [...], totalCount, page, pageSize } (RF-14.4, ver docs/audit-log.md)
 ```
 
 Cuerpo del `POST` (`role` obligatorio, el resto opcional):
@@ -108,7 +109,6 @@ o sigue usando `tenantId` como `X-Tenant-Id`. Ver `docs/local-e2e.md`.
 
 ## Fuera de alcance (slices/módulos posteriores)
 
-- **Auditoría inmutable** append-only de RF-14.4.
 - **Auth de operador con usuarios** (login, panel) — hoy sigue siendo una sola
   clave estática compartida por todo operador; RBAC de operador de verdad
   necesita eso primero.
