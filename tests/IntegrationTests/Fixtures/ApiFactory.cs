@@ -49,6 +49,11 @@ public sealed class ApiFactory(
                 // WireMock vía Reconfigure.
                 ["EcfSubmission:Enabled"] = "false",
                 ["EcfSubmission:SyncWaitBudgetSeconds"] = "0",
+
+                // Webhooks: sin worker de entrega en pruebas; se aceptan URLs http
+                // (los tests usan IPs literales para ejercer el guard anti-SSRF sin DNS).
+                ["Webhooks:Enabled"] = "false",
+                ["Webhooks:RequireHttps"] = "false",
             };
 
             if (overrides is not null)

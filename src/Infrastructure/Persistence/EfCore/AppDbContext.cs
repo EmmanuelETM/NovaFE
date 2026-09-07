@@ -5,6 +5,7 @@ using NovaFE.Domain.Common.Entities;
 using NovaFE.Domain.Ecf;
 using NovaFE.Domain.Sequences;
 using NovaFE.Domain.Tenants;
+using NovaFE.Domain.Webhooks;
 using NovaFE.Infrastructure.Persistence.Audit;
 using NovaFE.Infrastructure.Persistence.Idempotency;
 using NovaFE.Infrastructure.Persistence.Outbox;
@@ -34,6 +35,9 @@ public class AppDbContext(
 
     /// <summary>Comprobantes fiscales electrónicos emitidos (tabla <c>issued_ecf</c>).</summary>
     public DbSet<IssuedEcf> IssuedEcf => Set<IssuedEcf>();
+
+    /// <summary>Endpoints de webhook por contribuyente (tabla <c>webhook_endpoints</c>, RF-12.7).</summary>
+    public DbSet<WebhookEndpoint> WebhookEndpoints => Set<WebhookEndpoint>();
 
     internal DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
 

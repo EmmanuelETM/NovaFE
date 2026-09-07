@@ -32,6 +32,10 @@ using NovaFE.Infrastructure.Signing;
 using NovaFE.Infrastructure.Tenants;
 using NovaFE.Infrastructure.Tenants.EfCore;
 using NovaFE.Infrastructure.Tenants.Sql;
+using NovaFE.Infrastructure.Webhooks;
+using NovaFE.Infrastructure.Webhooks.EfCore;
+using NovaFE.Infrastructure.Webhooks.Sql;
+using NovaFE.Application.Webhooks.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -167,6 +171,11 @@ public static class InfrastructureService
         services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
         services.AddScoped<IAuditLogWriter, AuditLogWriter>();
         services.AddScoped<IAuditLogReadRepository, AuditLogReadRepository>();
+        services.AddScoped<IWebhookEndpointRepository, WebhookEndpointRepository>();
+        services.AddScoped<IWebhookEndpointReadRepository, WebhookEndpointReadRepository>();
+
+        // Guard anti-SSRF de las URL de webhook (resuelve DNS): sin estado → singleton.
+        services.AddSingleton<IWebhookUrlPolicy, HttpWebhookUrlPolicy>();
 
         // Los jsonb del comprobante emitido → tipos de dominio en las lecturas Dapper.
         SqlMapper.AddTypeHandler(new EcfTotalsSnapshotJsonHandler());

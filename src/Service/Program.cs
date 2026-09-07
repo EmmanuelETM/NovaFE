@@ -109,6 +109,14 @@ try
     if (builder.Configuration.GetValue("EcfSubmission:Enabled", defaultValue: true))
         builder.Services.AddHostedService<EcfSubmissionWorker>();
 
+    // Webhooks (RF-12.7): opciones + settings internos. El worker de entrega
+    // llega con el slice de entrega.
+    builder.Services.AddOptions<WebhooksOptions>()
+        .Bind(builder.Configuration.GetSection(WebhooksOptions.SectionName))
+        .ValidateDataAnnotations();
+    builder.Services.AddSingleton(sp =>
+        sp.GetRequiredService<IOptions<WebhooksOptions>>().Value.ToSettings());
+
     // ==========================================
     //     4. Observabilidad & Health Checks
     // ==========================================
