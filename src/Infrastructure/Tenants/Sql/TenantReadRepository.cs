@@ -35,6 +35,18 @@ internal sealed class TenantReadRepository(IDbSession session) : ITenantReadRepo
             new CommandDefinition(sql, new { id }, session.Transaction, cancellationToken: ct));
     }
 
+    public async Task<IReadOnlyList<Guid>> ListActiveIdsAsync(CancellationToken ct = default)
+    {
+        const string sql = "SELECT id FROM tenants WHERE is_deleted = false AND status = 'Active'";
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        var ids = await connection.QueryAsync<Guid>(
+            new CommandDefinition(sql, transaction: session.Transaction, cancellationToken: ct));
+
+        return [.. ids];
+    }
+
     public async Task<PagedResult<TenantSummaryDto>> ListAsync(
         int page,
         int pageSize,

@@ -320,16 +320,20 @@ tabla de sistema, sin RLS. Lectura: `GET /api/v1/tenants/{id}/audit-log`
 **Webhooks (RF-12.7)** (`src/Domain/Webhooks`, `src/Application/Webhooks`,
 `src/Infrastructure/Webhooks`): notificación asíncrona al ERP del contribuyente.
 `/api/v1/webhooks` (CRUD, política `TenantConfig`) administra los
-`WebhookEndpoint` (`ITenantOwned`, RLS; `secret` en claro para firmar). v1 emite
-**6 eventos** del ciclo de vida del e-CF (`ecf.submitted` · `ecf.accepted` ·
+`WebhookEndpoint` (`ITenantOwned`, RLS; `secret` en claro para firmar). Eventos:
+**los 6 del ciclo de vida del e-CF** (`ecf.submitted` · `ecf.accepted` ·
 `ecf.accepted_conditional` · `ecf.rejected` · `ecf.review` · `ecf.failed`), que
 `EcfSubmissionProcessor` encola en la **misma transacción** que la transición
-`IssuedEcf.Mark*` (`PersistAndNotifyAsync`). Entrega at-least-once por un outbox
-en PostgreSQL (`webhook_deliveries`, tabla de sistema sin RLS) + `WebhookDeliveryWorker`,
-con backoff `10s→6h` y auto-disable del endpoint por fallos. Sobre estilo
-Stripe/GitHub; firma `X-NovaFE-Signature: sha256=HMAC(secret, "{ts}.{body}")` con
-anti-replay. Guard anti-SSRF (`IWebhookUrlPolicy`) al crear y antes de cada
-entrega. No cambiar sin leer `docs/webhooks.md`.
+`IssuedEcf.Mark*` (`PersistAndNotifyAsync`); y **los de vencimiento** de
+certificados y secuencias (`certificate.expiring`/`expired`,
+`sequence.expiring`/`expired`/`low`/`exhausted`), que emite `ExpiryMonitorWorker`
+(RF-01.6, `docs/expiry-monitor.md`) con dedup en `expiry_notifications`. Entrega
+at-least-once por un outbox en PostgreSQL (`webhook_deliveries`, tabla de sistema
+sin RLS) + `WebhookDeliveryWorker`, con backoff `10s→6h` y auto-disable del
+endpoint por fallos. Sobre estilo Stripe/GitHub; firma
+`X-NovaFE-Signature: sha256=HMAC(secret, "{ts}.{body}")` con anti-replay. Guard
+anti-SSRF (`IWebhookUrlPolicy`) al crear y antes de cada entrega. No cambiar sin
+leer `docs/webhooks.md`.
 
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.

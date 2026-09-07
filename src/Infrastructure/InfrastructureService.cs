@@ -9,6 +9,8 @@ using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Infrastructure.Audit.Sql;
 using NovaFE.Infrastructure.Caching;
+using NovaFE.Infrastructure.Notifications;
+using NovaFE.Application.Notifications;
 using NovaFE.Infrastructure.Certificates.EfCore;
 using NovaFE.Infrastructure.Certificates.Sql;
 using Dapper;
@@ -173,6 +175,7 @@ public static class InfrastructureService
         services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
         services.AddScoped<IAuditLogWriter, AuditLogWriter>();
         services.AddScoped<IAuditLogReadRepository, AuditLogReadRepository>();
+        services.AddScoped<IExpiryNotificationLog, PostgresExpiryNotificationLog>();
         services.AddScoped<IWebhookEndpointRepository, WebhookEndpointRepository>();
         services.AddScoped<IWebhookEndpointReadRepository, WebhookEndpointReadRepository>();
         services.AddScoped<IWebhookDeliveryReadRepository, WebhookDeliveryReadRepository>();

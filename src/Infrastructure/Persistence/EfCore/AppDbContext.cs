@@ -8,6 +8,7 @@ using NovaFE.Domain.Tenants;
 using NovaFE.Domain.Webhooks;
 using NovaFE.Infrastructure.Persistence.Audit;
 using NovaFE.Infrastructure.Persistence.Idempotency;
+using NovaFE.Infrastructure.Persistence.Notifications;
 using NovaFE.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,6 +45,8 @@ public class AppDbContext(
     internal DbSet<EcfSubmissionOutboxRow> EcfSubmissionOutbox => Set<EcfSubmissionOutboxRow>();
 
     internal DbSet<WebhookDeliveryRow> WebhookDeliveries => Set<WebhookDeliveryRow>();
+
+    internal DbSet<ExpiryNotificationRow> ExpiryNotifications => Set<ExpiryNotificationRow>();
 
     /// <summary>Registro de auditoría inmutable (RF-14.4, tabla <c>audit_log</c>).</summary>
     internal DbSet<AuditLogRow> AuditLog => Set<AuditLogRow>();

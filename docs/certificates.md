@@ -128,7 +128,9 @@ origen equivocada aborta sin tocar nada).
 
 ## Pendiente
 
-- Alertas de vencimiento (90/30/15/7 días) — RF-01.6. Será el primer worker
-  in-process (ver el flag `Workers:Enabled` cuando exista).
 - Purga de `certificate_secrets` de certificados revocados hace > N días.
 - Verificar `HolderIdentifier` contra un certificado real de TestECF.
+
+Las **alertas de vencimiento** (RF-01.6) ya están: las emite el monitor de
+vencimientos por webhook (`certificate.expiring` a 90/30/15/7 días,
+`certificate.expired`). Ver [`expiry-monitor.md`](expiry-monitor.md).

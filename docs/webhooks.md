@@ -1,8 +1,9 @@
 # Webhooks (RF-12.7)
 
-> **Estado: implementado.** Los 6 eventos de ciclo de vida del e-CF + suscripciones
-> + outbox de entrega + firma HMAC + log de entregas. Los eventos de
-> certificado/secuencia y los de M5/M8/M11 quedan para su módulo (§Fuera de alcance).
+> **Estado: implementado.** Los 6 eventos del ciclo de vida del e-CF + los 6 de
+> vencimiento de certificados y secuencias (RF-01.6, `docs/expiry-monitor.md`),
+> con suscripciones + outbox de entrega + firma HMAC + log de entregas. Los de
+> M5/M8/M11 quedan para su módulo (§Fuera de alcance).
 
 Notificaciones asíncronas al ERP del cliente para no depender del polling de
 `GET /ecf/{id}`. Cada tenant configura uno o más endpoints, elige a qué eventos se
@@ -23,7 +24,7 @@ convención de Stripe / GitHub.
 Tipo discreto `categoria.evento`. El cliente se suscribe a tipos exactos o a un
 comodín (`ecf.*`, `*`).
 
-### v1 — ciclo de vida del e-CF
+### Ciclo de vida del e-CF
 
 | Evento | Se dispara cuando | `data.object.status` |
 |---|---|---|
@@ -35,19 +36,30 @@ comodín (`ecf.*`, `*`).
 | `ecf.failed` | Falló el transporte tras agotar los reintentos | `failed` |
 
 Se emiten desde `EcfSubmissionProcessor`, **en la misma transacción** que la
-transición del agregado (`IssuedEcf.Mark*`). No requieren un worker nuevo para
-producirse (sí para entregarse — ver abajo).
+transición del agregado (`IssuedEcf.Mark*`).
 
 `ecf.signed` **no** existe: es el resultado síncrono del `POST /ecf`, el cliente
 ya lo tiene en la respuesta. `webhook.ping` es un evento sintético para probar un
 endpoint (`POST /webhooks/{id}/ping`).
 
+### Vencimientos (RF-01.6 — ver [`expiry-monitor.md`](expiry-monitor.md))
+
+| Evento | Se dispara cuando |
+|---|---|
+| `certificate.expiring` | El certificado activo se acerca a `ValidTo` (90 / 30 / 15 / 7 días) |
+| `certificate.expired` | El certificado venció |
+| `sequence.expiring` | El rango se acerca a `ExpiresOn` (30 / 7 días) |
+| `sequence.expired` | El rango venció |
+| `sequence.low` | El stock cayó al 20 % o menos del rango |
+| `sequence.exhausted` | No quedan secuencias por entregar |
+
+Los emite `ExpiryMonitorWorker` en un barrido periódico. El `data.object` es el
+`CertificateDto` / `NcfSequenceDto` tal cual su `GET`.
+
 ### Después (llegan con su módulo)
 
 | Evento | Módulo |
 |---|---|
-| `certificate.expiring` · `certificate.expired` | RF-01.6 — necesita el worker de monitoreo |
-| `sequence.low` · `sequence.exhausted` · `sequence.expiring` | M7 — mismo worker |
 | `inbound_ecf.received` · `acknowledgement.received` · `commercial_approval.received` | M5 |
 | `ecf.voided` | M8 |
 | `contingency.activated` · `contingency.deactivated` | M11 |
@@ -176,8 +188,7 @@ Config `Webhooks`: `Enabled` (true), `MaxEndpointsPerTenant` (5),
 
 ## Fuera de alcance (v1)
 
-- Los eventos de certificado / secuencia (dependen del worker de monitoreo,
-  RF-01.6) y los de M5 / M8 / M11.
+- Los eventos de M5 / M8 / M11 (llegan con su módulo).
 - Rotación de secret con período de gracia (v1: el viejo muere al instante).
 - Reintento manual de una entrega `dead` desde la API.
 - Filtros de payload / transformaciones por endpoint.

@@ -3,6 +3,7 @@ using Asp.Versioning;
 using NovaFE.Application;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Ecf.Submission;
+using NovaFE.Application.Notifications;
 using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Domain.Common.Json;
 using NovaFE.Infrastructure;
@@ -120,6 +121,15 @@ try
 
     if (builder.Configuration.GetValue("Webhooks:Enabled", defaultValue: true))
         builder.Services.AddHostedService<WebhookDeliveryWorker>();
+
+    // Monitor de vencimientos de certificados y secuencias (RF-01.6).
+    builder.Services.AddOptions<ExpiryMonitorOptions>()
+        .Bind(builder.Configuration.GetSection(ExpiryMonitorOptions.SectionName))
+        .ValidateDataAnnotations();
+    builder.Services.AddSingleton<IExpiryMonitorPump, ExpiryMonitorPump>();
+
+    if (builder.Configuration.GetValue("ExpiryMonitor:Enabled", defaultValue: true))
+        builder.Services.AddHostedService<ExpiryMonitorWorker>();
 
     // ==========================================
     //     4. Observabilidad & Health Checks

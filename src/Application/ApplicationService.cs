@@ -2,6 +2,7 @@
 using NovaFE.Application.Ecf;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Submission;
+using NovaFE.Application.Notifications;
 using NovaFE.Application.Signing;
 using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Application.Webhooks.Delivery;
@@ -30,6 +31,10 @@ public static class ApplicationService
 
         // Entrega de webhooks (RF-12.7). El worker/pump viven en Service.
         services.AddScoped<WebhookDeliveryProcessor>();
+
+        // Monitor de vencimientos (RF-01.6): barre certificados y secuencias por
+        // tenant. El worker/pump viven en Service.
+        services.AddScoped<ExpiryScan>();
 
         // Auto-register all use cases that implement IUseCase<,>
         var useCaseTypes = assembly.GetTypes()
