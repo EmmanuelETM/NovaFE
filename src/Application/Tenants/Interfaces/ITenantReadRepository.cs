@@ -10,6 +10,9 @@ public interface ITenantReadRepository
 {
     Task<TenantDto?> GetByIdAsync(Guid id, CancellationToken ct = default);
 
+    /// <summary>Todos los ids de contribuyente activos. Para el trabajo de fondo que barre por tenant.</summary>
+    Task<IReadOnlyList<Guid>> ListActiveIdsAsync(CancellationToken ct = default);
+
     Task<PagedResult<TenantSummaryDto>> ListAsync(
         int page,
         int pageSize,

@@ -58,6 +58,9 @@ public sealed class ApiFactory(
                 // (los tests usan IPs literales para ejercer el guard anti-SSRF sin DNS).
                 ["Webhooks:Enabled"] = "false",
                 ["Webhooks:RequireHttps"] = "false",
+
+                // Monitor de vencimientos: sin worker; los tests disparan el pump.
+                ["ExpiryMonitor:Enabled"] = "false",
             };
 
             if (overrides is not null)
