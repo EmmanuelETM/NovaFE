@@ -11,8 +11,9 @@
 # al host, entorno Development, herramientas de inspección— viven en
 # docker-compose.override.yml, que Compose y Visual Studio mezclan automáticamente.
 #
-# En producción la API se despliega desde el Dockerfile (Railway/DigitalOcean) y
-# PostgreSQL es un servicio gestionado. Este compose es solo para local.
+# En producción la API se despliega desde el Dockerfile a Azure Container Apps y
+# PostgreSQL es Neon (gestionado). Este compose es solo para local. Ver
+# docs/deployment.md.
 #
 # No hay Redis: a la escala de arranque la caché es en memoria (ver docs/redis.md).
 #

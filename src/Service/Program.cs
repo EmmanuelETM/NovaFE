@@ -10,9 +10,13 @@ using NovaFE.Service.Common;
 using NovaFE.Service.Configuration;
 using NovaFE.Service.DevTools;
 using NovaFE.Service.Extensions;
+using NovaFE.Service.Maintenance;
 using NovaFE.Service.Middlewares;
 using NovaFE.Service.Workers;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IO;
 using Scalar.AspNetCore;
@@ -46,6 +50,22 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddSingleton<RecyclableMemoryStreamManager>();
+
+    // Detrás del ingress de Azure Container Apps (proxy Envoy que termina TLS) la
+    // petición llega por HTTP con X-Forwarded-Proto/For. Sin esto, Request.Scheme
+    // sería "http" y UseHttpsRedirection entraría en loop. La IP del proxy de ACA
+    // es dinámica, así que no se puede acotar por KnownProxies.
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
+    // ACA manda SIGTERM y espera antes de matar el contenedor: se le da margen al
+    // EcfSubmissionWorker para terminar el tick en curso en vez de cortarlo.
+    builder.Services.Configure<HostOptions>(options =>
+        options.ShutdownTimeout = TimeSpan.FromSeconds(25));
 
     // Todo error de la API (incluidos los 404 de ruteo y los 400 de validación
     // del model binder) sale con traceId, no solo los que pasan por un controller.
@@ -162,6 +182,27 @@ try
 
     var app = builder.Build();
 
+    // Modo "migrar y salir": lo usa un Container Apps Job con la misma imagen como
+    // paso previo al despliegue (RUN_MIGRATIONS_AND_EXIT=true). Aplica migraciones
+    // y seeds y termina, sin levantar el servidor. El advisory lock de
+    // DatabaseInitializer hace segura la concurrencia. Ver docs/deployment.md.
+    if (app.Configuration.GetValue("RUN_MIGRATIONS_AND_EXIT", defaultValue: false))
+    {
+        Log.Information("RUN_MIGRATIONS_AND_EXIT: aplicando migraciones y seeds, luego cierre.");
+        await app.MigrateAndSeedDatabaseAsync(force: true);
+        Log.Information("Migraciones y seeds completados.");
+        return 0;
+    }
+
+    // Modo "re-envolver y salir": una sola vez, al cambiar CertificateVault:Provider
+    // en un despliegue con certificados ya cargados. Ver docs/certificates.md.
+    if (app.Configuration.GetValue(RewrapCertificateSecrets.EnabledKey, defaultValue: false))
+    {
+        var count = await app.RewrapCertificateSecretsAsync();
+        Log.Information("Re-envueltos {Count} secreto(s) de certificado. Cierre.", count);
+        return 0;
+    }
+
     // Fuera de Development, los endpoints de operador exigen Security:AdminApiKey.
     // Sin ella el AdminKeyAuthenticationHandler rechaza todo — se avisa fuerte.
     if (!app.Environment.IsDevelopment()
@@ -171,12 +212,31 @@ try
             "Security:AdminApiKey no está configurada: los endpoints de operador rechazarán toda petición.");
     }
 
+    // app.tenant_id es una variable de SESIÓN: un pooler en modo transaction
+    // (endpoint -pooler de Neon, PgBouncer transaction) hace que RLS deje de
+    // aislar por tenant sin avisar. Se avisa fuerte; no se aborta. Ver
+    // docs/multi-tenancy.md §3.
+    if (DatabaseConnectionString.LooksLikeTransactionPooler(
+            app.Services.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString))
+    {
+        Log.Warning(
+            "El host de la base parece un pooler en modo transaction (-pooler / pgbouncer). "
+            + "Con transaction pooling el aislamiento por tenant (RLS) se rompe: usá el endpoint "
+            + "directo o el pooler en modo session. Ver docs/multi-tenancy.md.");
+    }
+
     // Migraciones + seeds al arrancar, solo si Database:MigrateOnStartup está
     // activo (por defecto: on en Development, off en el resto). Corre antes de
     // aceptar tráfico.
     await app.MigrateAndSeedDatabaseAsync();
 
     // El orden de los middlewares importa. Cada línea está donde está por una razón:
+
+    // Primero de todo: reescribe Scheme/RemoteIp desde X-Forwarded-* del ingress
+    // de Container Apps, para que el resto del pipeline (HTTPS redirect, logs,
+    // rate limiter por IP) vea los valores reales del cliente.
+    app.UseForwardedHeaders();
+
     app.UseExceptionHandler();
 
     // Sin esto, un 404 de ruta inexistente o un 405 devuelven cuerpo vacío.

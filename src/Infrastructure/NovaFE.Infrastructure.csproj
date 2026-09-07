@@ -33,6 +33,11 @@
     <PackageReference Include="System.Security.Cryptography.Xml" />
   </ItemGroup>
 
+  <ItemGroup Label="Azure Key Vault (IKeyProtector opcional — protección de la KEK)">
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Security.KeyVault.Keys" />
+  </ItemGroup>
+
   <ItemGroup Label="Representación Impresa (Módulo 9)">
     <PackageReference Include="QuestPDF" />
     <PackageReference Include="QRCoder" />

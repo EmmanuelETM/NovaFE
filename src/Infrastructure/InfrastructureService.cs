@@ -52,8 +52,16 @@ public static class InfrastructureService
         services.AddOptions<DatabaseOptions>()
             .Bind(configuration.GetSection(DatabaseOptions.SectionName))
             .PostConfigure(options =>
-                options.ConnectionString =
-                    configuration.GetConnectionString(DatabaseOptions.ConnectionName) ?? string.Empty)
+            {
+                // El connection string se toma de su lugar estándar y se normaliza
+                // acá una sola vez: pool acotado, timeouts, TLS y el reset de
+                // sesión que necesita el aislamiento por tenant. EF, Dapper y los
+                // health checks consumen este mismo valor. Ver DatabaseConnectionString.
+                var raw = configuration.GetConnectionString(DatabaseOptions.ConnectionName) ?? string.Empty;
+                options.ConnectionString = string.IsNullOrWhiteSpace(raw)
+                    ? string.Empty
+                    : DatabaseConnectionString.Normalize(raw, options);
+            })
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -80,11 +88,23 @@ public static class InfrastructureService
         // otros backends posibles (Supabase Vault, HashiCorp Vault).
         services.AddOptions<CertificateVaultOptions>()
             .Bind(configuration.GetSection(CertificateVaultOptions.SectionName))
-            .ValidateDataAnnotations()
             .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<CertificateVaultOptions>, CertificateVaultOptionsValidator>();
 
-        services.AddSingleton<IKeyProtector, LocalKeyProtector>();
+        // El proveedor de IKeyProtector se elige por configuración: 'local' (KEK en
+        // config) o 'azure-key-vault' (la KEK vive en el vault). Cambiar de uno a
+        // otro es solo CertificateVault:Provider — sin tocar código. Ver
+        // docs/certificates.md. Se resuelve desde IOptions (no un snapshot de
+        // IConfiguration) para ver la configuración final.
+        services.AddSingleton<IKeyProtector>(sp =>
+            KeyProtectorFactory.Create(sp.GetRequiredService<IOptions<CertificateVaultOptions>>().Value));
+
         services.AddScoped<ICertificateVault, EnvelopeCertificateVault>();
+
+        // Re-envuelve la DEK de cada secreto de certificado al cambiar de proveedor
+        // de KEK (la DEK y el ciphertext no cambian, solo la KEK que la protege).
+        // Operación de una sola vez; ver docs/certificates.md.
+        services.AddScoped<CertificateSecretRewrapper>();
 
         // Firma XMLDSig (parámetros exactos de la DGII). Sin estado → singleton.
         services.AddSingleton<IXmlSigner, XmlDsigSigner>();

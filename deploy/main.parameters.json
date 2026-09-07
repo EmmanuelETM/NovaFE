@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "namePrefix": {
+      "value": "novafe-prod"
+    },
+    "containerImage": {
+      "value": "novafeprod.azurecr.io/novafe-api:latest"
+    },
+    "acrName": {
+      "value": "novafeprod"
+    },
+    "dbConnectionString": {
+      "value": "REEMPLAZAR — endpoint DIRECTO de Neon (no -pooler). Host=ep-xxx.us-east-2.aws.neon.tech;Database=novafe;Username=novafe_app;Password=***;SSL Mode=VerifyFull"
+    },
+    "adminApiKey": {
+      "value": "REEMPLAZAR — clave estática de operador (X-Admin-Key)"
+    },
+    "dgiiEcfBaseUrl": {
+      "value": "https://ecf.dgii.gov.do"
+    },
+    "dgiiFcBaseUrl": {
+      "value": "https://fc.dgii.gov.do"
+    },
+    "dashboardOrigin": {
+      "value": ""
+    },
+    "otlpEndpoint": {
+      "value": ""
+    },
+    "minReplicas": {
+      "value": 1
+    },
+    "maxReplicas": {
+      "value": 3
+    }
+  }
+}

@@ -14,6 +14,43 @@ public sealed class DatabaseOptions
     /// <summary>Nombre del connection string dentro de <c>ConnectionStrings</c>.</summary>
     public const string ConnectionName = "Default";
 
+    public const string ProviderPostgres = "postgres";
+    public const string ProviderNeon = "neon";
+
+    /// <summary>
+    /// Proveedor del Postgres gestionado: <c>postgres</c> (por defecto, cualquier
+    /// Postgres estándar) o <c>neon</c>. <c>neon</c> solo ajusta defaults —
+    /// tiempo de conexión más alto (el compute de Neon se suspende y tiene cold
+    /// start) y verificación TLS completa. No cambia el proveedor de Npgsql.
+    /// Ver <c>docs/deployment.md</c>.
+    /// </summary>
+    public string Provider { get; set; } = ProviderPostgres;
+
+    /// <summary>
+    /// Tamaño máximo del pool de conexiones de Npgsql. Un Postgres gestionado
+    /// (Neon, Azure) limita las conexiones; con una o dos réplicas un pool chico
+    /// sobra. Se aplica al connection string si este no lo trae ya.
+    /// </summary>
+    [Range(1, 200)]
+    public int MaxPoolSize { get; set; } = 20;
+
+    /// <summary>
+    /// Tiempo de espera para <b>abrir</b> una conexión (segundos). Con
+    /// <c>Provider = neon</c> el default sube a 30: la primera conexión tras un
+    /// rato de inactividad despierta el compute suspendido y tarda unos segundos.
+    /// </summary>
+    [Range(1, 300)]
+    public int ConnectTimeoutSeconds { get; set; } = 15;
+
+    /// <summary>
+    /// Exige TLS (<c>SSL Mode = Require</c>). <c>false</c> por defecto para no
+    /// romper el Postgres local / de Testcontainers, que no tiene TLS; en
+    /// producción se activa en <c>appsettings.Production.json</c>. Con
+    /// <c>Provider = neon</c> el TLS se fuerza igual (Neon siempre lo pide) y
+    /// además se verifica la cadena del certificado.
+    /// </summary>
+    public bool RequireSsl { get; set; }
+
     /// <summary>
     /// Se toma de <c>ConnectionStrings:Default</c>, no de la sección Database:
     /// así sigue funcionando con las herramientas que esperan ese lugar estándar.
