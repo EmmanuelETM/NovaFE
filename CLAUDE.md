@@ -317,6 +317,20 @@ directamente, no de `ICurrentTenant`. `AuditLogWriter` solo tiene `INSERT` (sin
 tabla de sistema, sin RLS. Lectura: `GET /api/v1/tenants/{id}/audit-log`
 (operador, paginado). No cambiar sin leer `docs/audit-log.md`.
 
+**Webhooks (RF-12.7)** (`src/Domain/Webhooks`, `src/Application/Webhooks`,
+`src/Infrastructure/Webhooks`): notificación asíncrona al ERP del contribuyente.
+`/api/v1/webhooks` (CRUD, política `TenantConfig`) administra los
+`WebhookEndpoint` (`ITenantOwned`, RLS; `secret` en claro para firmar). v1 emite
+**6 eventos** del ciclo de vida del e-CF (`ecf.submitted` · `ecf.accepted` ·
+`ecf.accepted_conditional` · `ecf.rejected` · `ecf.review` · `ecf.failed`), que
+`EcfSubmissionProcessor` encola en la **misma transacción** que la transición
+`IssuedEcf.Mark*` (`PersistAndNotifyAsync`). Entrega at-least-once por un outbox
+en PostgreSQL (`webhook_deliveries`, tabla de sistema sin RLS) + `WebhookDeliveryWorker`,
+con backoff `10s→6h` y auto-disable del endpoint por fallos. Sobre estilo
+Stripe/GitHub; firma `X-NovaFE-Signature: sha256=HMAC(secret, "{ts}.{body}")` con
+anti-replay. Guard anti-SSRF (`IWebhookUrlPolicy`) al crear y antes de cada
+entrega. No cambiar sin leer `docs/webhooks.md`.
+
 - La carpeta de Dapper se llama `Sql`, no `Dapper`, porque un namespace terminado
   en `.Dapper` rompe el `using Dapper;`. No la renombres.
 - Con EF Core, la auditoría y el borrado lógico los aplican interceptores y un

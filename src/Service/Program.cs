@@ -3,6 +3,7 @@ using Asp.Versioning;
 using NovaFE.Application;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Ecf.Submission;
+using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Domain.Common.Json;
 using NovaFE.Infrastructure;
 using NovaFE.Infrastructure.Persistence;
@@ -108,6 +109,17 @@ try
 
     if (builder.Configuration.GetValue("EcfSubmission:Enabled", defaultValue: true))
         builder.Services.AddHostedService<EcfSubmissionWorker>();
+
+    // Webhooks (RF-12.7): opciones, settings internos, pump y worker de entrega.
+    builder.Services.AddOptions<WebhooksOptions>()
+        .Bind(builder.Configuration.GetSection(WebhooksOptions.SectionName))
+        .ValidateDataAnnotations();
+    builder.Services.AddSingleton(sp =>
+        sp.GetRequiredService<IOptions<WebhooksOptions>>().Value.ToSettings());
+    builder.Services.AddSingleton<IWebhookDeliveryPump, WebhookDeliveryPump>();
+
+    if (builder.Configuration.GetValue("Webhooks:Enabled", defaultValue: true))
+        builder.Services.AddHostedService<WebhookDeliveryWorker>();
 
     // ==========================================
     //     4. Observabilidad & Health Checks

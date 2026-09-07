@@ -1,6 +1,10 @@
+using NovaFE.Application.Webhooks.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 namespace NovaFE.IntegrationTests.Fixtures;
@@ -49,6 +53,11 @@ public sealed class ApiFactory(
                 // WireMock vía Reconfigure.
                 ["EcfSubmission:Enabled"] = "false",
                 ["EcfSubmission:SyncWaitBudgetSeconds"] = "0",
+
+                // Webhooks: sin worker de entrega en pruebas; se aceptan URLs http
+                // (los tests usan IPs literales para ejercer el guard anti-SSRF sin DNS).
+                ["Webhooks:Enabled"] = "false",
+                ["Webhooks:RequireHttps"] = "false",
             };
 
             if (overrides is not null)
@@ -58,6 +67,14 @@ public sealed class ApiFactory(
             }
 
             config.AddInMemoryCollection(settings);
+        });
+
+        // Guard de URL sin DNS: IPs privadas se rechazan, loopback (WireMock) y
+        // hostnames se permiten. Ver TestWebhookUrlPolicy.
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<IWebhookUrlPolicy>();
+            services.AddSingleton<IWebhookUrlPolicy, TestWebhookUrlPolicy>();
         });
     }
 }

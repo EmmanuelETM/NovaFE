@@ -255,3 +255,51 @@ POST {{Service_HostAddress}}/api/v1/ecf/00000000-0000-0000-0000-000000000000/ret
 X-Tenant-Id: {{tenantId}}
 
 ###
+
+# ============================================================
+#   Webhooks (RF-12.7) — ver docs/webhooks.md
+# ============================================================
+
+### W1. Registrar un endpoint (la respuesta trae el secret una sola vez)
+POST {{Service_HostAddress}}/api/v1/webhooks
+X-Tenant-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "url": "https://webhook.site/00000000-0000-0000-0000-000000000000",
+  "events": ["ecf.accepted", "ecf.rejected", "ecf.review"],
+  "description": "ERP contable"
+}
+
+### W2. Listar los endpoints del tenant
+GET {{Service_HostAddress}}/api/v1/webhooks
+X-Tenant-Id: {{tenantId}}
+
+### W3. Ver un endpoint
+GET {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000
+X-Tenant-Id: {{tenantId}}
+
+### W4. Actualización parcial (suscribir a todo ecf.*, deshabilitar)
+PATCH {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000
+X-Tenant-Id: {{tenantId}}
+Content-Type: application/json
+
+{ "events": ["ecf.*"], "enabled": false }
+
+### W5. Rotar el secret (el viejo deja de valer)
+POST {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000/rotate-secret
+X-Tenant-Id: {{tenantId}}
+
+### W6. Probar el endpoint (entrega un webhook.ping y devuelve el resultado)
+POST {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000/ping
+X-Tenant-Id: {{tenantId}}
+
+### W7. Log de entregas del endpoint
+GET {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000/deliveries?page=1&pageSize=20
+X-Tenant-Id: {{tenantId}}
+
+### W8. Eliminar un endpoint
+DELETE {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000
+X-Tenant-Id: {{tenantId}}
+
+###

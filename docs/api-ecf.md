@@ -3,8 +3,8 @@
 **Estado: implementado.** `POST /api/v1/ecf` arma, calcula, firma, persiste y
 **envía el comprobante a la DGII** (Módulo 4): intenta resolver el estado fiscal
 dentro del propio request (~8 s) y, si la DGII tarda, un worker de fondo termina
-el seguimiento por `TrackId`. Ver `docs/dgii-submission.md`. Los webhooks (el
-cliente hoy hace polling de `GET /ecf/{id}`) son un slice aparte.
+el seguimiento por `TrackId`. Ver `docs/dgii-submission.md`. Los cambios de estado se avisan por **webhook**
+(`docs/webhooks.md`); el cliente también puede hacer polling de `GET /ecf/{id}`.
 
 Piezas: `IssueEcfCommand` (payload) · `EcfDocumentMapper` (payload → `EcfDocument`)
 · `IssueEcfCommandValidator` · `IssueEcfUseCase` (pipeline) · `EcfController`.
@@ -284,7 +284,7 @@ secuencia (M7) → armar y calcular (M2 + M6) → firmar (M3) → **persistir + 
 en una transacción** (M4). Luego el **fast-path inline** intenta el envío a la
 DGII con espera acotada (~8 s); si no alcanza, un worker de fondo (outbox
 `SKIP LOCKED`) lo termina. **Nunca** falla el `POST` por la DGII — el comprobante
-ya está firmado y guardado. Los webhooks (HMAC-SHA256) son un slice aparte.
+ya está firmado y guardado. Cada transición dispara un webhook (`docs/webhooks.md`).
 
 ---
 
@@ -347,10 +347,8 @@ ya está firmado y guardado. Los webhooks (HMAC-SHA256) son un slice aparte.
 
 ---
 
-## 10. Fuera de alcance (Módulo 5 / 9 / 11 / 14 / webhooks)
+## 10. Fuera de alcance (Módulo 5 / 9 / 11 / 14)
 
-- **Webhooks** — notificación al cliente del cambio de estado (config por tenant,
-  HMAC-SHA256, reintentos, historial). Slice aparte; hoy el cliente hace polling.
 - **M5** — envío al receptor electrónico B2B + ACECF / `commercialApproval`.
 - **M11** — contingencia (`IndicadorEnvioDiferido`, Decreto 587-24).
 - **RF-02.10** — validar NC ≤ `MontoTotal` del e-CF modificado (necesita el original persistido).

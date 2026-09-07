@@ -37,7 +37,7 @@ Bloquean el primer cliente o la certificación con la DGII.
 |---|---|---|
 | **M8 — Anulación de rango (ANECF) + estado `voided`** | Las notas de crédito (tipo 34) ya funcionan como e-CF vía M12; falta la anulación de un rango de secuencias y el estado `voided`. | Plan Técnico §9; `docs/api-ecf.md`, `docs/sequences.md` |
 | **M10 — `consultaestatusservicio` + consultas restantes** | `consultaresultado` ya se usa en M4. Falta el "¿está viva la DGII?" (lo necesita M11), consulta de directorio, TrackIds masivo. | Plan Técnico §11; `docs/dgii-submission.md` |
-| **Webhooks (HMAC-SHA256, RF-12.7)** | Hoy el cliente hace polling de `GET /ecf/{id}`. **Diseño + plan listos** (`docs/webhooks.md`, plan `webhooks.md`): 6 eventos de ciclo de vida del e-CF + outbox de entrega + suscripciones por tenant, en 4 slices. | `docs/webhooks.md` |
+| ~~Webhooks (HMAC-SHA256, RF-12.7)~~ | **Hecho.** 6 eventos de ciclo de vida del e-CF + suscripciones por tenant + outbox de entrega + firma HMAC + log de entregas. | `docs/webhooks.md` |
 | **M12 — matriz de obligatoriedad 0/1/2/3 por tipo** | Completar los validadores por tipo (`IssueEcfCommandValidator`); hoy la matriz autoritativa vive solo en `EcfDocument.ValidateStructure`. | `docs/api-ecf.md`, `docs/ecf-xml.md` |
 | **Rate limiting por plan (RF-12.3)** | El limiter global ya particiona por tenant; los topes por plan son otro slice. | `docs/api-auth.md` §"Fuera de alcance" |
 
