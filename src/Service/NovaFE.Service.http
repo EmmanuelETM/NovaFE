@@ -290,7 +290,15 @@ Content-Type: application/json
 POST {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000/rotate-secret
 X-Tenant-Id: {{tenantId}}
 
-### W6. Eliminar un endpoint
+### W6. Probar el endpoint (entrega un webhook.ping y devuelve el resultado)
+POST {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000/ping
+X-Tenant-Id: {{tenantId}}
+
+### W7. Log de entregas del endpoint
+GET {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000/deliveries?page=1&pageSize=20
+X-Tenant-Id: {{tenantId}}
+
+### W8. Eliminar un endpoint
 DELETE {{Service_HostAddress}}/api/v1/webhooks/00000000-0000-0000-0000-000000000000
 X-Tenant-Id: {{tenantId}}
 

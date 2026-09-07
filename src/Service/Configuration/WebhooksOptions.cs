@@ -46,5 +46,6 @@ public sealed class WebhooksOptions
         DeliveryTimeout = TimeSpan.FromSeconds(DeliveryTimeoutSeconds),
         MaxAttempts = MaxAttempts,
         AutoDisableAfterConsecutiveFailures = AutoDisableAfterConsecutiveFailures,
+        DeliveriesRetention = TimeSpan.FromDays(DeliveriesRetentionDays),
     };
 }

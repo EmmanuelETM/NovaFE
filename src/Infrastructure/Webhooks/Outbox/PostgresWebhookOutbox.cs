@@ -124,6 +124,17 @@ internal sealed class PostgresWebhookOutbox(AppDbContext context, TimeProvider t
             """, ct);
     }
 
+    public Task<int> PurgeAsync(TimeSpan olderThan, CancellationToken ct = default)
+    {
+        var cutoff = timeProvider.GetUtcNow() - olderThan;
+
+        return context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            DELETE FROM webhook_deliveries
+            WHERE status IN ('delivered', 'dead') AND updated_at < {cutoff}
+            """, ct);
+    }
+
     private static string? Truncate(string? value) =>
         value is { Length: > 1000 } ? value[..1000] : value;
 }

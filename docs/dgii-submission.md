@@ -124,7 +124,7 @@ al tenant correcto.
 
 ## Fuera de alcance (módulos propios)
 
-Webhooks (slice aparte — el cliente hace polling de `GET /ecf/{id}`), envío al
+Envío al
 **receptor electrónico** B2B (M5), contingencia / `IndicadorEnvioDiferido` (M11),
 polling de `consultaestatusservicio` (M10), anulación ANECF y estado `voided`
 (M8), liberación de secuencias quemadas por un rechazo (un rechazo simplemente

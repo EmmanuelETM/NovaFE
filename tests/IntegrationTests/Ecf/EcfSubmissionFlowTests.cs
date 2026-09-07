@@ -93,6 +93,49 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
     private Task<int> PumpAsync()
         => Factory.Services.GetRequiredService<IEcfSubmissionPump>().RunOnceAsync();
 
+    private Task<int> WebhookPumpAsync()
+        => Factory.Services.GetRequiredService<NovaFE.Application.Webhooks.Delivery.IWebhookDeliveryPump>().RunOnceAsync();
+
+    [RequiresDockerFact]
+    public async Task A_resolved_comprobante_delivers_ecf_webhooks_end_to_end()
+    {
+        using var dgii = new WireMockFixture();
+        StubAuth(dgii.Server);
+        StubReception(dgii.Server);
+        StubResult(dgii.Server, codigo: 1, estado: "Aceptado");
+
+        using var receiver = new WireMockFixture();
+        receiver.Server.Given(Request.Create().WithPath("/hook").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        Reconfigure(new Dictionary<string, string?>
+        {
+            ["Dgii:EcfBaseUrl"] = dgii.BaseUrl,
+            ["EcfSubmission:Enabled"] = "false",
+            ["EcfSubmission:SyncWaitBudgetSeconds"] = "8",
+            ["EcfSubmission:InlinePollDelayMillis"] = "50",
+        });
+        await ArrangeTenantAsync();
+
+        string[] all = ["ecf.*"];
+        (await Client.PostAsJsonAsync("/api/v1/webhooks", new { url = $"{receiver.BaseUrl}/hook", events = all }))
+            .EnsureSuccessStatusCode();
+
+        var post = await Client.PostAsJsonAsync("/api/v1/ecf", CreditoFiscal());
+        post.StatusCode.ShouldBe(HttpStatusCode.Created, await post.Content.ReadAsStringAsync());
+        (await LeerAsync<EcfResponse>(post))!.Status.ShouldBe("accepted");
+
+        // La emisión encoló ecf.submitted y ecf.accepted; el worker de entrega los manda.
+        await WebhookPumpAsync();
+
+        var types = receiver.Server.LogEntries
+            .Select(e => e.RequestMessage!.Headers!["X-NovaFE-Event"][0])
+            .ToList();
+
+        types.ShouldContain("ecf.submitted");
+        types.ShouldContain("ecf.accepted");
+    }
+
     [RequiresDockerFact]
     public async Task A_fast_dgii_resolves_the_comprobante_inside_the_post_response()
     {

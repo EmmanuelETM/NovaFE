@@ -36,6 +36,9 @@ public sealed record WebhookSettings
     /// <summary>Fallos de entrega seguidos tras los que un endpoint se deshabilita solo. 0 lo desactiva.</summary>
     public int AutoDisableAfterConsecutiveFailures { get; init; } = 20;
 
+    /// <summary>Cuánto se conservan las filas <c>delivered</c> / <c>dead</c> (log de entregas).</summary>
+    public TimeSpan DeliveriesRetention { get; init; } = TimeSpan.FromDays(30);
+
     /// <summary>La espera para el reintento número <paramref name="attempts"/> (0 = el primero).</summary>
     public TimeSpan BackoffFor(int attempts)
     {

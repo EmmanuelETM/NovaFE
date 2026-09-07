@@ -1,3 +1,4 @@
+using NovaFE.Application.Webhooks;
 using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Application.Webhooks.Interfaces;
 using NovaFE.Service.Common;
@@ -13,6 +14,7 @@ namespace NovaFE.Service.Workers;
 /// </summary>
 internal sealed class WebhookDeliveryPump(
     IServiceScopeFactory scopeFactory,
+    WebhookSettings settings,
     ILogger<WebhookDeliveryPump> logger) : IWebhookDeliveryPump
 {
     private static readonly TimeSpan StuckAfter = TimeSpan.FromMinutes(5);
@@ -28,6 +30,15 @@ internal sealed class WebhookDeliveryPump(
             logger.LogInformation("Recuperadas {Count} entregas de webhook atascadas", reaped);
 
         var batch = await outbox.ClaimBatchAsync(BatchSize, ct);
+
+        // En un tick sin trabajo se aprovecha para purgar el log viejo.
+        if (batch.Count == 0)
+        {
+            var purged = await outbox.PurgeAsync(settings.DeliveriesRetention, ct);
+            if (purged > 0)
+                logger.LogInformation("Purgadas {Count} entregas de webhook del log", purged);
+            return 0;
+        }
 
         var processed = 0;
         foreach (var item in batch)

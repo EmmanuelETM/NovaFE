@@ -1,10 +1,15 @@
 using Microsoft.Extensions.Logging;
+using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Dgii.Contracts;
 using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
+using NovaFE.Application.Ecf.IssueEcf;
+using NovaFE.Application.Webhooks;
+using NovaFE.Application.Webhooks.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Dgii;
 using NovaFE.Domain.Ecf;
+using NovaFE.Domain.Webhooks;
 
 namespace NovaFE.Application.Ecf.Submission;
 
@@ -21,9 +26,30 @@ public sealed class EcfSubmissionProcessor(
     IDgiiTokenProvider tokenProvider,
     IDgiiSubmissionClient client,
     EcfSubmissionSettings settings,
+    IUnitOfWork unitOfWork,
+    IWebhookOutbox webhookOutbox,
     TimeProvider timeProvider,
     ILogger<EcfSubmissionProcessor> logger)
 {
+    /// <summary>
+    /// Persiste una transición del comprobante y encola el evento de webhook
+    /// correspondiente en la <b>misma</b> transacción. Si el tenant no tiene
+    /// endpoints suscritos, el fan-out es un no-op barato.
+    /// </summary>
+    private Task PersistAndNotifyAsync(
+        IssuedEcf ecf, string webhookEventType, CancellationToken ct, Func<CancellationToken, Task>? alsoInTransaction = null)
+        => unitOfWork.ExecuteInTransactionAsync(async t =>
+        {
+            await ecfRepo.UpdateAsync(ecf, t);
+            await webhookOutbox.EnqueueAsync(
+                WebhookEvent.Create(webhookEventType, EcfDtoAssembler.From(ecf), timeProvider.GetUtcNow()),
+                ecf.TenantId,
+                t);
+
+            if (alsoInTransaction is not null)
+                await alsoInTransaction(t);
+        }, ct);
+
     public async Task ProcessAsync(EcfSubmissionWorkItem item, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -120,9 +146,8 @@ public sealed class EcfSubmissionProcessor(
             return;
         }
 
-        await ecfRepo.UpdateAsync(ecf, ct);
-        await queue.RescheduleAsync(
-            item.Id, EcfSubmissionKind.Poll, now + settings.FirstPollDelay, attempts: 0, trackId: ack.Value.TrackId, ct: ct);
+        await PersistAndNotifyAsync(ecf, WebhookEventType.EcfSubmitted, ct, t => queue.RescheduleAsync(
+            item.Id, EcfSubmissionKind.Poll, now + settings.FirstPollDelay, attempts: 0, trackId: ack.Value.TrackId, ct: t));
     }
 
     private Task OnSubmitErrorAsync(EcfSubmissionWorkItem item, IssuedEcf ecf, ErrorOr.Error error, CancellationToken ct)
@@ -157,7 +182,7 @@ public sealed class EcfSubmissionProcessor(
         if (item.Attempts >= settings.PollLadder.Count)
         {
             if (!ecf.MarkForReview(reason).IsError)
-                await ecfRepo.UpdateAsync(ecf, ct);
+                await PersistAndNotifyAsync(ecf, WebhookEventType.EcfReview, ct);
             await queue.CompleteAsync(item.Id, ct);
             logger.LogWarning(
                 "e-NCF {Encf} (TrackId {TrackId}) pasa a revisión manual: {Reason}", ecf.Encf.Value, item.TrackId, reason);
@@ -191,7 +216,15 @@ public sealed class EcfSubmissionProcessor(
             return;
         }
 
-        await ecfRepo.UpdateAsync(ecf, ct);
+        string webhookEvent;
+        if (ecf.Status == EcfStatus.Accepted)
+            webhookEvent = WebhookEventType.EcfAccepted;
+        else if (ecf.Status == EcfStatus.AcceptedConditional)
+            webhookEvent = WebhookEventType.EcfAcceptedConditional;
+        else
+            webhookEvent = WebhookEventType.EcfRejected;
+
+        await PersistAndNotifyAsync(ecf, webhookEvent, ct);
 
         if (verdict.StatusCode == 2)
             logger.LogWarning("e-NCF {Encf} rechazado por la DGII (secuencia reutilizable: {Usable})",
@@ -219,7 +252,7 @@ public sealed class EcfSubmissionProcessor(
     private async Task GiveUpSubmitAsync(EcfSubmissionWorkItem item, IssuedEcf ecf, string reason, CancellationToken ct)
     {
         if (!ecf.MarkFailed(reason).IsError)
-            await ecfRepo.UpdateAsync(ecf, ct);
+            await PersistAndNotifyAsync(ecf, WebhookEventType.EcfFailed, ct);
         await queue.MarkDeadAsync(item.Id, reason, ct);
         logger.LogError("e-NCF {Encf} no se pudo enviar a la DGII: {Reason}", ecf.Encf.Value, reason);
     }

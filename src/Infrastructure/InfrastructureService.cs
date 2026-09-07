@@ -175,6 +175,7 @@ public static class InfrastructureService
         services.AddScoped<IAuditLogReadRepository, AuditLogReadRepository>();
         services.AddScoped<IWebhookEndpointRepository, WebhookEndpointRepository>();
         services.AddScoped<IWebhookEndpointReadRepository, WebhookEndpointReadRepository>();
+        services.AddScoped<IWebhookDeliveryReadRepository, WebhookDeliveryReadRepository>();
         services.AddScoped<IWebhookOutbox, PostgresWebhookOutbox>();
 
         // Guard anti-SSRF de las URL de webhook (resuelve DNS) + firma HMAC: sin estado.

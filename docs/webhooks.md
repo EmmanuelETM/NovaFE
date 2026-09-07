@@ -1,5 +1,9 @@
 # Webhooks (RF-12.7)
 
+> **Estado: implementado.** Los 6 eventos de ciclo de vida del e-CF + suscripciones
+> + outbox de entrega + firma HMAC + log de entregas. Los eventos de
+> certificado/secuencia y los de M5/M8/M11 quedan para su módulo (§Fuera de alcance).
+
 Notificaciones asíncronas al ERP del cliente para no depender del polling de
 `GET /ecf/{id}`. Cada tenant configura uno o más endpoints, elige a qué eventos se
 suscribe, y NovaFE le entrega un `POST` firmado (HMAC-SHA256) cada vez que ocurre
@@ -126,9 +130,9 @@ Recurso por tenant, política `TenantConfig` (rol `admin_tenant`).
 | `GET` | `/api/v1/webhooks/{id}` | Uno (sin `secret`) |
 | `PATCH` | `/api/v1/webhooks/{id}` | `{ url?, events?, enabled?, description? }` |
 | `POST` | `/api/v1/webhooks/{id}/rotate-secret` | → `200 { secret }` (el viejo deja de valer al instante) |
-| `POST` | `/api/v1/webhooks/{id}/ping` | Envía `webhook.ping` y devuelve el resultado de la entrega inline |
-| `DELETE` | `/api/v1/webhooks/{id}` | |
-| `GET` | `/api/v1/webhooks/{id}/deliveries` | Log paginado: tipo, código HTTP, intento, timestamps |
+| `POST` | `/api/v1/webhooks/{id}/ping` | Entrega un `webhook.ping` **inline** (no pasa por el outbox) y devuelve `{ delivered, statusCode, error }` |
+| `DELETE` | `/api/v1/webhooks/{id}` | Borrado lógico; deja de recibir entregas de inmediato |
+| `GET` | `/api/v1/webhooks/{id}/deliveries` | Log paginado (`?page=&pageSize=`): tipo, `status`, `lastStatusCode`, `attempts`, timestamps |
 
 **Validación del `url`** (`WebhookEndpoint.Create` + validador):
 - `https` obligatorio fuera de Development.
@@ -167,6 +171,21 @@ Config `Webhooks`: `Enabled` (true), `DeliveryTimeoutSeconds` (10),
 `MaxAttempts` (7), `BackoffLadder`, `MaxEndpointsPerTenant` (5),
 `AutoDisableAfterConsecutiveFailures` (20), `RequireHttps` (true),
 `DeliveriesRetentionDays` (30).
+
+## Piezas del código
+
+| Interfaz (Application) | Impl (Infrastructure) | Rol |
+|---|---|---|
+| `IWebhookEndpointRepository` · `IWebhookEndpointReadRepository` · `IWebhookDeliveryReadRepository` | EF / Dapper | CRUD + log de suscripciones y entregas |
+| `IWebhookUrlPolicy` | `HttpWebhookUrlPolicy` | https + guard anti-SSRF (`PrivateAddressGuard` + DNS) |
+| `IWebhookOutbox` | `PostgresWebhookOutbox` | Fan-out, claim/reschedule/dead/reap/purge |
+| `IWebhookSignature` | `HmacWebhookSignature` | El `X-NovaFE-Signature` |
+| `IWebhookSender` | `HttpWebhookSender` | El `POST` firmado; re-corre el guard antes de conectar |
+| `WebhookDeliveryProcessor` · `IWebhookDeliveryPump` | — · `WebhookDeliveryPump` + `WebhookDeliveryWorker` (Service) | Un tick: reap + claim + entregar; purga en los ticks vacíos |
+
+Los eventos del e-CF los emite `EcfSubmissionProcessor` en la **misma transacción**
+que la transición `IssuedEcf.Mark*` (`PersistAndNotifyAsync`), reusando
+`EcfDtoAssembler.From(ecf)` para el `data.object`.
 
 ## Fuera de alcance (v1)
 

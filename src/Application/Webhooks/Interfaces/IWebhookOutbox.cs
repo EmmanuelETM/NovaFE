@@ -27,6 +27,9 @@ public interface IWebhookOutbox
 
     /// <summary>Recupera filas atascadas en <c>processing</c> (worker caído a mitad de una entrega).</summary>
     Task<int> ReapStuckAsync(TimeSpan olderThan, CancellationToken ct = default);
+
+    /// <summary>Borra el log de entregas (<c>delivered</c> / <c>dead</c>) más viejo que <paramref name="olderThan"/>.</summary>
+    Task<int> PurgeAsync(TimeSpan olderThan, CancellationToken ct = default);
 }
 
 /// <summary>Una fila de entrega reclamada, lista para procesar.</summary>

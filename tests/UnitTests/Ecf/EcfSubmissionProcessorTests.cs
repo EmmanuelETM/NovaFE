@@ -2,10 +2,12 @@ using ErrorOr;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Dgii.Contracts;
 using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Submission;
+using NovaFE.Application.Webhooks.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Dgii;
 using NovaFE.Domain.Ecf;
@@ -20,15 +22,24 @@ public class EcfSubmissionProcessorTests
     private readonly IEcfSubmissionQueue _queue = Substitute.For<IEcfSubmissionQueue>();
     private readonly IDgiiTokenProvider _tokens = Substitute.For<IDgiiTokenProvider>();
     private readonly IDgiiSubmissionClient _client = Substitute.For<IDgiiSubmissionClient>();
+    private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
+    private readonly IWebhookOutbox _webhookOutbox = Substitute.For<IWebhookOutbox>();
     private readonly FakeTimeProvider _clock = new(Now);
     private readonly EcfSubmissionSettings _settings = new();
 
     public EcfSubmissionProcessorTests()
-        => _tokens.GetTokenAsync(Arg.Any<DgiiEnvironment>(), Arg.Any<CancellationToken>())
+    {
+        _tokens.GetTokenAsync(Arg.Any<DgiiEnvironment>(), Arg.Any<CancellationToken>())
             .Returns(new AuthenticationToken("bearer-xyz", Now, Now.AddHours(1)));
 
+        // La UoW de prueba solo ejecuta la operación (sin transacción real).
+        _uow.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(call => ((Func<CancellationToken, Task>)call[0]).Invoke(call.Arg<CancellationToken>()));
+    }
+
     private EcfSubmissionProcessor Sut() => new(
-        _ecfRepo, _queue, _tokens, _client, _settings, _clock, NullLogger<EcfSubmissionProcessor>.Instance);
+        _ecfRepo, _queue, _tokens, _client, _settings, _uow, _webhookOutbox, _clock,
+        NullLogger<EcfSubmissionProcessor>.Instance);
 
     private IssuedEcf Signed(bool rfce = false)
     {
@@ -45,6 +56,11 @@ public class EcfSubmissionProcessorTests
     private static EcfSubmissionWorkItem Item(IssuedEcf ecf, EcfSubmissionKind kind, int attempts = 0, string? trackId = null)
         => new(Guid.NewGuid(), ecf.Id, ecf.TenantId, DgiiEnvironment.Test, kind, attempts, trackId);
 
+    private async Task AssertWebhookEnqueued(string type) =>
+        await _webhookOutbox.Received(1).EnqueueAsync(
+            Arg.Is<NovaFE.Application.Webhooks.Contracts.WebhookEventEnvelope>(e => e.Type == type),
+            Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+
     [Fact]
     public async Task Submit_success_records_the_track_id_and_schedules_a_poll()
     {
@@ -60,6 +76,7 @@ public class EcfSubmissionProcessorTests
         await _ecfRepo.Received(1).UpdateAsync(ecf, Arg.Any<CancellationToken>());
         await _queue.Received(1).RescheduleAsync(item.Id, EcfSubmissionKind.Poll,
             Now + _settings.FirstPollDelay, 0, "TRACK-1", null, Arg.Any<CancellationToken>());
+        await AssertWebhookEnqueued("ecf.submitted");
     }
 
     [Fact]
@@ -74,6 +91,7 @@ public class EcfSubmissionProcessorTests
 
         ecf.Status.ShouldBe(EcfStatus.Accepted);
         await _queue.Received(1).CompleteAsync(item.Id, Arg.Any<CancellationToken>());
+        await AssertWebhookEnqueued("ecf.accepted");
     }
 
     [Fact]
@@ -103,6 +121,7 @@ public class EcfSubmissionProcessorTests
 
         ecf.Status.ShouldBe(EcfStatus.Failed);
         await _queue.Received(1).MarkDeadAsync(item.Id, Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await AssertWebhookEnqueued("ecf.failed");
     }
 
     [Fact]
@@ -134,6 +153,7 @@ public class EcfSubmissionProcessorTests
         ecf.DgiiStatusText.ShouldBe("Aceptado");
         ecf.DgiiReceivedAt.ShouldBe(Now);
         await _queue.Received(1).CompleteAsync(item.Id, Arg.Any<CancellationToken>());
+        await AssertWebhookEnqueued("ecf.accepted");
     }
 
     [Fact]
@@ -149,6 +169,7 @@ public class EcfSubmissionProcessorTests
 
         ecf.Status.ShouldBe(EcfStatus.Rejected);
         ecf.SequenceUsable.ShouldBe(false);
+        await AssertWebhookEnqueued("ecf.rejected");
     }
 
     [Fact]
@@ -179,6 +200,7 @@ public class EcfSubmissionProcessorTests
         await Sut().ProcessAsync(item);
 
         ecf.Status.ShouldBe(EcfStatus.Review);
+        await AssertWebhookEnqueued("ecf.review");
         await _queue.Received(1).CompleteAsync(item.Id, Arg.Any<CancellationToken>());
     }
 
@@ -194,6 +216,7 @@ public class EcfSubmissionProcessorTests
 
         resolved.ShouldBeTrue();
         ecf.Status.ShouldBe(EcfStatus.AcceptedConditional);
+        await AssertWebhookEnqueued("ecf.accepted_conditional");
         await _queue.DidNotReceive().RescheduleAsync(
             Arg.Any<Guid>(), Arg.Any<EcfSubmissionKind>(), Arg.Any<DateTimeOffset>(), Arg.Any<int>(),
             Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());

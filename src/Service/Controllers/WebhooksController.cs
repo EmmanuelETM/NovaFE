@@ -2,7 +2,9 @@ using Asp.Versioning;
 using NovaFE.Application.Webhooks.CreateEndpoint;
 using NovaFE.Application.Webhooks.DeleteEndpoint;
 using NovaFE.Application.Webhooks.GetEndpoint;
+using NovaFE.Application.Webhooks.ListDeliveries;
 using NovaFE.Application.Webhooks.ListEndpoints;
+using NovaFE.Application.Webhooks.PingEndpoint;
 using NovaFE.Application.Webhooks.RotateEndpointSecret;
 using NovaFE.Application.Webhooks.UpdateEndpoint;
 using NovaFE.Service.Common;
@@ -27,6 +29,8 @@ public sealed class WebhooksController(
     GetWebhookEndpointUseCase get,
     UpdateWebhookEndpointUseCase update,
     RotateWebhookEndpointSecretUseCase rotateSecret,
+    PingWebhookEndpointUseCase ping,
+    ListWebhookDeliveriesUseCase listDeliveries,
     DeleteWebhookEndpointUseCase delete) : ApiController
 {
     /// <summary>Registra un endpoint. La respuesta lleva el <c>secret</c> — única vez que se ve.</summary>
@@ -56,6 +60,16 @@ public sealed class WebhooksController(
     [HttpPost("{id:guid}/rotate-secret")]
     public async Task<IActionResult> RotateSecret(Guid id, CancellationToken ct)
         => (await rotateSecret.Execute(new RotateWebhookEndpointSecretCommand(id), ct)).Match(Ok, Problem);
+
+    /// <summary>Envía un <c>webhook.ping</c> al endpoint y devuelve el resultado de la entrega.</summary>
+    [HttpPost("{id:guid}/ping")]
+    public async Task<IActionResult> Ping(Guid id, CancellationToken ct)
+        => (await ping.Execute(new PingWebhookEndpointCommand(id), ct)).Match(Ok, Problem);
+
+    /// <summary>Log de entregas del endpoint, paginado (más reciente primero).</summary>
+    [HttpGet("{id:guid}/deliveries")]
+    public async Task<IActionResult> Deliveries(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        => (await listDeliveries.Execute(new ListWebhookDeliveriesQuery(id, page, pageSize), ct)).Match(Ok, Problem);
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)

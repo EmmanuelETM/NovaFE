@@ -22,3 +22,6 @@ public sealed record WebhookEndpointCreatedDto(WebhookEndpointDto Endpoint, stri
 
 /// <summary>Respuesta de <c>rotate-secret</c>: el nuevo secret en claro.</summary>
 public sealed record WebhookSecretDto(string Secret);
+
+/// <summary>Resultado de un <c>ping</c>: si el endpoint respondió <c>2xx</c> y con qué código.</summary>
+public sealed record WebhookPingResultDto(bool Delivered, int? StatusCode, string? Error);

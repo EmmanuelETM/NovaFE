@@ -7,6 +7,7 @@ using NovaFE.Application.Webhooks;
 using NovaFE.Application.Webhooks.Contracts;
 using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Application.Webhooks.Interfaces;
+using NovaFE.Domain.Common;
 using NovaFE.Domain.Webhooks;
 using NovaFE.Infrastructure.Persistence.EfCore;
 using NovaFE.IntegrationTests.Fixtures;
@@ -116,6 +117,48 @@ public sealed class WebhookDeliveryTests(DatabaseFixture database) : Integration
             .EnsureSuccessStatusCode();
 
         (await EnqueueAsync(tenant, WebhookEventType.EcfAccepted, new { id = "z" })).ShouldBe(0);
+    }
+
+    [RequiresDockerFact]
+    public async Task Ping_delivers_a_synthetic_event_inline_and_returns_the_result()
+    {
+        using var receiver = new WireMockFixture();
+        receiver.Server.Given(Request.Create().WithPath("/hook").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(204));
+
+        await RegisterAndActAsTenantAsync("140999000");
+        var created = await CreateEndpointAsync($"{receiver.BaseUrl}/hook", "ecf.rejected");
+
+        var ping = await LeerAsync<WebhookPingResultDto>(
+            await Client.PostAsync($"/api/v1/webhooks/{created.Endpoint.Id}/ping", content: null));
+
+        ping!.Delivered.ShouldBeTrue();
+        ping.StatusCode.ShouldBe(204);
+
+        var body = receiver.Server.LogEntries.ShouldHaveSingleItem().RequestMessage!.Body!;
+        body.ShouldContain("webhook.ping");
+    }
+
+    [RequiresDockerFact]
+    public async Task Deliveries_log_records_each_attempt()
+    {
+        using var receiver = new WireMockFixture();
+        receiver.Server.Given(Request.Create().WithPath("/hook").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        var tenant = await RegisterAndActAsTenantAsync("141000111");
+        var created = await CreateEndpointAsync($"{receiver.BaseUrl}/hook", "ecf.accepted");
+
+        await EnqueueAsync(tenant, WebhookEventType.EcfAccepted, new { id = "d" });
+        await PumpAsync();
+
+        var log = await LeerAsync<PagedResult<WebhookDeliveryDto>>(
+            await Client.GetAsync($"/api/v1/webhooks/{created.Endpoint.Id}/deliveries"));
+
+        var entry = log!.Items.ShouldHaveSingleItem();
+        entry.EventType.ShouldBe("ecf.accepted");
+        entry.Status.ShouldBe("delivered");
+        entry.LastStatusCode.ShouldBe(200);
     }
 
     private async Task ForceDueAsync()
