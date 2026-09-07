@@ -156,36 +156,23 @@ la lista → `400`.
 
 ## Piezas
 
-| Interfaz (Application) | Impl (Infrastructure) | Rol |
+| Interfaz (Application) | Impl | Rol |
 |---|---|---|
-| `IWebhookEndpointRepository` · `IWebhookEndpointReadRepository` | EF / Dapper | CRUD de suscripciones (`webhook_endpoints`, `ITenantOwned`) |
-| `IWebhookEventQueue` | `PostgresWebhookOutbox` | Fan-out del evento a filas de `webhook_deliveries` |
-| `IWebhookSignature` | `HmacWebhookSignature` | Cómputo del `X-NovaFE-Signature` |
-| `IWebhookSender` | `HttpWebhookSender` | `POST` al endpoint del cliente (HttpClient con timeout corto) |
-| — | `WebhookDeliveryProcessor` (Application) | Entrega una fila y aplica el resultado |
-| `IWebhookDeliveryPump` | `WebhookDeliveryPump` (Service) | Un tick: reap + claim + entregar |
-| — | `WebhookDeliveryWorker : BackgroundService` (Service) | Dispara el pump en intervalo |
-| — | `WebhookEvent` (Application) | Construye el sobre desde el agregado |
-
-Config `Webhooks`: `Enabled` (true), `DeliveryTimeoutSeconds` (10),
-`MaxAttempts` (7), `BackoffLadder`, `MaxEndpointsPerTenant` (5),
-`AutoDisableAfterConsecutiveFailures` (20), `RequireHttps` (true),
-`DeliveriesRetentionDays` (30).
-
-## Piezas del código
-
-| Interfaz (Application) | Impl (Infrastructure) | Rol |
-|---|---|---|
-| `IWebhookEndpointRepository` · `IWebhookEndpointReadRepository` · `IWebhookDeliveryReadRepository` | EF / Dapper | CRUD + log de suscripciones y entregas |
+| `IWebhookEndpointRepository` · `IWebhookEndpointReadRepository` · `IWebhookDeliveryReadRepository` | EF / Dapper | CRUD + log (`webhook_endpoints` `ITenantOwned`; `webhook_deliveries` sistema) |
 | `IWebhookUrlPolicy` | `HttpWebhookUrlPolicy` | https + guard anti-SSRF (`PrivateAddressGuard` + DNS) |
-| `IWebhookOutbox` | `PostgresWebhookOutbox` | Fan-out, claim/reschedule/dead/reap/purge |
+| `IWebhookOutbox` | `PostgresWebhookOutbox` | Fan-out del evento, claim/reschedule/dead/reap/purge |
 | `IWebhookSignature` | `HmacWebhookSignature` | El `X-NovaFE-Signature` |
 | `IWebhookSender` | `HttpWebhookSender` | El `POST` firmado; re-corre el guard antes de conectar |
-| `WebhookDeliveryProcessor` · `IWebhookDeliveryPump` | — · `WebhookDeliveryPump` + `WebhookDeliveryWorker` (Service) | Un tick: reap + claim + entregar; purga en los ticks vacíos |
+| `WebhookDeliveryProcessor` · `IWebhookDeliveryPump` | `WebhookDeliveryPump` + `WebhookDeliveryWorker` (Service) | Un tick: reap + claim + entregar; purga en los ticks vacíos |
+| `WebhookEvent` (Application) | — | Construye el sobre |
 
 Los eventos del e-CF los emite `EcfSubmissionProcessor` en la **misma transacción**
 que la transición `IssuedEcf.Mark*` (`PersistAndNotifyAsync`), reusando
 `EcfDtoAssembler.From(ecf)` para el `data.object`.
+
+Config `Webhooks`: `Enabled` (true), `MaxEndpointsPerTenant` (5),
+`RequireHttps` (true), `DeliveryTimeoutSeconds` (10), `MaxAttempts` (7),
+`AutoDisableAfterConsecutiveFailures` (20), `DeliveriesRetentionDays` (30).
 
 ## Fuera de alcance (v1)
 
