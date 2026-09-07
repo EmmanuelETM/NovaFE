@@ -55,6 +55,17 @@
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.11" />
   </ItemGroup>
 
+  <ItemGroup Label="Azure Key Vault (IKeyProtector opcional — protección de la KEK)">
+    <!--
+      Solo se usan cuando CertificateVault:Provider = azure-key-vault (Fase 1.5 del
+      roadmap de docs/certificates.md). En local/Development el proveedor es "local"
+      y estos paquetes quedan inertes. Azure.Identity trae DefaultAzureCredential
+      (managed identity en Azure, az login / variables de entorno fuera).
+    -->
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
+    <PackageVersion Include="Azure.Security.KeyVault.Keys" Version="4.10.1" />
+  </ItemGroup>
+
   <ItemGroup Label="Representación Impresa (PDF + QR)">
     <!--
       QuestPDF: licencia Community (gratis para organizaciones con &lt; US$1M de

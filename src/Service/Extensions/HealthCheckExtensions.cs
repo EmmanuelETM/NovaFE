@@ -1,6 +1,8 @@
 using NovaFE.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 
 namespace NovaFE.Service.Extensions;
 
@@ -17,11 +19,13 @@ internal static class HealthCheckExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString(DatabaseOptions.ConnectionName) ?? string.Empty;
-
         services.AddHealthChecks()
             .AddNpgSql(
-                connectionString: connectionString,
+                // El mismo connection string normalizado que usan EF y Dapper
+                // (DatabaseOptions.ConnectionString, ya pasado por
+                // DatabaseConnectionString.Normalize), no el crudo de config.
+                connectionStringFactory: sp =>
+                    sp.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString,
                 healthQuery: "SELECT 1;",
                 name: "postgresql",
                 failureStatus: HealthStatus.Unhealthy,

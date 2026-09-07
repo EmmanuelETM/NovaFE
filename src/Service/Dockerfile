@@ -66,6 +66,11 @@ USER root
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
+# El sink de archivo de Serilog escribe en /app/logs (appsettings.Production.json).
+# La app corre sin privilegios, así que el directorio se crea acá con el dueño
+# correcto. En Azure Container Apps el disco es efímero y ese sink es solo un
+# respaldo local: el que importa es la consola → Log Analytics.
+RUN mkdir -p /app/logs && chown $APP_UID /app/logs
 USER $APP_UID
 
 WORKDIR /app

@@ -20,7 +20,13 @@ public static class DatabaseInitializer
     // la base ya al día.
     private const long StartupLockKey = 5_713_190_012L;
 
-    public static async Task MigrateAndSeedDatabaseAsync(this IHost host, CancellationToken ct = default)
+    /// <param name="force">
+    /// Ignora <c>Database:MigrateOnStartup</c> y migra igual. Lo usa el modo
+    /// "migrar y salir" (<c>RUN_MIGRATIONS_AND_EXIT</c>), donde migrar es
+    /// justamente el propósito del proceso.
+    /// </param>
+    public static async Task MigrateAndSeedDatabaseAsync(
+        this IHost host, bool force = false, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(host);
 
@@ -30,7 +36,7 @@ public static class DatabaseInitializer
         var options = services.GetRequiredService<IOptions<DatabaseOptions>>().Value;
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("Database.Initializer");
 
-        if (!options.MigrateOnStartup)
+        if (!force && !options.MigrateOnStartup)
         {
             logger.LogDebug("Database:MigrateOnStartup está desactivado; no se aplican migraciones ni seeds.");
             return;
