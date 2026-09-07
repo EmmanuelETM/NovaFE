@@ -25,6 +25,7 @@
     <File Path="docs/signing.md" />
     <File Path="docs/time.md" />
     <File Path="docs/verification-url.md" />
+    <File Path="docs/webhooks.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Application/NovaFE.Application.csproj" />
