@@ -34,7 +34,9 @@ using NovaFE.Infrastructure.Tenants.EfCore;
 using NovaFE.Infrastructure.Tenants.Sql;
 using NovaFE.Infrastructure.Webhooks;
 using NovaFE.Infrastructure.Webhooks.EfCore;
+using NovaFE.Infrastructure.Webhooks.Outbox;
 using NovaFE.Infrastructure.Webhooks.Sql;
+using NovaFE.Application.Webhooks;
 using NovaFE.Application.Webhooks.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -173,9 +175,15 @@ public static class InfrastructureService
         services.AddScoped<IAuditLogReadRepository, AuditLogReadRepository>();
         services.AddScoped<IWebhookEndpointRepository, WebhookEndpointRepository>();
         services.AddScoped<IWebhookEndpointReadRepository, WebhookEndpointReadRepository>();
+        services.AddScoped<IWebhookOutbox, PostgresWebhookOutbox>();
 
-        // Guard anti-SSRF de las URL de webhook (resuelve DNS): sin estado → singleton.
+        // Guard anti-SSRF de las URL de webhook (resuelve DNS) + firma HMAC: sin estado.
         services.AddSingleton<IWebhookUrlPolicy, HttpWebhookUrlPolicy>();
+        services.AddSingleton<IWebhookSignature, HmacWebhookSignature>();
+
+        // Cliente de entrega: timeout corto, SIN reintento de Polly (el outbox reintenta).
+        services.AddHttpClient<IWebhookSender, HttpWebhookSender>((sp, client) =>
+            client.Timeout = sp.GetRequiredService<WebhookSettings>().DeliveryTimeout);
 
         // Los jsonb del comprobante emitido → tipos de dominio en las lecturas Dapper.
         SqlMapper.AddTypeHandler(new EcfTotalsSnapshotJsonHandler());

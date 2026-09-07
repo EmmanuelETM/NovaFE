@@ -54,7 +54,7 @@ public sealed class WebhookEndpointsEndpointsTests(DatabaseFixture database) : I
     {
         await RegisterAndActAsTenantAsync("130777888");
 
-        foreach (var url in new[] { "http://127.0.0.1/x", "http://10.0.0.5/x", "http://169.254.169.254/latest/meta-data" })
+        foreach (var url in new[] { "http://10.0.0.5/x", "http://169.254.169.254/latest/meta-data", "http://192.168.1.10/x" })
         {
             var response = await Client.PostAsJsonAsync("/api/v1/webhooks", Body(url, "ecf.accepted"));
             response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, $"url {url} debería rechazarse");

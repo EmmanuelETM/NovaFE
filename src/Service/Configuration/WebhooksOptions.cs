@@ -43,5 +43,8 @@ public sealed class WebhooksOptions
     {
         MaxEndpointsPerTenant = MaxEndpointsPerTenant,
         RequireHttps = RequireHttps,
+        DeliveryTimeout = TimeSpan.FromSeconds(DeliveryTimeoutSeconds),
+        MaxAttempts = MaxAttempts,
+        AutoDisableAfterConsecutiveFailures = AutoDisableAfterConsecutiveFailures,
     };
 }

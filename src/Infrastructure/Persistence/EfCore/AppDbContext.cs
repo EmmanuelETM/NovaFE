@@ -43,6 +43,8 @@ public class AppDbContext(
 
     internal DbSet<EcfSubmissionOutboxRow> EcfSubmissionOutbox => Set<EcfSubmissionOutboxRow>();
 
+    internal DbSet<WebhookDeliveryRow> WebhookDeliveries => Set<WebhookDeliveryRow>();
+
     /// <summary>Registro de auditoría inmutable (RF-14.4, tabla <c>audit_log</c>).</summary>
     internal DbSet<AuditLogRow> AuditLog => Set<AuditLogRow>();
 

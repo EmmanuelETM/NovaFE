@@ -4,6 +4,7 @@ using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Submission;
 using NovaFE.Application.Signing;
 using NovaFE.Application.Signing.Interfaces;
+using NovaFE.Application.Webhooks.Delivery;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +27,9 @@ public static class ApplicationService
         // la capa Service desde configuración.
         services.AddScoped<EcfSubmissionProcessor>();
         services.AddScoped<IEcfSubmissionFastPath, EcfSubmissionFastPath>();
+
+        // Entrega de webhooks (RF-12.7). El worker/pump viven en Service.
+        services.AddScoped<WebhookDeliveryProcessor>();
 
         // Auto-register all use cases that implement IUseCase<,>
         var useCaseTypes = assembly.GetTypes()
