@@ -112,6 +112,18 @@ runtime. `FORCE ROW LEVEL SECURITY` hace que ni el dueño se salte la política,
 que las tareas de mantenimiento que necesiten ver todo deben fijar `app.tenant_id`
 o usar un rol con `BYPASSRLS` explícito y auditado.
 
+El script del rol restringido de producción es
+[`deploy/sql/001-app-role.sql`](../deploy/sql/001-app-role.sql). **Ojo:** algunos
+Postgres gestionados dan `BYPASSRLS` al rol por defecto aunque no sea
+superusuario (Neon lo hace con `neondb_owner`) — ahí RLS **no** se aplica hasta
+que la app conecte con `novafe_app`.
+
+`RowLevelSecurityTests` (integración) ejercita esto de verdad: crea un rol sin
+`BYPASSRLS`, y verifica que las políticas `tenant_isolation` cortan lecturas,
+`INSERT` de otro tenant (`WITH CHECK`), y `UPDATE`/`DELETE` de filas ajenas. El
+resto de la suite corre como el superusuario del contenedor, donde la garantía es
+la Capa A (filtro de EF).
+
 ## Cómo agregar una entidad tenant-scoped
 
 1. `class Foo : Entity<Guid>, ITenantOwned, IAuditableEntity` con

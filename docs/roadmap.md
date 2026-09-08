@@ -20,7 +20,7 @@ Bloquean el primer cliente o la certificación con la DGII.
 |---|---|---|
 | **Probar el despliegue** | Etapas 0 (Neon local) → 1 (Azure + KEK local) → 2 (Key Vault). Sin esto no hay nada que vender. | `docs/deployment.md`, `deploy/README.md`, memoria `deploy-testing-plan` |
 | **Verificar contra TestECF real** | Formato exacto de los campos de las 3 respuestas de la DGII (`trackId`, `codigo` número vs. cadena), comportamiento del código `0`, resolución síncrona del RFCE, ruta exacta de `recepcionfc`, `HolderIdentifier` en el subject del certificado INDOTEL. La certificación DGII depende de que esto sea correcto. | `docs/dgii-submission.md` §"Pendiente de verificar", `docs/certificates.md` |
-| **Rol `novafe_app` + prueba de aislamiento RLS** | El script SQL existe (`deploy/sql/001-app-role.sql`); falta la prueba de integración que se conecta como rol no-superusuario y verifica el corte cross-tenant. Hoy las pruebas corren como `postgres` y RLS nunca se ejercita. | `docs/multi-tenancy.md` |
+| Prueba de aislamiento RLS con rol restringido | ✅ **Hecho.** `RowLevelSecurityTests` conecta como un rol sin `BYPASSRLS` y verifica el corte cross-tenant (lecturas, `WITH CHECK` en `INSERT`, `UPDATE`/`DELETE` de filas ajenas). Falta correr `deploy/sql/001-app-role.sql` en el Postgres de producción y apuntar el runtime a `novafe_app`. | `docs/multi-tenancy.md` |
 | ~~Worker de alertas de vencimiento de certificados (RF-01.6)~~ | **Hecho.** `ExpiryMonitorWorker`: avisa por webhook `certificate.expiring` (90/30/15/7) · `certificate.expired` · `sequence.expiring`/`expired`/`low`/`exhausted`. | `docs/expiry-monitor.md` |
 
 ## P1 — Primeros clientes / requisito regulatorio

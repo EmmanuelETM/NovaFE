@@ -24,7 +24,19 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     private Respawner? _respawner;
 
+    /// <summary>Cadena de conexión como el rol dueño (superusuario del contenedor): DDL, migraciones, seed.</summary>
     public string ConnectionString { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Cadena de conexión como un rol <b>restringido</b> (sin superusuario ni
+    /// <c>BYPASSRLS</c>), igual que <c>novafe_app</c> en producción. Es lo que
+    /// hace que las políticas RLS realmente se apliquen — ver
+    /// <c>RowLevelSecurityTests</c> y <c>docs/multi-tenancy.md</c>.
+    /// </summary>
+    public string RestrictedConnectionString { get; private set; } = string.Empty;
+
+    internal const string RestrictedRole = "novafe_rls_test";
+    private const string RestrictedPassword = "rls_test_pw";
 
     public async ValueTask InitializeAsync()
     {
@@ -36,6 +48,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         ConnectionString = _container.GetConnectionString();
 
         await ApplyMigrationsAsync();
+        await CreateRestrictedRoleAsync();
 
         // Respawn arma su plan de borrado leyendo el esquema, así que se crea
         // después de aplicar las migraciones.
@@ -76,5 +89,38 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
         await using var context = new AppDbContext(options, NullCurrentTenant.Instance);
         await context.Database.MigrateAsync();
+    }
+
+    /// <summary>
+    /// Crea el rol restringido de runtime (los mismos privilegios que
+    /// <c>deploy/sql/001-app-role.sql</c>: acceso a datos, nunca DDL, sin
+    /// <c>BYPASSRLS</c>) y arma <see cref="RestrictedConnectionString"/>.
+    /// </summary>
+    private async Task CreateRestrictedRoleAsync()
+    {
+        await using var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync();
+
+        var db = new NpgsqlConnectionStringBuilder(ConnectionString).Database;
+
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = $"""
+                DROP ROLE IF EXISTS {RestrictedRole};
+                CREATE ROLE {RestrictedRole} LOGIN PASSWORD '{RestrictedPassword}'
+                    NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+                GRANT CONNECT ON DATABASE "{db}" TO {RestrictedRole};
+                GRANT USAGE ON SCHEMA public TO {RestrictedRole};
+                GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {RestrictedRole};
+                GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {RestrictedRole};
+                """;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        RestrictedConnectionString = new NpgsqlConnectionStringBuilder(ConnectionString)
+        {
+            Username = RestrictedRole,
+            Password = RestrictedPassword,
+        }.ConnectionString;
     }
 }
