@@ -3,22 +3,26 @@
 -- ============================================================================
 --  Para que Row-Level Security realmente aísle por tenant, la app NO debe
 --  conectarse como superusuario, ni como dueño de las tablas, ni con BYPASSRLS.
---  Las migraciones las corre el rol dueño (el rol por defecto de Neon / de la
---  base); el runtime usa `novafe_app`, creado acá.
+--  (Algunos Postgres gestionados dan BYPASSRLS al rol por defecto aunque no sea
+--  superusuario — Neon lo hace con `neondb_owner`.)
 --
---  Contexto: docs/multi-tenancy.md §"El rol de aplicación en producción".
+--  Las migraciones las corre el rol dueño; el runtime usa `novafe_app`, creado
+--  acá. Contexto: docs/multi-tenancy.md §"El rol de aplicación en producción".
 --
 --  Uso:
---    1. Conectate a la base como el rol dueño (el que trae Neon por defecto).
---    2. Editá la contraseña de abajo (o usá \set antes de correr).
---    3. psql "<connection string del dueño>" -f deploy/sql/001-app-role.sql
---    4. El connection string de la Container App usa novafe_app, NO el dueño.
+--    1. Conectate a la base como el rol dueño (el de Neon por defecto, o el
+--       editor SQL de la consola de Neon).
+--    2. EDITÁ las dos líneas de PSQL SET de abajo — o, si tu cliente no soporta
+--       `\set` (p. ej. el editor de Neon), borralas y reemplazá :'app_password'
+--       por 'tu-contraseña' y :"dbname" por el nombre real de la base.
+--    3. Corré este archivo entero.
+--    4. El connection string del runtime usa novafe_app, NO el dueño.
 --
 --  Idempotente: se puede correr varias veces.
 -- ============================================================================
 
-\set app_password `echo "${NOVAFE_APP_PASSWORD:-CAMBIAR_ESTA_CONTRASENA}"`
-\set dbname `echo "${NOVAFE_DB_NAME:-novafe}"`
+\set app_password 'CAMBIAR_ESTA_CONTRASENA'
+\set dbname 'neondb'
 
 DO $$
 BEGIN
@@ -33,7 +37,7 @@ $$;
 -- Sin privilegios de superusuario ni BYPASSRLS (defaults, pero explícito).
 ALTER ROLE novafe_app NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
 
--- Acceso a datos, nunca DDL. Correr conectado a la base objetivo (:dbname).
+-- Acceso a datos, nunca DDL.
 GRANT CONNECT ON DATABASE :"dbname" TO novafe_app;
 GRANT USAGE ON SCHEMA public TO novafe_app;
 
@@ -41,7 +45,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO novafe_ap
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO novafe_app;
 
 -- Que las tablas/secuencias futuras (nuevas migraciones) hereden los mismos
--- permisos automáticamente. Se aplica a lo que cree el rol que corre ESTE script.
+-- permisos automáticamente. Se aplica a lo que cree el rol que corre ESTE script
+-- (el dueño), así que corré esto DESPUÉS de cada release que agregue tablas — o
+-- volvé a correr los dos GRANT … ON ALL … de arriba.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO novafe_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
@@ -51,3 +57,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 -- vía RowLevelSecurity.Enable) hace que ni el dueño se salte la política. Una
 -- tarea de mantenimiento que necesite ver todo debe fijar app.tenant_id o usar
 -- un rol con BYPASSRLS explícito y auditado.
+--
+-- Cubierto por RowLevelSecurityTests (integración): valida este mismo modelo de
+-- grants + NOBYPASSRLS contra las políticas reales.
