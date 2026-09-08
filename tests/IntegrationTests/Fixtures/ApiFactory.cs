@@ -30,6 +30,13 @@ public sealed class ApiFactory(
             {
                 ["ConnectionStrings:Default"] = connectionString,
 
+                // La configuración de base se fija acá (gana sobre user-secrets):
+                // si un dev tiene "Database:Provider=neon" o un connection string
+                // remoto en sus secrets, las pruebas deben ignorarlo y hablar solo
+                // con el contenedor. El de Testcontainers no tiene TLS.
+                ["Database:Provider"] = "postgres",
+                ["Database:RequireSsl"] = "false",
+
                 // El esquema de las pruebas lo aplica DatabaseFixture; el arranque
                 // de la app no debe migrar ni sembrar nada.
                 ["Database:MigrateOnStartup"] = "false",
