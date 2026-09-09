@@ -1,32 +1,57 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { neonConfig, Pool as NeonPool } from "@neondatabase/serverless";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
+import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
+import { Pool as PgPool } from "pg";
+import ws from "ws";
 
 import { env } from "@/lib/env";
 
 import * as schema from "./auth/schema";
 
 /**
- * Pool de Postgres para Better Auth.
+ * Cliente de Postgres para Better Auth.
  *
- * Es un cliente **aparte** del de la API .NET: el dashboard no toca las tablas de
- * negocio (eso va por el proxy `app/api/backend`). Este pool existe solo para que
- * Better Auth guarde usuarios y sesiones en el schema `auth`. Mismo Neon, schema
- * distinto de `public` (que es territorio de EF Core).
+ * **Contrato**: el resto del código importa `db` (una instancia de Drizzle) y
+ * nunca toca el driver. Cambiar de driver —o de proveedor de Postgres— es tocar
+ * solo este archivo.
  *
- * Driver `pg` (node-postgres), **no** `@neondatabase/serverless`: `pg` habla con
- * cualquier Postgres, así que mudarse de Neon es cambiar `DATABASE_URL` y nada más.
+ * `DATABASE_DRIVER`:
+ *   - `pg` (default) — node-postgres, TCP. Portable a **cualquier** Postgres
+ *     (Docker local, RDS, Azure, un branch de Neon…). Es el de desarrollo.
+ *   - `neon` — `@neondatabase/serverless` sobre WebSocket. En Vercel evita el
+ *     handshake TCP en cada invocación fría y no agota el límite de conexiones
+ *     de Neon bajo concurrencia. Solo tiene sentido corriendo serverless
+ *     contra Neon.
+ *
+ * Better Auth hace un lookup a la sesión en casi cada request autenticado, así
+ * que en producción (Vercel + Neon) `neon` vale la pena; en local `pg` gana en
+ * simplicidad y portabilidad. Mudarse de Neon: `DATABASE_DRIVER=pg`, y ya.
+ *
+ * Es un cliente **aparte** del de la API .NET: el dashboard no toca las tablas
+ * de negocio (eso va por el proxy `app/api/backend`). Este pool existe solo
+ * para el schema `auth`.
  */
-const globalForDb = globalThis as unknown as { __authPool?: Pool };
 
-const pool =
-  globalForDb.__authPool ??
-  new Pool({
-    connectionString: env.DATABASE_URL,
-    max: 5,
-  });
+// `@neondatabase/serverless` necesita una impl de WebSocket; Node 22 trae una
+// nativa pero se fija explícita para que también ande en runtimes que no.
+neonConfig.webSocketConstructor = ws;
 
-// En dev, Next recarga módulos en cada cambio: sin esto se abriría un pool nuevo
-// por recarga hasta agotar las conexiones de Neon.
-if (process.env.NODE_ENV !== "production") globalForDb.__authPool = pool;
+function build() {
+  const connectionString = env.DATABASE_URL;
 
-export const db = drizzle(pool, { schema });
+  if (env.DATABASE_DRIVER === "neon") {
+    return drizzleNeon(new NeonPool({ connectionString }), { schema });
+  }
+
+  return drizzlePg(new PgPool({ connectionString, max: 5 }), { schema });
+}
+
+// En dev, Next recarga módulos en cada cambio: sin cachear en globalThis se
+// abriría un pool nuevo por recarga hasta agotar las conexiones.
+const globalForDb = globalThis as unknown as {
+  __authDb?: ReturnType<typeof build>;
+};
+
+export const db: ReturnType<typeof build> = globalForDb.__authDb ?? build();
+
+if (process.env.NODE_ENV !== "production") globalForDb.__authDb = db;
