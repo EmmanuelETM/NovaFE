@@ -1,0 +1,53 @@
+# CI del dashboard (web/). Sustituye al hook de pre-commit del scaffold
+# original, que no se lleva bien con un subdirectorio de un repo git existente.
+
+name: Web CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ["web/**", ".github/workflows/web-ci.yml"]
+  pull_request:
+    branches: [main, develop]
+    paths: ["web/**", ".github/workflows/web-ci.yml"]
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  check:
+    name: Lint, typecheck y build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.22"
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.node-version
+
+      - name: Instalar dependencias
+        run: bun install --frozen-lockfile
+
+      - name: Formato
+        run: bun run format:check
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Build
+        # El schema de la API viene como placeholder en el repo (se regenera con
+        # la API corriendo); SKIP_ENV_VALIDATION porque las env llegan en runtime.
+        run: SKIP_ENV_VALIDATION=1 bun run build
+
+      - name: Typecheck
+        # Después del build: `next build` genera los tipos globales de rutas
+        # (LayoutProps, PageProps…) que tsc necesita.
+        run: bun run typecheck

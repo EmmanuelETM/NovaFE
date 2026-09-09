@@ -1,0 +1,9 @@
+# El dashboard usa LF en todos lados (Prettier lo fija así, y es la convención
+# de Next/Vercel). Esto anula el `CRLF en working copy` de la raíz para web/.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

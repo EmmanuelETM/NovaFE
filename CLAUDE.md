@@ -7,6 +7,11 @@ siguiendo los patrones existentes.
 Contexto del producto y de negocio: ver la sección **Contexto del Proyecto** más
 abajo. El detalle regulatorio de DGII vive en `C:\workplace\FE_DGII\`.
 
+**El dashboard** (panel de administración, M15) vive en `web/` — Next.js 16 +
+React 19, se despliega en Vercel, habla con esta API por un proxy de mismo
+origen. Es un proyecto aparte con su propio toolchain (Bun) y su propia guía:
+`web/CLAUDE.md`. Nada de esta guía .NET aplica ahí.
+
 ---
 
 ## Arquitectura
