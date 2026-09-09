@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Salida cruda del CLI de Better Auth (solo para diffear al agregar plugins;
+# el schema versionado y envuelto en pgSchema("auth") es lib/auth/schema.ts)
+/lib/auth/schema.generated.ts
+
 # vercel
 .vercel
 
