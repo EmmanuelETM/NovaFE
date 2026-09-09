@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/lib/db";
+import { sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
 
 import * as schema from "./schema";
@@ -12,11 +13,11 @@ import * as schema from "./schema";
  * (`~/.claude/plans/linear-beaming-squirrel.md`).
  *
  * - Adapter Drizzle, tablas en el schema `auth` de Neon (aparte de `public`,
- *   que es de EF Core en la API .NET). Driver `pg` → portable a cualquier Postgres.
- * - Solo **OAuth**: Google, GitHub, Microsoft (Entra ID). Sin passwords, sin
- *   magic links, sin proveedor de correo.
- * - `accountLinking` para que la misma persona por dos providers con el mismo
- *   email sea un solo `user`.
+ *   que es de EF Core en la API .NET). Driver por contrato en `lib/db.ts`.
+ * - Login: **OAuth** (Google, GitHub, Microsoft/Entra ID) **+ email/contraseña**
+ *   con verificación de correo obligatoria.
+ * - `accountLinking` para que la misma persona por dos vías con el mismo email
+ *   sea un solo `user`.
  *
  * Better Auth hace **solo autenticación** (identidad). La autorización —qué
  * tenant, qué rol— vive en la API .NET (`platform_users`), y el BFF la resuelve
@@ -31,6 +32,33 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+
+  emailAndPassword: {
+    enabled: true,
+    // Sin verificar el correo no hay sesión: un `platform_users` se aprovisiona
+    // por email, así que registrarse con el correo de otro no puede dar acceso.
+    requireEmailVerification: true,
+    minPasswordLength: 10,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Restablecé tu contraseña — NovaFE",
+        html: `<p>Pediste restablecer tu contraseña. Entrá a <a href="${url}">este enlace</a> para elegir una nueva.</p><p>Si no fuiste vos, ignorá este correo.</p>`,
+      });
+    },
+  },
+
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Verificá tu correo — NovaFE",
+        html: `<p>Confirmá tu correo entrando a <a href="${url}">este enlace</a>.</p>`,
+      });
+    },
+  },
 
   socialProviders: {
     google: {

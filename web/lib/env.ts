@@ -42,6 +42,15 @@ export const env = createEnv({
     /** Postgres para Better Auth (schema `auth`). El mismo Neon que la API. */
     DATABASE_URL: z.url().optional(),
 
+    /**
+     * Driver de Postgres para Better Auth. Contrato en `lib/db.ts`.
+     *   - `pg` (default): node-postgres, portable a cualquier Postgres. Dev.
+     *   - `neon`: @neondatabase/serverless sobre WebSocket. En Vercel evita el
+     *     handshake TCP por invocación. Solo tiene sentido serverless + Neon.
+     * Mudarse de Neon = volver a `pg`, cero cambios de código.
+     */
+    DATABASE_DRIVER: z.enum(["pg", "neon"]).default("pg"),
+
     /** Secreto de Better Auth (firma cookies/tokens). `openssl rand -base64 32`. */
     BETTER_AUTH_SECRET: z.string().min(1).optional(),
 
@@ -54,6 +63,14 @@ export const env = createEnv({
      * `identityHeaders()` en `lib/api/server.ts`.
      */
     INTERNAL_API_KEY: z.string().min(1).optional(),
+
+    // --- Correo (verificación de email + reset de contraseña) ---------------
+    // Contrato en `lib/email.ts`. Sin RESEND_API_KEY, en dev el correo se
+    // escribe a la consola. Cambiar a Azure Communication Services = reescribir
+    // solo esa función.
+    RESEND_API_KEY: z.string().min(1).optional(),
+    /** Remitente de los correos. Debe ser un dominio verificado en Resend. */
+    EMAIL_FROM: z.string().min(1).default("NovaFE <onboarding@resend.dev>"),
 
     // --- OAuth: Google + GitHub + Microsoft (Entra ID) ----------------------
     // Redirect URI a registrar en cada provider:

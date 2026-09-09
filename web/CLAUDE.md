@@ -39,20 +39,28 @@ Query y Table, react-hook-form + Zod, nuqs y Zustand ya cableados.
 
 Plan completo: `~/.claude/plans/linear-beaming-squirrel.md` (sección "Auth humano").
 
-- **Self-hosted** (no el Managed de Neon) por portabilidad: mudarse de Neon = cambiar
-  `DATABASE_URL`. Driver `pg`, no `@neondatabase/serverless`.
-- **Solo OAuth**: Google + GitHub + Microsoft (Entra ID). Sin passwords, sin magic links.
+- **Self-hosted** (no el Managed de Neon) por portabilidad.
+- **Driver por contrato** (`lib/db.ts`): `DATABASE_DRIVER=pg` (default, node-postgres,
+  portable a cualquier Postgres) o `neon` (`@neondatabase/serverless` sobre WebSocket,
+  para Vercel + Neon). El resto del código importa `db` y no sabe cuál es. Mudarse de
+  Neon = `DATABASE_DRIVER=pg`.
+- **Login**: OAuth (Google + GitHub + Microsoft/Entra ID) **+ email/contraseña** con
+  verificación de correo obligatoria.
+- **Correo por contrato** (`lib/email.ts`): Resend, o log a consola en dev sin
+  `RESEND_API_KEY`. Swappable a Azure Communication Services.
 - Tablas en el schema **`auth`** de Neon (Drizzle + `drizzle-kit`), aparte de `public`
   (que es de EF Core en la API). El .NET **no** lee esas tablas.
-- Archivos: `lib/db.ts` (pool `pg` + Drizzle), `lib/auth/index.ts` (config),
-  `lib/auth/schema.ts` (tablas, envueltas a mano en `pgSchema("auth")` — ver el comentario
-  del archivo antes de regenerar), `lib/auth/client.ts`, `app/api/auth/[...all]/route.ts`.
+- Archivos: `lib/db.ts` (contrato de driver + Drizzle), `lib/email.ts` (contrato de
+  correo), `lib/auth/index.ts` (config), `lib/auth/schema.ts` (tablas, envueltas a mano
+  en `pgSchema("auth")` — ver el comentario del archivo antes de regenerar),
+  `lib/auth/client.ts`, `app/api/auth/[...all]/route.ts`.
 - Autorización (tenant + rol) **no** vive acá — vive en `platform_users` en la API .NET.
   Better Auth solo hace autenticación.
 - Scripts: `bun run auth:generate` (CLI → `schema.generated.ts` para diffear),
   `bun run db:generate` / `db:migrate` (drizzle-kit, schema `auth`).
-- Env (todas opcionales por ahora): `DATABASE_URL`, `BETTER_AUTH_SECRET`,
-  `BETTER_AUTH_URL`, `INTERNAL_API_KEY`, `GOOGLE_*` / `GITHUB_*` / `MICROSOFT_*`.
+- Env (todas opcionales por ahora): `DATABASE_URL`, `DATABASE_DRIVER`,
+  `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `INTERNAL_API_KEY`, `RESEND_API_KEY`,
+  `EMAIL_FROM`, `GOOGLE_*` / `GITHUB_*` / `MICROSOFT_*`.
 - **Neon MCP**: agregado a la config de Claude Code (`claude mcp add neon …`). Autenticar
   con `/mcp`. Útil para el schema `auth`, branches de Neon, y el rol `novafe_app` pendiente.
 - **`bun run api:types`** apunta a `http://localhost:5071/openapi/v1.json` (solo mapeado en
