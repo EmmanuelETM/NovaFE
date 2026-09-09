@@ -1,0 +1,9 @@
+# Generado desde el OpenAPI de la API. Reformatearlo produce un diff enorme cada vez
+# que se regenera, y nadie lo lee.
+lib/api/schema.d.ts
+
+node_modules
+.next
+out
+build
+bun.lock
