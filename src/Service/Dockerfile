@@ -10,9 +10,12 @@
 # 'aspnet' (no 'sdk'): imagen chica, sin compilador ni SDK en producción.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 # libfontconfig1: lo necesita el Skia nativo de QuestPDF (Representación Impresa,
-# Módulo 9) para resolver fuentes en Linux. La imagen slim no lo trae.
+#   Módulo 9) para resolver fuentes en Linux. La imagen slim no lo trae.
+# libgssapi-krb5-2: Npgsql negocia cifrado GSSAPI antes de TLS al abrir una
+#   conexión; sin esta librería registra un "Cannot load library
+#   libgssapi_krb5.so.2" (inofensivo contra Postgres local, ruido contra Neon).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libfontconfig1 \
+    && apt-get install -y --no-install-recommends libfontconfig1 libgssapi-krb5-2 \
     && rm -rf /var/lib/apt/lists/*
 USER $APP_UID
 WORKDIR /app

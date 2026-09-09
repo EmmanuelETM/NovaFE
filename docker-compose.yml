@@ -33,6 +33,14 @@ services:
       # El doble guion bajo es el separador de secciones de configuración en
       # .NET: esta variable sobrescribe ConnectionStrings:Default de appsettings.
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=NovaFE;Username=postgres;Password=${POSTGRES_PASSWORD:-Local_dev_password_123}"
+      # El compose local siempre habla con el Postgres del contenedor de al lado,
+      # que no tiene TLS. Se fija el proveedor explícitamente para que la config
+      # de Neon en user-secrets —que docker-compose.override.yml monta para que
+      # Visual Studio pueda depurar dentro del contenedor— no se filtre y fuerce
+      # SslMode=VerifyFull contra un Postgres que no habla TLS. Las env vars ganan
+      # sobre user-secrets en el orden de configuración de .NET.
+      Database__Provider: "postgres"
+      Database__RequireSsl: "false"
       # En Development, la KEK del vault de certificados sale de
       # appsettings.Development.json. En producción se define
       # CertificateVault__MasterKey por el mecanismo de secretos del proveedor.
