@@ -14,4 +14,13 @@ public sealed class SecurityOptions
     /// vacía fuera de Development = endpoints cerrados a cal y canto.
     /// </summary>
     public string? AdminApiKey { get; set; }
+
+    /// <summary>
+    /// Secreto compartido con el BFF del dashboard (header <c>X-Internal-Key</c>).
+    /// Autoriza al BFF a actuar en nombre de un humano ya autenticado por Better
+    /// Auth, que se identifica en <c>X-Acting-User</c> / <c>X-Acting-Email</c>.
+    /// Vacío = el esquema queda deshabilitado (ningún humano entra por esta vía).
+    /// En producción va por Key Vault.
+    /// </summary>
+    public string? InternalApiKey { get; set; }
 }

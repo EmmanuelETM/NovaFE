@@ -50,6 +50,27 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
                 cancellationToken: ct));
     }
 
+    public async Task<PlatformUserDto?> FindByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        const string sql =
+            """
+            SELECT id           AS "Id",
+                   email        AS "Email",
+                   role         AS "Role",
+                   tenant_id    AS "TenantId",
+                   (auth_user_id IS NOT NULL) AS "AuthLinked",
+                   revoked_at   AS "RevokedAt",
+                   created_at   AS "CreatedAt"
+            FROM platform_users
+            WHERE id = @id AND is_deleted = false
+            """;
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        return await connection.QuerySingleOrDefaultAsync<PlatformUserDto>(
+            new CommandDefinition(sql, new { id }, session.Transaction, cancellationToken: ct));
+    }
+
     public async Task<IReadOnlyList<PlatformUserDto>> ListByTenantAsync(Guid tenantId, CancellationToken ct = default)
     {
         const string sql =

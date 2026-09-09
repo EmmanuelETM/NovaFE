@@ -48,6 +48,10 @@ public static partial class Errors
         public static Error InvalidApiKey => Error.Unauthorized(
             code: "Auth.InvalidApiKey",
             description: "La credencial de la petición no es válida, está revocada o venció.");
+
+        public static Error NotAuthenticated => Error.Unauthorized(
+            code: "Auth.NotAuthenticated",
+            description: "La petición no está autenticada.");
     }
 
     public static class Http

@@ -35,6 +35,7 @@ using NovaFE.Infrastructure.Signing;
 using NovaFE.Infrastructure.Tenants;
 using NovaFE.Infrastructure.Tenants.EfCore;
 using NovaFE.Infrastructure.Tenants.Sql;
+using NovaFE.Infrastructure.Users;
 using NovaFE.Infrastructure.Users.EfCore;
 using NovaFE.Infrastructure.Users.Sql;
 using NovaFE.Infrastructure.Webhooks;
@@ -169,6 +170,7 @@ public static class InfrastructureService
         services.AddScoped<IApiKeyAuthenticator, ApiKeyAuthenticator>();
         services.AddScoped<IPlatformUserRepository, PlatformUserRepository>();
         services.AddScoped<IPlatformUserReadRepository, PlatformUserReadRepository>();
+        services.AddScoped<IPlatformUserAuthenticator, PlatformUserAuthenticator>();
         services.AddScoped<ICertificateRepository, CertificateRepository>();
         services.AddScoped<ICertificateReadRepository, CertificateReadRepository>();
         services.AddScoped<INcfSequenceRepository, NcfSequenceRepository>();
