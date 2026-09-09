@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "http": {
+    "API (Neon)": {
       "commandName": "Project",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
@@ -8,7 +8,18 @@
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5071"
     },
-    "https": {
+    "API (Postgres local)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__Default": "Host=localhost;Port=5432;Database=NovaFE;Username=postgres;Password=Local_dev_password_123",
+        "Database__Provider": "postgres",
+        "Database__RequireSsl": "false"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5071"
+    },
+    "API (Neon, HTTPS)": {
       "commandName": "Project",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

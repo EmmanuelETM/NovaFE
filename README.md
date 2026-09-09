@@ -65,10 +65,20 @@ dotnet user-secrets set "ConnectionStrings:Default" "Host=...;Database=NovaFE;..
 
 ### Opción C: Visual Studio
 
-Abre `NovaFE.slnx` y elige el proyecto de arranque **docker-compose**: F5 levanta
-toda la orquestación con depuración (Fast Mode) sobre el contenedor `api`. El
-proyecto `NovaFE.Service` también trae el perfil **Container (Dockerfile)** para
-depurar solo la API en su contenedor.
+Abre `NovaFE.slnx`. El desplegable de arranque ofrece:
+
+| Elección | Qué levanta | Puerto | Base de datos |
+| --- | --- | --- | --- |
+| Proyecto **docker-compose** | API + Postgres, ambos en contenedor (Fast Mode) | 8080 | Postgres del contenedor |
+| `NovaFE.Service` → perfil **API (Neon)** | solo la API (`dotnet run`) | 5071 | user-secrets (Neon) o `appsettings.Development.json` |
+| `NovaFE.Service` → perfil **API (Postgres local)** | solo la API (`dotnet run`) | 5071 | Postgres del contenedor (fuerza `Provider=postgres`, ignora los user-secrets de Neon) |
+| `NovaFE.Service` → perfil **Container (Dockerfile)** | solo la API en su contenedor | dinámico | user-secrets / appsettings |
+
+**API (Postgres local)** necesita el contenedor de Postgres arriba
+(`docker compose up -d postgres` una vez; queda con `restart: unless-stopped`).
+Los perfiles `API (*)` usan el mismo puerto 5071, así que el dashboard (`web/`)
+no cambia de `APP_API_URL` al alternar Neon ↔ local — solo el `APP_DEV_TENANT_ID`,
+porque cada base tiene sus propios contribuyentes.
 
 La documentación interactiva queda en `/scalar` (solo en Development).
 
