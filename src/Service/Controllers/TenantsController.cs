@@ -8,6 +8,9 @@ using NovaFE.Application.Tenants.ListTenants;
 using NovaFE.Application.Tenants.RegisterTenant;
 using NovaFE.Application.Tenants.RevokeApiKey;
 using NovaFE.Application.Tenants.SetEmitterProfile;
+using NovaFE.Application.Users.ListTenantUsers;
+using NovaFE.Application.Users.ProvisionTenantUser;
+using NovaFE.Application.Users.RevokeUser;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -32,6 +35,9 @@ public sealed class TenantsController(
     CreateApiKeyUseCase createApiKey,
     ListApiKeysUseCase listApiKeys,
     RevokeApiKeyUseCase revokeApiKey,
+    ProvisionTenantUserUseCase provisionUser,
+    ListTenantUsersUseCase listUsers,
+    RevokeUserUseCase revokeUser,
     ListAuditLogUseCase listAuditLog) : ApiController
 {
     [HttpPost]
@@ -105,6 +111,34 @@ public sealed class TenantsController(
         => (await revokeApiKey.Execute(new RevokeApiKeyCommand(id, keyId), ct))
             .Match(_ => NoContent(), Problem);
 
+    /// <summary>
+    /// Da de alta a un empleado del contribuyente en el dashboard, por correo. La
+    /// persona entra cuando inicia sesión con ese mismo correo en Better Auth.
+    /// </summary>
+    [HttpPost("{id:guid}/users")]
+    public async Task<IActionResult> ProvisionUser(
+        Guid id,
+        [FromBody] ProvisionUserBody body,
+        CancellationToken ct)
+        => (await provisionUser.Execute(new ProvisionTenantUserCommand(id, body.Email, body.Role), ct))
+            .Match(
+                user => CreatedAtAction(nameof(ListUsers), new { id, version = "1" }, user),
+                Problem);
+
+    /// <summary>Los usuarios del contribuyente en el dashboard.</summary>
+    [HttpGet("{id:guid}/users")]
+    public async Task<IActionResult> ListUsers(Guid id, CancellationToken ct)
+        => (await listUsers.Execute(new ListTenantUsersQuery(id), ct)).Match(Ok, Problem);
+
+    /// <summary>Revoca el acceso de un usuario del contribuyente al dashboard.</summary>
+    [HttpDelete("{id:guid}/users/{userid:guid}")]
+    public async Task<IActionResult> RevokeUser(
+        Guid id,
+        [FromRoute(Name = "userid")] Guid userId,
+        CancellationToken ct)
+        => (await revokeUser.Execute(new RevokeUserCommand(userId, id), ct))
+            .Match(_ => NoContent(), Problem);
+
     /// <summary>Registro de auditoría del contribuyente (RF-14.4), paginado.</summary>
     [HttpGet("{id:guid}/audit-log")]
     public async Task<IActionResult> GetAuditLog(
@@ -131,4 +165,11 @@ public sealed class TenantsController(
     /// <c>consultor</c>, RF-14.5) es obligatorio — sin default.
     /// </summary>
     public sealed record CreateApiKeyBody(string? Label, string? Environment, string Role, DateTimeOffset? ExpiresAt);
+
+    /// <summary>
+    /// Cuerpo del <c>POST .../users</c>. <c>role</c> (<c>admin_tenant</c> /
+    /// <c>emisor</c> / <c>consultor</c>) es obligatorio; <c>admin_sistema</c> no
+    /// es un rol de contribuyente.
+    /// </summary>
+    public sealed record ProvisionUserBody(string Email, string Role);
 }
