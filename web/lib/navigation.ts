@@ -25,8 +25,8 @@ export interface NavItem {
   description: string;
   icon: LucideIcon;
   /**
-   * Nivel mínimo para verlo. Los roles son jerárquicos, así que pedir supervisor incluye
-   * al administrador. **Esconder no es proteger**: la API valida cada petición.
+   * Rango mínimo para verlo (`ROLE` en `features/auth/roles.ts`). **Esconder no es
+   * proteger**: la API valida cada petición contra `platform_users`.
    */
   minRole: RoleLevel;
   /**
@@ -51,7 +51,7 @@ export const NAVIGATION: readonly NavSection[] = [
         label: "Inicio",
         description: "El resumen de la aplicación",
         icon: LayoutDashboard,
-        minRole: ROLE.operator,
+        minRole: ROLE.consultor,
         ready: true,
       },
     ],
@@ -64,7 +64,7 @@ export const NAVIGATION: readonly NavSection[] = [
         label: "Usuarios",
         description: "Quién entra al sistema y con qué rol",
         icon: Users,
-        minRole: ROLE.administrator,
+        minRole: ROLE.admin_tenant,
         // Ejemplo de módulo previsto sin pantalla: se pinta inerte con la etiqueta
         // «pronto». Cámbialo a `true` cuando exista `app/(app)/usuarios/page.tsx`.
         ready: false,
@@ -74,7 +74,7 @@ export const NAVIGATION: readonly NavSection[] = [
         label: "Configuración",
         description: "Los valores que ajustan el comportamiento",
         icon: Settings2,
-        minRole: ROLE.administrator,
+        minRole: ROLE.admin_tenant,
         ready: false,
       },
     ],

@@ -6,7 +6,7 @@ import type { RoleLevel } from "./roles";
 import { useCan } from "./use-current-user";
 
 interface CanProps {
-  /** Nivel mínimo. Los roles son jerárquicos, así que «supervisor» incluye al administrador. */
+  /** Rango mínimo (`ROLE` en `./roles`). `admin_tenant` incluye a `emisor` y `consultor`. */
   role: RoleLevel;
   children: ReactNode;
   /** Qué mostrar cuando no alcanza. Por defecto, nada. */

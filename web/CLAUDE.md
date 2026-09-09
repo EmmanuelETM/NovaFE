@@ -23,29 +23,39 @@ Query y Table, react-hook-form + Zod, nuqs y Zustand ya cableados.
   `APP_DEV_TENANT_ID` tiene que existir en la que estés usando (créalo con
   `POST /api/v1/dev/sandbox` contra esa instancia). NovaFE versiona por ruta:
   `APP_API_VERSION=v1`.
-- **Identidad (desarrollo)**: `APP_DEV_TENANT_ID` = id de un contribuyente ya registrado.
-  `identityHeaders()` en `lib/api/server.ts` lo manda como `X-Tenant-Id` — el esquema
-  `DevTenantHeader` de NovaFE, disponible **solo en Development** (rol fijo `admin_tenant`).
-- **Identidad (producción)**: todavía por cablear. Llega con **Better Auth** (ver abajo).
-  Cuando exista, se cambia solo `identityHeaders()`: sesión → `X-Internal-Key` +
-  `X-Acting-User`/`X-Acting-Email`; el proxy `[...path]` borra esas cabeceras si vienen
-  del browser.
-- **`GET /users/me`** todavía **no existe** en NovaFE (llega con Better Auth). Mientras
-  tanto, `app/(app)/layout.tsx` cae a `features/auth/dev-user.ts` (perfil sintético) cuando
-  el endpoint responde 404 y hay `APP_DEV_TENANT_ID`. Al existir el endpoint: borrar
-  `dev-user.ts` y ese `if` del `catch`.
+- **Identidad** (`identityHeaders()` en `lib/api/server.ts`, es `async`):
+  1. hay sesión de Better Auth → `X-Internal-Key` + `X-Acting-User`/`X-Acting-Email`;
+  2. si no y `APP_DEV_TENANT_ID` está seteado → `X-Tenant-Id` (esquema `DevTenantHeader`
+     de NovaFE, solo en Development, rol fijo `admin_tenant`);
+  3. si no → nada, y la API responde 401.
+     El proxy `app/api/backend/[...path]` **borra** `x-internal-key`/`x-acting-*`/`x-tenant-id`
+     (y `x-api-key`/`x-admin-key`) del request entrante — el browser no puede inyectarlas.
+- **`GET /users/me`** ya existe en la API (`UserProfileDto`). El layout lo pide server-side
+  y de ahí sale la navegación por rol. Sin sesión → `AccessScreen` con enlace a `/login`.
 
-## Auth humana — Better Auth (scaffold, NO cableado aún)
+## Auth humana — Better Auth (CABLEADO — slices G/H/I)
 
 Plan completo: `~/.claude/plans/linear-beaming-squirrel.md` (sección "Auth humano").
+Referencia del lado .NET: `../docs/human-auth.md`.
 
+- **`proxy.ts`** (antes `middleware.ts` — Next 16) redirige a `/login` si no hay cookie de
+  sesión (lectura sin I/O; no valida). Salta el gate si `APP_DEV_TENANT_ID` está seteado.
+- **`app/(auth)/login`** — un botón por cada provider OAuth con credenciales en el entorno
+  (`enabledSocialProviders()` en `lib/auth/providers.ts`). Se van habilitando de a uno:
+  hoy **solo GitHub**. `app/(auth)/auth-error` recibe los fallos de OAuth.
+- **Logout** en `nav-user.tsx` (`authClient.signOut()` → `/login`).
+- **Roles**: `features/auth/roles.ts` — los 4 de la API (`consultor` < `emisor` <
+  `admin_tenant` < `admin_sistema`) con rango numérico; `roleRank()` / `roleLabel()`.
+  `lib/navigation.ts` filtra por `minRole`. `CurrentUser` = `UserProfileDto` de la API.
 - **Self-hosted** (no el Managed de Neon) por portabilidad.
 - **Driver por contrato** (`lib/db.ts`): `DATABASE_DRIVER=pg` (default, node-postgres,
   portable a cualquier Postgres) o `neon` (`@neondatabase/serverless` sobre WebSocket,
   para Vercel + Neon). El resto del código importa `db` y no sabe cuál es. Mudarse de
   Neon = `DATABASE_DRIVER=pg`.
-- **Login**: OAuth (Google + GitHub + Microsoft/Entra ID) **+ email/contraseña** con
-  verificación de correo obligatoria.
+- **Login**: OAuth (GitHub habilitado; Google + Microsoft cuando se pongan sus
+  credenciales) **+ email/contraseña** con verificación de correo obligatoria (la UI de
+  email/contraseña todavía no está — solo los botones OAuth). Cada provider OAuth se
+  registra en `lib/auth/index.ts` solo si sus `*_CLIENT_ID`/`*_CLIENT_SECRET` están.
 - **Correo por contrato** (`lib/email.ts`): Resend, o log a consola en dev sin
   `RESEND_API_KEY`. Swappable a Azure Communication Services.
 - Tablas en el schema **`auth`** de Neon (Drizzle + `drizzle-kit`), aparte de `public`
@@ -53,14 +63,16 @@ Plan completo: `~/.claude/plans/linear-beaming-squirrel.md` (sección "Auth huma
 - Archivos: `lib/db.ts` (contrato de driver + Drizzle), `lib/email.ts` (contrato de
   correo), `lib/auth/index.ts` (config), `lib/auth/schema.ts` (tablas, envueltas a mano
   en `pgSchema("auth")` — ver el comentario del archivo antes de regenerar),
-  `lib/auth/client.ts`, `app/api/auth/[...all]/route.ts`.
+  `lib/auth/{client,providers,social}.ts`, `app/api/auth/[...all]/route.ts`.
 - Autorización (tenant + rol) **no** vive acá — vive en `platform_users` en la API .NET.
   Better Auth solo hace autenticación.
 - Scripts: `bun run auth:generate` (CLI → `schema.generated.ts` para diffear),
-  `bun run db:generate` / `db:migrate` (drizzle-kit, schema `auth`).
-- Env (todas opcionales por ahora): `DATABASE_URL`, `DATABASE_DRIVER`,
-  `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `INTERNAL_API_KEY`, `RESEND_API_KEY`,
-  `EMAIL_FROM`, `GOOGLE_*` / `GITHUB_*` / `MICROSOFT_*`.
+  `bun run db:generate` / `db:migrate` (drizzle-kit, schema `auth`; el `.sql` va
+  versionado en `drizzle/`). Recomendado: apuntar `DATABASE_URL` a un **branch `dev` de
+  Neon** para no tocar `production`.
+- Env: `DATABASE_URL` (requerida para auth), `DATABASE_DRIVER`, `BETTER_AUTH_SECRET`,
+  `BETTER_AUTH_URL`, `INTERNAL_API_KEY` (= `Security:InternalApiKey` de la API),
+  `RESEND_API_KEY`, `EMAIL_FROM`, `GITHUB_*` (y `GOOGLE_*` / `MICROSOFT_*` cuando toque).
 - **Neon MCP**: agregado a la config de Claude Code (`claude mcp add neon …`). Autenticar
   con `/mcp`. Útil para el schema `auth`, branches de Neon, y el rol `novafe_app` pendiente.
 - **`bun run api:types`** apunta a `http://localhost:5071/openapi/v1.json` (solo mapeado en

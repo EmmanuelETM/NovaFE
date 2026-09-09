@@ -7,7 +7,6 @@ import {
 } from "@/components/shared/app-shell";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { AccessScreen } from "@/features/auth/access-screen";
-import { devFallbackUser } from "@/features/auth/dev-user";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
@@ -49,23 +48,20 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   try {
     user = await apiFetch<CurrentUser>("/users/me");
   } catch (error) {
-    // NovaFE todavía no expone `GET /users/me` (llega con BetterAuth). Mientras
-    // tanto, en desarrollo el endpoint responde 404 y se cae al perfil sintético
-    // del contribuyente de `.env.local`. Cualquier otro fallo sí es AccessScreen.
-    if (error instanceof ApiError && error.status === 404 && devFallbackUser) {
-      user = devFallbackUser;
-    } else {
-      const esDeLaApi = error instanceof ApiError;
+    // Sin sesión (o sin `APP_DEV_TENANT_ID` en dev) la API responde 401 y acá se
+    // muestra la pantalla de acceso. El `proxy.ts` redirige a `/login` antes
+    // de llegar acá en el caso normal; esto cubre la sesión que expira entre el
+    // middleware y el render, o un usuario autenticado sin `platform_users`.
+    const esDeLaApi = error instanceof ApiError;
 
-      return (
-        <AccessScreen
-          status={esDeLaApi ? error.status : 0}
-          message={
-            esDeLaApi ? error.message : "No se pudo conectar con el servidor."
-          }
-        />
-      );
-    }
+    return (
+      <AccessScreen
+        status={esDeLaApi ? error.status : 0}
+        message={
+          esDeLaApi ? error.message : "No se pudo conectar con el servidor."
+        }
+      />
+    );
   }
 
   const store = await cookies();

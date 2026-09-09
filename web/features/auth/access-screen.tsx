@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RefreshCw, ShieldAlert } from "lucide-react";
+import { LogIn, RefreshCw, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -15,38 +16,48 @@ interface AccessScreenProps {
 /**
  * Lo que se ve cuando no se pudo establecer quién eres.
  *
- * El esqueleto de la aplicación necesita el perfil para saber qué enlaces mostrar, así que
- * si `GET /users/me` falla no hay aplicación que pintar. Y eso es información, no un
- * estorbo: en producción este es exactamente el camino de alguien que no está dado de alta,
- * y decírselo con su nombre propio ahorra la llamada a soporte que empieza con «no me deja
- * entrar».
+ * El layout necesita el perfil (`GET /users/me`) para pintar la navegación; si
+ * falla, no hay app que mostrar. Tres casos, que piden cosas distintas:
  *
- * Se distinguen los dos casos porque piden cosas distintas: un 403 no se arregla
- * reintentando, y una API caída no se arregla hablando con nadie.
+ * - **401** — no hay sesión (o venció). Enlace a iniciar sesión.
+ * - **403** — autenticado pero sin alta en `platform_users`. Que un admin te dé de alta.
+ * - **otro / 0** — la API no respondió. Reintentar.
  */
 export function AccessScreen({ status, message }: AccessScreenProps) {
   const router = useRouter();
 
-  const sinPermiso = status === 401 || status === 403;
+  const sinSesion = status === 401;
+  const sinAlta = status === 403;
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 p-6 text-center">
       <div className="flex max-w-md flex-col gap-2">
         <div className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
           <ShieldAlert className="size-4" aria-hidden />
-          {sinPermiso ? "Sin acceso" : "No se pudo verificar tu acceso"}
+          {sinSesion
+            ? "Sesión no iniciada"
+            : sinAlta
+              ? "Sin acceso"
+              : "No se pudo verificar tu acceso"}
         </div>
 
         <h1 className="text-xl font-semibold tracking-tight">{message}</h1>
 
         <p className="text-muted-foreground text-sm">
-          {sinPermiso
-            ? "Tu cuenta tiene que estar dada de alta antes de poder entrar. Pídele a un administrador que te registre."
-            : "El servidor no respondió. Si vuelve a pasar, avísale al equipo de soporte."}
+          {sinSesion
+            ? "Iniciá sesión para entrar al panel."
+            : sinAlta
+              ? "Tu cuenta todavía no está dada de alta. Pedile a un administrador que te registre con este correo."
+              : "El servidor no respondió. Si vuelve a pasar, avisale al equipo."}
         </p>
       </div>
 
-      {!sinPermiso && (
+      {sinSesion ? (
+        <Button render={<Link href="/login" />}>
+          <LogIn aria-hidden />
+          Iniciar sesión
+        </Button>
+      ) : sinAlta ? null : (
         <Button variant="outline" onClick={() => router.refresh()}>
           <RefreshCw aria-hidden />
           Reintentar
