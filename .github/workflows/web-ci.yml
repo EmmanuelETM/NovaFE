@@ -45,7 +45,11 @@ jobs:
       - name: Build
         # El schema de la API viene como placeholder en el repo (se regenera con
         # la API corriendo); SKIP_ENV_VALIDATION porque las env llegan en runtime.
+        # BETTER_AUTH_SECRET: valor de descarte solo para que Better Auth no tire
+        # el error de "default secret" al evaluar la route de auth en el build.
         run: SKIP_ENV_VALIDATION=1 bun run build
+        env:
+          BETTER_AUTH_SECRET: ci-build-only-placeholder-not-a-real-secret-000000
 
       - name: Typecheck
         # Después del build: `next build` genera los tipos globales de rutas

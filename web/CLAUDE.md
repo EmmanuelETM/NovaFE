@@ -26,14 +26,35 @@ Query y Table, react-hook-form + Zod, nuqs y Zustand ya cableados.
 - **Identidad (desarrollo)**: `APP_DEV_TENANT_ID` = id de un contribuyente ya registrado.
   `identityHeaders()` en `lib/api/server.ts` lo manda como `X-Tenant-Id` — el esquema
   `DevTenantHeader` de NovaFE, disponible **solo en Development** (rol fijo `admin_tenant`).
-- **Identidad (producción)**: todavía por cablear. Llega con **BetterAuth** (sesión humana
-  self-hosted en esta app Next, tablas en la misma BD Neon). Plan:
-  `~/.claude/plans/linear-beaming-squirrel.md`. Cuando exista, se cambia solo
-  `identityHeaders()`.
-- **`GET /users/me`** todavía **no existe** en NovaFE (llega con BetterAuth). Mientras
+- **Identidad (producción)**: todavía por cablear. Llega con **Better Auth** (ver abajo).
+  Cuando exista, se cambia solo `identityHeaders()`: sesión → `X-Internal-Key` +
+  `X-Acting-User`/`X-Acting-Email`; el proxy `[...path]` borra esas cabeceras si vienen
+  del browser.
+- **`GET /users/me`** todavía **no existe** en NovaFE (llega con Better Auth). Mientras
   tanto, `app/(app)/layout.tsx` cae a `features/auth/dev-user.ts` (perfil sintético) cuando
   el endpoint responde 404 y hay `APP_DEV_TENANT_ID`. Al existir el endpoint: borrar
   `dev-user.ts` y ese `if` del `catch`.
+
+## Auth humana — Better Auth (scaffold, NO cableado aún)
+
+Plan completo: `~/.claude/plans/linear-beaming-squirrel.md` (sección "Auth humano").
+
+- **Self-hosted** (no el Managed de Neon) por portabilidad: mudarse de Neon = cambiar
+  `DATABASE_URL`. Driver `pg`, no `@neondatabase/serverless`.
+- **Solo OAuth**: Google + GitHub + Microsoft (Entra ID). Sin passwords, sin magic links.
+- Tablas en el schema **`auth`** de Neon (Drizzle + `drizzle-kit`), aparte de `public`
+  (que es de EF Core en la API). El .NET **no** lee esas tablas.
+- Archivos: `lib/db.ts` (pool `pg` + Drizzle), `lib/auth/index.ts` (config),
+  `lib/auth/schema.ts` (tablas, envueltas a mano en `pgSchema("auth")` — ver el comentario
+  del archivo antes de regenerar), `lib/auth/client.ts`, `app/api/auth/[...all]/route.ts`.
+- Autorización (tenant + rol) **no** vive acá — vive en `platform_users` en la API .NET.
+  Better Auth solo hace autenticación.
+- Scripts: `bun run auth:generate` (CLI → `schema.generated.ts` para diffear),
+  `bun run db:generate` / `db:migrate` (drizzle-kit, schema `auth`).
+- Env (todas opcionales por ahora): `DATABASE_URL`, `BETTER_AUTH_SECRET`,
+  `BETTER_AUTH_URL`, `INTERNAL_API_KEY`, `GOOGLE_*` / `GITHUB_*` / `MICROSOFT_*`.
+- **Neon MCP**: agregado a la config de Claude Code (`claude mcp add neon …`). Autenticar
+  con `/mcp`. Útil para el schema `auth`, branches de Neon, y el rol `novafe_app` pendiente.
 - **`bun run api:types`** apunta a `http://localhost:5071/openapi/v1.json` (solo mapeado en
   Development). Regenera `lib/api/schema.d.ts` con la API corriendo.
 

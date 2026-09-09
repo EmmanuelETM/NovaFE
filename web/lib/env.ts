@@ -34,6 +34,38 @@ export const env = createEnv({
      * `lib/api/server.ts`.
      */
     APP_DEV_TENANT_ID: z.uuid().optional(),
+
+    // --- Auth humana: Better Auth self-hosted (ver plan human-auth) ----------
+    // Opcionales por ahora: el scaffold de auth existe pero todavía no está
+    // cableado al flujo. Pasan a requeridas cuando aterrice el slice H.
+
+    /** Postgres para Better Auth (schema `auth`). El mismo Neon que la API. */
+    DATABASE_URL: z.url().optional(),
+
+    /** Secreto de Better Auth (firma cookies/tokens). `openssl rand -base64 32`. */
+    BETTER_AUTH_SECRET: z.string().min(1).optional(),
+
+    /** URL pública del dashboard — base de los callbacks de OAuth. */
+    BETTER_AUTH_URL: z.url().optional(),
+
+    /**
+     * Secreto compartido con la API .NET (cabecera `X-Internal-Key`). Autoriza
+     * al BFF a actuar en nombre de un humano ya autenticado. Ver
+     * `identityHeaders()` en `lib/api/server.ts`.
+     */
+    INTERNAL_API_KEY: z.string().min(1).optional(),
+
+    // --- OAuth: Google + GitHub + Microsoft (Entra ID) ----------------------
+    // Redirect URI a registrar en cada provider:
+    //   {BETTER_AUTH_URL}/api/auth/callback/{google|github|microsoft}
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    GITHUB_CLIENT_ID: z.string().min(1).optional(),
+    GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
+    MICROSOFT_CLIENT_ID: z.string().min(1).optional(),
+    MICROSOFT_CLIENT_SECRET: z.string().min(1).optional(),
+    /** Tenant de Entra ID. `common` = cualquier cuenta Microsoft (personal + org). */
+    MICROSOFT_TENANT_ID: z.string().min(1).default("common"),
   },
 
   /**
