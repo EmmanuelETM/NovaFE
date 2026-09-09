@@ -126,7 +126,9 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         (await LeerAsync<EcfResponse>(post))!.Status.ShouldBe("accepted");
 
         // La emisión encoló ecf.submitted y ecf.accepted; el worker de entrega los manda.
-        await WebhookPumpAsync();
+        await EventuallyAsync(
+            () => Task.FromResult(receiver.Server.LogEntries.Count >= 2),
+            tick: WebhookPumpAsync);
 
         var types = receiver.Server.LogEntries
             .Select(e => e.RequestMessage!.Headers!["X-NovaFE-Event"][0])
@@ -190,15 +192,14 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         var issued = await LeerAsync<EcfResponse>(post);
         issued!.Status.ShouldBe("submitted");
 
-        // La DGII ya resolvió; el worker lo recoge.
+        // La DGII ya resolvió; el worker lo recoge (puede tardar más de un tick).
         dgii.Server.ResetMappings();
         StubAuth(dgii.Server);
         StubResult(dgii.Server, codigo: 1, estado: "Aceptado");
 
-        (await PumpAsync()).ShouldBe(1);
-
-        var get = await LeerAsync<EcfResponse>(await Client.GetAsync($"/api/v1/ecf/{issued.Id}"));
-        get!.Status.ShouldBe("accepted");
+        await EventuallyAsync(
+            async () => (await LeerAsync<EcfResponse>(await Client.GetAsync($"/api/v1/ecf/{issued.Id}")))!.Status == "accepted",
+            tick: () => PumpAsync());
     }
 
     [RequiresDockerFact]

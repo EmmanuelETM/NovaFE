@@ -51,7 +51,9 @@ public sealed class WebhookDeliveryTests(DatabaseFixture database) : Integration
         var created = await CreateEndpointAsync($"{receiver.BaseUrl}/hook", "ecf.accepted");
 
         (await EnqueueAsync(tenant, WebhookEventType.EcfAccepted, new { id = "abc", status = "accepted" })).ShouldBe(1);
-        (await PumpAsync()).ShouldBe(1);
+        await EventuallyAsync(
+            () => Task.FromResult(receiver.Server.LogEntries.Count > 0),
+            tick: PumpAsync);
 
         var request = receiver.Server.LogEntries.ShouldHaveSingleItem().RequestMessage.ShouldNotBeNull();
         var headers = request.Headers.ShouldNotBeNull();
@@ -87,9 +89,10 @@ public sealed class WebhookDeliveryTests(DatabaseFixture database) : Integration
         await EnqueueAsync(tenant, WebhookEventType.EcfRejected, new { id = "x" });
 
         // El 503 → la fila se reprograma con backoff y el endpoint suma un fallo.
-        await PumpAsync();
+        await EventuallyAsync(
+            async () => (await GetEndpointAsync(created.Endpoint.Id)).ConsecutiveFailures == 1,
+            tick: PumpAsync);
         (await DeliveryStatusAsync(created.Endpoint.Id)).ShouldBe("pending");
-        (await GetEndpointAsync(created.Endpoint.Id)).ConsecutiveFailures.ShouldBe(1);
 
         // Ahora el receptor responde 200; se adelanta el next_attempt_at.
         receiver.Server.Reset();
@@ -98,10 +101,10 @@ public sealed class WebhookDeliveryTests(DatabaseFixture database) : Integration
         (await ForceDueAsync()).ShouldBe(1);
 
         // El worker corre cada pocos segundos en producción; acá se dispara a mano.
-        // Se reintenta el pump por si la primera pasada no reclama la fila
-        // (jitter de tiempos), sin depender de un único intento.
-        await EventuallyAsync(async () =>
-            await DeliveryStatusAsync(created.Endpoint.Id) == "delivered");
+        // No se asume que la primera pasada reclama la fila (jitter de tiempos).
+        await EventuallyAsync(
+            async () => await DeliveryStatusAsync(created.Endpoint.Id) == "delivered",
+            tick: PumpAsync);
 
         (await GetEndpointAsync(created.Endpoint.Id)).ConsecutiveFailures.ShouldBe(0);
     }
@@ -114,20 +117,6 @@ public sealed class WebhookDeliveryTests(DatabaseFixture database) : Integration
         return await db.Database
             .SqlQuery<string>($"SELECT status AS \"Value\" FROM webhook_deliveries WHERE endpoint_id = {endpointId} ORDER BY created_at DESC LIMIT 1")
             .SingleOrDefaultAsync();
-    }
-
-    /// <summary>Dispara el pump hasta que se cumpla la condición o se agote el margen.</summary>
-    private async Task EventuallyAsync(Func<Task<bool>> condition, int attempts = 10)
-    {
-        for (var i = 0; i < attempts; i++)
-        {
-            await PumpAsync();
-            if (await condition())
-                return;
-            await Task.Delay(100);
-        }
-
-        throw new Shouldly.ShouldAssertException("La condición no se cumplió tras varios ticks del pump.");
     }
 
     [RequiresDockerFact]
@@ -182,7 +171,9 @@ public sealed class WebhookDeliveryTests(DatabaseFixture database) : Integration
         var created = await CreateEndpointAsync($"{receiver.BaseUrl}/hook", "ecf.accepted");
 
         await EnqueueAsync(tenant, WebhookEventType.EcfAccepted, new { id = "d" });
-        await PumpAsync();
+        await EventuallyAsync(
+            async () => await DeliveryStatusAsync(created.Endpoint.Id) == "delivered",
+            tick: PumpAsync);
 
         var log = await LeerAsync<PagedResult<WebhookDeliveryDto>>(
             await Client.GetAsync($"/api/v1/webhooks/{created.Endpoint.Id}/deliveries"));

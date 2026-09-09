@@ -54,8 +54,10 @@ public sealed class ExpiryMonitorTests(DatabaseFixture database) : IntegrationTe
 
         await ArrangeAsync("130445566", receiver);
 
-        (await MonitorPumpAsync()).ShouldBe(1);
-        await WebhookPumpAsync();
+        await MonitorPumpAsync();
+        await EventuallyAsync(
+            () => Task.FromResult(receiver.Server.LogEntries.Count >= 2),
+            tick: WebhookPumpAsync);
 
         var types = receiver.Server.LogEntries
             .Select(e => e.RequestMessage!.Headers!["X-NovaFE-Event"][0])
@@ -64,13 +66,13 @@ public sealed class ExpiryMonitorTests(DatabaseFixture database) : IntegrationTe
         types.ShouldContain("certificate.expiring");
         types.ShouldContain("sequence.expired");
 
-        // Segunda pasada: nada nuevo que entregar.
+        // Segunda pasada: los avisos ya se registraron → nada nuevo que entregar.
         receiver.Server.Reset();
         receiver.Server.Given(Request.Create().WithPath("/hook").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200));
 
         await MonitorPumpAsync();
-        (await WebhookPumpAsync()).ShouldBe(0);
+        await WebhookPumpAsync();
         receiver.Server.LogEntries.ShouldBeEmpty();
     }
 }

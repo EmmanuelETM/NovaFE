@@ -15,7 +15,7 @@ public sealed class RowLevelSecurityTests(DatabaseFixture database) : Integratio
     private static readonly Guid TenantA = Guid.CreateVersion7();
     private static readonly Guid TenantB = Guid.CreateVersion7();
 
-    private async Task<NpgsqlConnection> OpenAsync(string connectionString, Guid? tenantId)
+    private static async Task<NpgsqlConnection> OpenAsync(string connectionString, Guid? tenantId)
     {
         var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();

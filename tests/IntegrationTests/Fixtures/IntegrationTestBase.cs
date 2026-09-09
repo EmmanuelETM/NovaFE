@@ -57,6 +57,35 @@ public abstract class IntegrationTestBase(DatabaseFixture database) : IAsyncLife
     }
 
     /// <summary>
+    /// Reintenta <paramref name="condition"/> hasta que sea verdadera o se agoten
+    /// los intentos. Para pruebas de workers eventualmente consistentes: no
+    /// asumas que un solo tick del pump resuelve el trabajo. <paramref name="tick"/>
+    /// (p. ej. disparar el pump) corre antes de cada chequeo.
+    /// </summary>
+    protected static async Task EventuallyAsync(
+        Func<Task<bool>> condition,
+        Func<Task>? tick = null,
+        int attempts = 20,
+        int delayMs = 100)
+    {
+        ArgumentNullException.ThrowIfNull(condition);
+
+        for (var i = 0; i < attempts; i++)
+        {
+            if (tick is not null)
+                await tick();
+
+            if (await condition())
+                return;
+
+            await Task.Delay(delayMs);
+        }
+
+        throw new Shouldly.ShouldAssertException(
+            $"La condición no se cumplió tras {attempts} intentos.");
+    }
+
+    /// <summary>
     /// Reconstruye la app con opciones de configuración extra (p. ej. apuntar la
     /// DGII a un WireMock). Llamar al inicio de la prueba, antes de escribir nada.
     /// </summary>
