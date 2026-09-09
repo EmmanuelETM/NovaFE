@@ -27,13 +27,25 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH"]);
 
-/** No se reenvian: las pone el fetch o son del transporte del cliente. */
+/**
+ * No se reenvian del request entrante:
+ * - las que pone el fetch o son del transporte (`host`, `connection`, …);
+ * - `cookie`, para que la cookie de sesion de Better Auth no llegue a la API;
+ * - las cabeceras de identidad, que las pone **solo** `identityHeaders()` del lado
+ *   servidor — asi un navegador no puede inyectar `x-acting-user` y suplantar a nadie.
+ */
 const SKIPPED_HEADERS = new Set([
   "host",
   "connection",
   "content-length",
   "accept-encoding",
   "cookie",
+  "x-internal-key",
+  "x-acting-user",
+  "x-acting-email",
+  "x-tenant-id",
+  "x-api-key",
+  "x-admin-key",
 ]);
 
 async function forward(
@@ -51,7 +63,7 @@ async function forward(
     if (!SKIPPED_HEADERS.has(key.toLowerCase())) headers.set(key, value);
   });
 
-  for (const [key, value] of Object.entries(identityHeaders())) {
+  for (const [key, value] of Object.entries(await identityHeaders())) {
     headers.set(key, value);
   }
 

@@ -2,6 +2,10 @@
 # que se regenera, y nadie lo lee.
 lib/api/schema.d.ts
 
+# Generado por drizzle-kit (schema `auth` de Better Auth). El .sql y su metadata.
+drizzle/
+lib/auth/schema.generated.ts
+
 node_modules
 .next
 out

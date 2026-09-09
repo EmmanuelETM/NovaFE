@@ -4,9 +4,9 @@ import { Boxes } from "lucide-react";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { HOME_HREF } from "@/lib/navigation";
 
-/** El nombre del sistema y el de la organización. Cámbialos por los tuyos. */
-const APP_NAME = "Aplicación";
-const ORG_NAME = "Organización";
+/** El nombre del sistema y el de la organización. */
+const APP_NAME = "NovaFE";
+const ORG_NAME = "Nemus Systems";
 
 /**
  * La marca, arriba del sidebar.

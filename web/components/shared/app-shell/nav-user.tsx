@@ -1,6 +1,8 @@
 "use client";
 
-import { ChevronsUpDown, Monitor, Moon, Sun } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { ChevronsUpDown, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -8,6 +10,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -20,8 +23,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { formatUserName } from "@/lib/format";
+import { roleLabel } from "@/features/auth/roles";
 import type { CurrentUser } from "@/features/auth/use-current-user";
+import { authClient } from "@/lib/auth/client";
+import { formatUserName } from "@/lib/format";
 
 const TEMAS = [
   { value: "light", label: "Claro", icon: Sun },
@@ -46,11 +51,20 @@ interface NavUserProps {
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
 
-  // El nombre real si lo hay; si no, el corto. El correo completo va dentro del menú: aquí
-  // no cabe, y un correo institucional truncado a la mitad no identifica a nadie.
-  const nombre = user.displayName ?? formatUserName(user.userName);
-  const rol = user.roleLabel ?? "Sin rol";
+  const correo = user.email ?? "usuario";
+  const nombre = formatUserName(correo);
+  const rol = roleLabel(user.role);
+
+  async function signOut() {
+    setSigningOut(true);
+    await authClient.signOut();
+    // `refresh` limpia la caché del layout de servidor; el middleware redirige a /login.
+    router.replace("/login");
+    router.refresh();
+  }
 
   return (
     <SidebarMenu>
@@ -90,7 +104,7 @@ export function NavUser({ user }: NavUserProps) {
                   {nombre}
                 </span>
                 <span className="text-muted-foreground block truncate text-xs">
-                  {user.userName}
+                  {correo}
                 </span>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
@@ -116,6 +130,20 @@ export function NavUser({ user }: NavUserProps) {
                 ))}
               </DropdownMenuRadioGroup>
             </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              disabled={signingOut}
+              onClick={(event) => {
+                // No cerrar el menú antes de que la navegación arranque.
+                event.preventDefault();
+                void signOut();
+              }}
+            >
+              <LogOut aria-hidden />
+              Cerrar sesión
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

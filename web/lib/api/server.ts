@@ -1,6 +1,7 @@
 import "server-only";
 
-import { env, isProduction } from "@/lib/env";
+import { getSession } from "@/lib/auth/session";
+import { env } from "@/lib/env";
 
 import { ApiError, readProblem } from "./problem";
 
@@ -8,13 +9,18 @@ import { ApiError, readProblem } from "./problem";
  * Cliente de la API .NET, **solo del lado del servidor**.
  *
  * Es la unica costura de identidad del proyecto: aqui se decide como se autentica, y solo
- * aqui. En desarrollo va la cabecera `X-Tenant-Id` (esquema `DevTenantHeader` de NovaFE,
- * solo disponible en Development); en produccion, el token de la sesion humana
- * (BetterAuth, todavia por cablear). Ninguna pantalla se entera de la diferencia.
+ * aqui.
+ *
+ * - Con sesion de Better Auth: el BFF actua en nombre del humano contra la API — manda
+ *   `X-Internal-Key` (secreto compartido) + `X-Acting-User`/`X-Acting-Email`. La API
+ *   resuelve un `PlatformUser` y emite los mismos claims que una API key.
+ * - Sin sesion, en desarrollo: la cabecera `X-Tenant-Id` con el contribuyente de
+ *   `.env.local` (esquema `DevTenantHeader` de NovaFE, solo en Development).
+ * - Sin nada: la API responde 401 y el layout muestra la pantalla de acceso.
  *
  * **El navegador nunca llama a la API .NET directamente.** Pasa por el proxy de
  * `app/api/backend/[...path]`. De ahi salen tres cosas: no hace falta CORS, la API puede
- * no ser publica, y el token nunca llega al navegador.
+ * no ser publica, y las cabeceras de identidad nunca llegan al navegador.
  */
 
 interface RequestOptions extends Omit<RequestInit, "body"> {
@@ -25,23 +31,24 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
 }
 
 /**
- * Identidad de la peticion.
+ * Identidad de la peticion. Ver la doc del modulo.
  *
- * En produccion sera el `Authorization: Bearer` del token de la sesion humana; hoy, en
- * desarrollo, devuelve la cabecera `X-Tenant-Id` con el contribuyente de `.env.local`.
- * **Cambiar esta funcion es lo unico que hace falta** el dia que exista la autenticacion
- * real (BetterAuth).
+ * Es `async` porque lee la sesion de Better Auth. **Cambiar esta funcion es lo unico que
+ * hace falta** si cambia el proveedor de identidad.
  */
-export function identityHeaders(): Record<string, string> {
-  if (isProduction) {
-    // TODO: tomar el access token de la sesion de BetterAuth y devolver
-    // { Authorization: `Bearer ${token}` }.
-    return {};
+export async function identityHeaders(): Promise<Record<string, string>> {
+  const session = await getSession();
+
+  if (session?.user && env.INTERNAL_API_KEY) {
+    return {
+      "X-Internal-Key": env.INTERNAL_API_KEY,
+      "X-Acting-User": session.user.id,
+      "X-Acting-Email": session.user.email,
+    };
   }
 
   if (env.APP_DEV_TENANT_ID) return { "X-Tenant-Id": env.APP_DEV_TENANT_ID };
 
-  // Sin el, NovaFE responde 401: el esquema DevTenantHeader exige la cabecera.
   return {};
 }
 
@@ -78,7 +85,7 @@ export async function apiFetch<T>(
     ...rest,
     headers: {
       "Content-Type": "application/json",
-      ...identityHeaders(),
+      ...(await identityHeaders()),
       ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),

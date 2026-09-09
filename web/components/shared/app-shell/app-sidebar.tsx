@@ -7,6 +7,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { roleRank } from "@/features/auth/roles";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 
 import { Brand } from "./brand";
@@ -37,7 +38,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain role={user.roleId} />
+        <NavMain role={roleRank(user.role)} />
       </SidebarContent>
 
       <SidebarFooter>

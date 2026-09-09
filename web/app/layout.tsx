@@ -17,8 +17,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aplicación",
-  description: "Descripción de la aplicación",
+  title: {
+    default: "NovaFE",
+    template: "%s · NovaFE",
+  },
+  description:
+    "Panel de administración de NovaFE — facturación electrónica (e-CF) para la DGII.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

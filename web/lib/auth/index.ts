@@ -15,7 +15,9 @@ import * as schema from "./schema";
  * - Adapter Drizzle, tablas en el schema `auth` de Neon (aparte de `public`,
  *   que es de EF Core en la API .NET). Driver por contrato en `lib/db.ts`.
  * - Login: **OAuth** (Google, GitHub, Microsoft/Entra ID) **+ email/contraseña**
- *   con verificación de correo obligatoria.
+ *   con verificación de correo obligatoria. Un provider OAuth solo se registra si
+ *   sus credenciales están en el entorno (ver `socialProviders` abajo), así que se
+ *   pueden ir habilitando de a uno.
  * - `accountLinking` para que la misma persona por dos vías con el mismo email
  *   sea un solo `user`.
  *
@@ -60,20 +62,34 @@ export const auth = betterAuth({
     },
   },
 
+  // Solo los providers con credenciales en el entorno. `enabledSocialProviders()`
+  // en `./providers` calcula lo mismo para pintar los botones del login.
   socialProviders: {
-    google: {
-      clientId: env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: env.GOOGLE_CLIENT_SECRET ?? "",
-    },
-    github: {
-      clientId: env.GITHUB_CLIENT_ID ?? "",
-      clientSecret: env.GITHUB_CLIENT_SECRET ?? "",
-    },
-    microsoft: {
-      clientId: env.MICROSOFT_CLIENT_ID ?? "",
-      clientSecret: env.MICROSOFT_CLIENT_SECRET ?? "",
-      tenantId: env.MICROSOFT_TENANT_ID,
-    },
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
+    ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
+      ? {
+          github: {
+            clientId: env.GITHUB_CLIENT_ID,
+            clientSecret: env.GITHUB_CLIENT_SECRET,
+          },
+        }
+      : {}),
+    ...(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET
+      ? {
+          microsoft: {
+            clientId: env.MICROSOFT_CLIENT_ID,
+            clientSecret: env.MICROSOFT_CLIENT_SECRET,
+            tenantId: env.MICROSOFT_TENANT_ID,
+          },
+        }
+      : {}),
   },
 
   account: {
