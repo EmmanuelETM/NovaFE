@@ -5,6 +5,7 @@ using NovaFE.Domain.Common.Entities;
 using NovaFE.Domain.Ecf;
 using NovaFE.Domain.Sequences;
 using NovaFE.Domain.Tenants;
+using NovaFE.Domain.Users;
 using NovaFE.Domain.Webhooks;
 using NovaFE.Infrastructure.Persistence.Audit;
 using NovaFE.Infrastructure.Persistence.Idempotency;
@@ -29,6 +30,9 @@ public class AppDbContext(
 
     /// <summary>Credenciales de acceso a la API, por contribuyente (tabla <c>api_keys</c>).</summary>
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+
+    /// <summary>Usuarios humanos del dashboard (tabla <c>platform_users</c>). Operator-managed, sin RLS.</summary>
+    public DbSet<PlatformUser> PlatformUsers => Set<PlatformUser>();
 
     public DbSet<Certificate> Certificates => Set<Certificate>();
 
