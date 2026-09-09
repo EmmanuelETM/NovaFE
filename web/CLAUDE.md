@@ -16,8 +16,13 @@ Query y Table, react-hook-form + Zod, nuqs y Zustand ya cableados.
 
 ## Conexión con la API NovaFE
 
-- **`APP_API_URL`** en `.env.local` — en local, `http://localhost:5071`
-  (`dotnet run --project ../src/Service`). NovaFE versiona por ruta: `APP_API_VERSION=v1`.
+- **`APP_API_URL`** en `.env.local` — `http://localhost:5071` con
+  `dotnet run --project ../src/Service`, o `http://localhost:8080` con Visual
+  Studio F5 / `docker compose up`. Cada camino usa una BD distinta (dotnet run =
+  user-secrets/Neon; docker compose = Postgres del contenedor), así que el
+  `APP_DEV_TENANT_ID` tiene que existir en la que estés usando (créalo con
+  `POST /api/v1/dev/sandbox` contra esa instancia). NovaFE versiona por ruta:
+  `APP_API_VERSION=v1`.
 - **Identidad (desarrollo)**: `APP_DEV_TENANT_ID` = id de un contribuyente ya registrado.
   `identityHeaders()` en `lib/api/server.ts` lo manda como `X-Tenant-Id` — el esquema
   `DevTenantHeader` de NovaFE, disponible **solo en Development** (rol fijo `admin_tenant`).
