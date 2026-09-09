@@ -18,6 +18,9 @@ public sealed class ApiFactory(
     string connectionString,
     IReadOnlyDictionary<string, string?>? overrides = null) : WebApplicationFactory<Program>
 {
+    /// <summary>Internal key de prueba: el header del BFF del dashboard (esquema <c>InternalKey</c>).</summary>
+    public const string InternalApiKey = "test-internal-key-not-a-real-secret";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -68,6 +71,10 @@ public sealed class ApiFactory(
 
                 // Monitor de vencimientos: sin worker; los tests disparan el pump.
                 ["ExpiryMonitor:Enabled"] = "false",
+
+                // Habilita el esquema InternalKey (humanos del dashboard). Inerte
+                // salvo que la petición traiga X-Internal-Key.
+                ["Security:InternalApiKey"] = InternalApiKey,
             };
 
             if (overrides is not null)

@@ -12,9 +12,18 @@ internal static class SecuritySchemes
     /// <summary>Endpoints de operador: clave estática <c>X-Admin-Key</c>.</summary>
     public const string AdminKey = "AdminKey";
 
+    /// <summary>
+    /// Humanos del dashboard: el BFF presenta <c>X-Internal-Key</c> + la identidad
+    /// del humano en <c>X-Acting-User</c> / <c>X-Acting-Email</c>.
+    /// </summary>
+    public const string InternalKey = "InternalKey";
+
     public const string ApiKeyHeader = "X-API-Key";
     public const string TenantHeader = "X-Tenant-Id";
     public const string AdminKeyHeader = "X-Admin-Key";
+    public const string InternalKeyHeader = "X-Internal-Key";
+    public const string ActingUserHeader = "X-Acting-User";
+    public const string ActingEmailHeader = "X-Acting-Email";
 
     /// <summary>Claim que lleva el id del contribuyente en el principal autenticado.</summary>
     public const string TenantClaim = "tenant_id";
@@ -41,6 +50,12 @@ internal static class SecurityPolicies
     /// <summary>Consultar comprobantes y su estado — cualquiera de los 3 roles.</summary>
     public const string EcfRead = "EcfRead";
 
-    /// <summary>Recursos de operador del SaaS: admin key.</summary>
+    /// <summary>Recursos de operador del SaaS: admin key o un humano <c>admin_sistema</c>.</summary>
     public const string Operator = "Operator";
+
+    /// <summary>
+    /// Cualquier principal autenticado, sin exigir rol ni tenant. Para
+    /// <c>GET /users/me</c>, que responde según quién sea.
+    /// </summary>
+    public const string Authenticated = "Authenticated";
 }

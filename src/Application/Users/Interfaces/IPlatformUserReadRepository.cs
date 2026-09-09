@@ -13,6 +13,9 @@ public interface IPlatformUserReadRepository
     /// </summary>
     Task<PlatformUserLookup?> ResolveAsync(string? authUserId, string email, CancellationToken ct = default);
 
+    /// <summary>El usuario <paramref name="id"/> como DTO, o <c>null</c>.</summary>
+    Task<PlatformUserDto?> FindByIdAsync(Guid id, CancellationToken ct = default);
+
     /// <summary>Los usuarios de un contribuyente, el más reciente primero.</summary>
     Task<IReadOnlyList<PlatformUserDto>> ListByTenantAsync(Guid tenantId, CancellationToken ct = default);
 
