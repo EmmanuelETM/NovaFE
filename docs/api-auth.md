@@ -98,8 +98,10 @@ Para cambiar el ambiente o el rol de una key se revoca y se acuña otra.
 - **Sin configurar**: en Development los endpoints de operador quedan **abiertos**
   con un aviso en el log; fuera de Development el handler **rechaza todo** y
   `Program.cs` avisa al arrancar.
-- No hay usuarios ni roles todavía: una sola clave para todo el operador. La auth
-  de operador "de verdad" (usuarios, panel, RBAC) es otro módulo.
+- Es el **rompe-cristal**: la auth de humanos (operadores y empleados de
+  contribuyentes) con usuarios individuales va por el esquema `InternalKey` — ver
+  `docs/human-auth.md`. La `X-Admin-Key` se queda para dar de alta al primer
+  operador y como plan B.
 
 ## Onboarding local
 
@@ -109,9 +111,6 @@ o sigue usando `tenantId` como `X-Tenant-Id`. Ver `docs/local-e2e.md`.
 
 ## Fuera de alcance (slices/módulos posteriores)
 
-- **Auth de operador con usuarios** (login, panel) — hoy sigue siendo una sola
-  clave estática compartida por todo operador; RBAC de operador de verdad
-  necesita eso primero.
 - **Rate limiting por plan** (RF-12.3) — el limiter global ya particiona por
   tenant (el `Name` del principal); los topes por plan son otro slice.
 - **Scopes por key** (más finos que el rol), rotación con período de gracia,

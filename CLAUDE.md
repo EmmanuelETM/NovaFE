@@ -311,6 +311,25 @@ tests) — ahí el ambiente cae al `DefaultEnvironment` del perfil y el rol es
 siempre `admin_tenant`. `TenantResolutionMiddleware` corre **después** de
 `UseAuthorization`. No cambiar sin leer `docs/api-auth.md`.
 
+**Autenticación de humanos / dashboard** (`src/Domain/Users`, `src/Application/Users`,
+`src/Infrastructure/Users`, `src/Service/Security/InternalKeyAuthenticationHandler.cs`):
+el canal **humano** (operadores + empleados del contribuyente, vía el dashboard
+`web/`). Better Auth es **self-hosted en `web/`** (no el Managed de Neon); el .NET
+**no valida tokens de Better Auth** — el BFF de Next valida la sesión y reenvía
+`X-Internal-Key` (secreto compartido, `Security:InternalApiKey`, vacío =
+deshabilitado) + `X-Acting-User`/`X-Acting-Email`. `InternalKeyAuthenticationHandler`
+resuelve un `PlatformUser` (tabla `platform_users`, operator-managed, **sin RLS**;
+alta **por correo**, `auth_user_id` se enlaza en el primer login) y emite los
+mismos claims que una API key (`tenant_id` + rol) → las políticas de M14 no
+cambian. `PlatformRole` (4 valores, incluye `admin_sistema`) es **separado** de
+`ApiKeyRole` (3, sin `admin_sistema`). Provisioning: `POST/GET/DELETE
+/api/v1/tenants/{id}/users` + `/api/v1/operator-users` (política `Operator`; primer
+operador vía rompe-cristal `X-Admin-Key`). `GET /api/v1/users/me` (política
+`Authenticated`) da el perfil que el dashboard usa para la navegación. El dashboard
+todavía manda `X-Tenant-Id` (dev); reescribir `identityHeaders()` en
+`web/lib/api/server.ts` + las pantallas de login son slices pendientes. No cambiar
+sin leer `docs/human-auth.md`.
+
 **Auditoría inmutable (Módulo 14, RF-14.4)** (`src/Service/Middlewares/AuditLoggingMiddleware.cs`,
 `src/Infrastructure/Persistence/Audit/`): una fila en `audit_log` por cada
 petición a un endpoint `[Authorize]`, éxito o no. El middleware se registra
