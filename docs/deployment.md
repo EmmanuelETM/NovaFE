@@ -14,6 +14,9 @@ detrás de una costura y se cambia por configuración.
 | Protección de la KEK | `IKeyProtector` + `CertificateVault:Provider` | `azure-key-vault` | `local` (KEK en variable de entorno) o, en el futuro, `aws-kms` / `gcp-kms` — una implementación nueva de `IKeyProtector` + un `case` en `InfrastructureService`. Ver [`certificates.md`](certificates.md). |
 | Vault de certificados (dónde vive el PKCS#12) | `ICertificateVault` | `EnvelopeCertificateVault` (ciphertext en Postgres) | HashiCorp Vault, etc. — Fase 2. Ver [`certificates.md`](certificates.md). |
 
+Runbook completo para mover la API a un VPS (`docker compose` + reverse proxy):
+[`vps-migration.md`](vps-migration.md).
+
 La idea: si mañana Neon no sirve, se levanta un Postgres en otro lado, se cambia
 el connection string, se corre el Job de migraciones y listo. Si Azure Key Vault
 molesta, `CertificateVault:Provider=local` con la KEK en un secreto y el sistema
