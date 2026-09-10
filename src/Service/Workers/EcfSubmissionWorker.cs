@@ -16,17 +16,24 @@ internal sealed class EcfSubmissionWorker(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var interval = options.Value.PollInterval;
-        logger.LogInformation("Worker de envío a la DGII iniciado (intervalo {Interval})", interval);
+        var baseInterval = options.Value.PollInterval;
+        var maxInterval = options.Value.MaxPollInterval;
+        logger.LogInformation(
+            "Worker de envío a la DGII iniciado (intervalo {Interval}, hasta {Max} sin trabajo)",
+            baseInterval, maxInterval);
 
         // Arranque escalonado entre instancias.
-        await SafeDelayAsync(Jitter(interval), stoppingToken);
+        await SafeDelayAsync(Jitter(baseInterval), stoppingToken);
+
+        var delay = baseInterval;
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var processed = 0;
+
             try
             {
-                await pump.RunOnceAsync(stoppingToken);
+                processed = await pump.RunOnceAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -37,7 +44,13 @@ internal sealed class EcfSubmissionWorker(
                 logger.LogError(ex, "El tick del worker de envío falló");
             }
 
-            await SafeDelayAsync(interval + Jitter(interval), stoppingToken);
+            // Con trabajo, ritmo base; con la cola vacía, se duplica la espera
+            // hasta el techo — así una instancia ociosa deja de martillar la base.
+            delay = processed > 0
+                ? baseInterval
+                : TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, maxInterval.Ticks));
+
+            await SafeDelayAsync(delay + Jitter(delay), stoppingToken);
         }
     }
 

@@ -15,8 +15,14 @@ namespace NovaFE.Service.Workers;
 internal sealed class EcfSubmissionPump(
     IServiceScopeFactory scopeFactory,
     IOptions<EcfSubmissionOptions> options,
+    TimeProvider timeProvider,
     ILogger<EcfSubmissionPump> logger) : IEcfSubmissionPump
 {
+    /// <summary>Recuperar filas atascadas es recuperación: basta cada minuto.</summary>
+    private static readonly TimeSpan ReapInterval = TimeSpan.FromMinutes(1);
+
+    private DateTimeOffset _lastReap = DateTimeOffset.MinValue;
+
     public async Task<int> RunOnceAsync(CancellationToken ct = default)
     {
         var opts = options.Value;
@@ -24,9 +30,14 @@ internal sealed class EcfSubmissionPump(
         using var claimScope = scopeFactory.CreateScope();
         var queue = claimScope.ServiceProvider.GetRequiredService<IEcfSubmissionQueue>();
 
-        var reaped = await queue.ReapStuckAsync(opts.StuckAfter, ct);
-        if (reaped > 0)
-            logger.LogInformation("Recuperadas {Count} filas de envío atascadas", reaped);
+        var now = timeProvider.GetUtcNow();
+        if (now - _lastReap >= ReapInterval)
+        {
+            _lastReap = now;
+            var reaped = await queue.ReapStuckAsync(opts.StuckAfter, ct);
+            if (reaped > 0)
+                logger.LogInformation("Recuperadas {Count} filas de envío atascadas", reaped);
+        }
 
         var batch = await queue.ClaimBatchAsync(opts.BatchSize, ct);
 
