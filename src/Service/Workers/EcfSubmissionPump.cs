@@ -14,7 +14,7 @@ namespace NovaFE.Service.Workers;
 /// </summary>
 internal sealed class EcfSubmissionPump(
     IServiceScopeFactory scopeFactory,
-    IOptions<EcfSubmissionOptions> options,
+    IOptionsMonitor<EcfSubmissionOptions> options,
     TimeProvider timeProvider,
     ILogger<EcfSubmissionPump> logger) : IEcfSubmissionPump
 {
@@ -25,7 +25,7 @@ internal sealed class EcfSubmissionPump(
 
     public async Task<int> RunOnceAsync(CancellationToken ct = default)
     {
-        var opts = options.Value;
+        var opts = options.CurrentValue;
 
         using var claimScope = scopeFactory.CreateScope();
         var queue = claimScope.ServiceProvider.GetRequiredService<IEcfSubmissionQueue>();

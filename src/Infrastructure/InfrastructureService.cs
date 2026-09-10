@@ -5,6 +5,7 @@ using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Representation;
 using NovaFE.Application.Sequences.Interfaces;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Application.Users.Interfaces;
@@ -31,6 +32,9 @@ using NovaFE.Infrastructure.Persistence.Sql;
 using NovaFE.Infrastructure.Security;
 using NovaFE.Infrastructure.Sequences.EfCore;
 using NovaFE.Infrastructure.Sequences.Sql;
+using NovaFE.Infrastructure.Settings;
+using NovaFE.Infrastructure.Settings.EfCore;
+using NovaFE.Infrastructure.Settings.Sql;
 using NovaFE.Infrastructure.Signing;
 using NovaFE.Infrastructure.Tenants;
 using NovaFE.Infrastructure.Tenants.EfCore;
@@ -188,8 +192,23 @@ public static class InfrastructureService
         services.AddScoped<IWebhookDeliveryReadRepository, WebhookDeliveryReadRepository>();
         services.AddScoped<IWebhookOutbox, PostgresWebhookOutbox>();
 
-        // Guard anti-SSRF de las URL de webhook (resuelve DNS) + firma HMAC: sin estado.
-        services.AddSingleton<IWebhookUrlPolicy, HttpWebhookUrlPolicy>();
+        // Settings de plataforma (motor de configuración runtime, ver
+        // docs/configuration.md). EF escribe, Dapper lee. El snapshot en memoria,
+        // el lector tipado y el invalidador se registran más abajo.
+        services.AddScoped<IPlatformSettingRepository, PlatformSettingRepository>();
+        services.AddScoped<IPlatformSettingReadRepository, PlatformSettingReadRepository>();
+        services.AddScoped<IPlatformSettingChangeLog, PlatformSettingChangeLog>();
+        services.AddScoped<ISettingsGenerationStore, SettingsGenerationStore>();
+        services.AddScoped<ISettingsSnapshotLoader, SettingsSnapshotLoader>();
+        services.AddScoped<ISettingsCacheInvalidator, SettingsCacheInvalidator>();
+        // Snapshot en memoria + lector tipado: sin estado por petición → singleton.
+        services.AddSingleton<ISettingsSnapshotHolder, SettingsSnapshotHolder>();
+        services.AddSingleton<ISettingsReader, CachedSettingsReader>();
+
+        // Firma HMAC: sin estado → singleton. El guard anti-SSRF (resuelve DNS)
+        // depende de WebhookSettings, que es transient sobre IOptionsMonitor para
+        // recoger cambios en caliente; por eso este también es transient.
+        services.AddTransient<IWebhookUrlPolicy, HttpWebhookUrlPolicy>();
         services.AddSingleton<IWebhookSignature, HmacWebhookSignature>();
 
         // Cliente de entrega: timeout corto, SIN reintento de Polly (el outbox reintenta).

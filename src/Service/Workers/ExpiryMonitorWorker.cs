@@ -11,13 +11,13 @@ namespace NovaFE.Service.Workers;
 /// </summary>
 internal sealed class ExpiryMonitorWorker(
     IExpiryMonitorPump pump,
-    IOptions<ExpiryMonitorOptions> options,
+    IOptionsMonitor<ExpiryMonitorOptions> options,
     ILogger<ExpiryMonitorWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var interval = options.Value.Interval;
-        logger.LogInformation("Monitor de vencimientos iniciado (intervalo {Interval})", interval);
+        logger.LogInformation(
+            "Monitor de vencimientos iniciado (intervalo {Interval})", options.CurrentValue.Interval);
 
         await SafeDelayAsync(TimeSpan.FromMinutes(1), stoppingToken);
 
@@ -37,7 +37,8 @@ internal sealed class ExpiryMonitorWorker(
                 logger.LogError(ex, "El barrido del monitor de vencimientos falló");
             }
 
-            await SafeDelayAsync(interval, stoppingToken);
+            // Se relee en cada iteración: un cambio en caliente aplica al próximo ciclo.
+            await SafeDelayAsync(options.CurrentValue.Interval, stoppingToken);
         }
     }
 

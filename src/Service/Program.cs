@@ -4,6 +4,7 @@ using NovaFE.Application;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Ecf.Submission;
 using NovaFE.Application.Notifications;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Domain.Common.Json;
 using NovaFE.Infrastructure;
@@ -104,8 +105,11 @@ try
     builder.Services.AddOptions<EcfSubmissionOptions>()
         .Bind(builder.Configuration.GetSection(EcfSubmissionOptions.SectionName))
         .ValidateDataAnnotations();
-    builder.Services.AddSingleton(sp =>
-        sp.GetRequiredService<IOptions<EcfSubmissionOptions>>().Value.ToSettings());
+    // Proyección para la capa Application: transient sobre IOptionsMonitor para
+    // que un cambio de configuración en caliente llegue al próximo scope, sin
+    // reiniciar el proceso. Ver docs/configuration.md.
+    builder.Services.AddTransient(sp =>
+        sp.GetRequiredService<IOptionsMonitor<EcfSubmissionOptions>>().CurrentValue.ToSettings());
     builder.Services.AddSingleton<IEcfSubmissionPump, EcfSubmissionPump>();
 
     if (builder.Configuration.GetValue("EcfSubmission:Enabled", defaultValue: true))
@@ -115,8 +119,11 @@ try
     builder.Services.AddOptions<WebhooksOptions>()
         .Bind(builder.Configuration.GetSection(WebhooksOptions.SectionName))
         .ValidateDataAnnotations();
-    builder.Services.AddSingleton(sp =>
-        sp.GetRequiredService<IOptions<WebhooksOptions>>().Value.ToSettings());
+    // Transient sobre IOptionsMonitor (ver la nota del envío a la DGII, arriba).
+    // Transient, no scoped: la config del HttpClient de entrega lo resuelve desde
+    // el proveedor raíz.
+    builder.Services.AddTransient(sp =>
+        sp.GetRequiredService<IOptionsMonitor<WebhooksOptions>>().CurrentValue.ToSettings());
     builder.Services.AddSingleton<IWebhookDeliveryPump, WebhookDeliveryPump>();
 
     if (builder.Configuration.GetValue("Webhooks:Enabled", defaultValue: true))
@@ -130,6 +137,17 @@ try
 
     if (builder.Configuration.GetValue("ExpiryMonitor:Enabled", defaultValue: true))
         builder.Services.AddHostedService<ExpiryMonitorWorker>();
+
+    // Motor de settings runtime (docs/configuration.md): el pump consulta el
+    // contador de generación y recarga el snapshot local si cambió; el poller lo
+    // dispara en intervalo. El warm-load inicial va más abajo, tras las migraciones.
+    builder.Services.AddOptions<SettingsOptions>()
+        .Bind(builder.Configuration.GetSection(SettingsOptions.SectionName))
+        .ValidateDataAnnotations();
+    builder.Services.AddSingleton<ISettingsRefreshPump, SettingsRefreshPump>();
+
+    if (builder.Configuration.GetValue("Settings:PollerEnabled", defaultValue: true))
+        builder.Services.AddHostedService<SettingsGenerationPoller>();
 
     // ==========================================
     //     4. Observabilidad & Health Checks
@@ -252,6 +270,23 @@ try
     // aceptar tráfico.
     await app.MigrateAndSeedDatabaseAsync();
 
+    // Warm-load del snapshot de settings antes de aceptar tráfico: así el
+    // middleware de mantenimiento y cualquier lector ya ven los overrides desde
+    // la primera petición, sin la ventana de "defaults por unos milisegundos".
+    // Best-effort: si la base no responde, se arranca con los defaults de código y
+    // el poller reintenta (docs/configuration.md §"Degradación").
+    try
+    {
+        await using var settingsScope = app.Services.CreateAsyncScope();
+        await settingsScope.ServiceProvider
+            .GetRequiredService<ISettingsCacheInvalidator>()
+            .RefreshNowAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "No se pudo cargar el snapshot de settings al arrancar; se usan los defaults de código");
+    }
+
     // El orden de los middlewares importa. Cada línea está donde está por una razón:
 
     // Primero de todo: reescribe Scheme/RemoteIp desde X-Forwarded-* del ingress
@@ -304,6 +339,11 @@ try
     // StatusCode final incluyendo los 401/403 que UseAuthorization() corta y que
     // nunca llegarían a un middleware registrado después de ella.
     app.UseMiddleware<AuditLoggingMiddleware>();
+
+    // Kill-switch de mantenimiento: 503 a todo salvo health checks y la API de
+    // settings. Después de la auditoría a propósito, para que el rechazo quede
+    // registrado. Lee el snapshot de settings en memoria (sin E/S).
+    app.UseMiddleware<MaintenanceModeMiddleware>();
 
     // Después de autenticar el esquema por defecto (API key): así el limitador
     // puede particionar por contribuyente y no solo por IP.

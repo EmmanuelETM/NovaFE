@@ -11,6 +11,7 @@ using NovaFE.Infrastructure.Persistence.Audit;
 using NovaFE.Infrastructure.Persistence.Idempotency;
 using NovaFE.Infrastructure.Persistence.Notifications;
 using NovaFE.Infrastructure.Persistence.Outbox;
+using NovaFE.Infrastructure.Settings.EfCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace NovaFE.Infrastructure.Persistence.EfCore;
@@ -54,6 +55,12 @@ public class AppDbContext(
 
     /// <summary>Registro de auditoría inmutable (RF-14.4, tabla <c>audit_log</c>).</summary>
     internal DbSet<AuditLogRow> AuditLog => Set<AuditLogRow>();
+
+    /// <summary>Overrides de settings de plataforma (tabla <c>platform_settings</c>). Operator-managed, sin RLS.</summary>
+    internal DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
+
+    /// <summary>Bitácora append-only de cambios de settings (tabla <c>platform_setting_changes</c>).</summary>
+    internal DbSet<PlatformSettingChange> PlatformSettingChanges => Set<PlatformSettingChange>();
 
     /// <summary>
     /// Tenant de la petición en curso. Los filtros globales de consulta de las
