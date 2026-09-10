@@ -37,6 +37,10 @@ public sealed partial class DurationSetting(
         _ => $"{Min}–{Max}",
     };
 
+    public override SettingHints? Hints => Min is null && Max is null
+        ? null
+        : new SettingHints(Min: Min is { } lo ? Format(lo) : null, Max: Max is { } hi ? Format(hi) : null);
+
     public override string Format(TimeSpan value) => value.ToString("c", CultureInfo.InvariantCulture);
 
     public override bool TryParse(string raw, out TimeSpan value)

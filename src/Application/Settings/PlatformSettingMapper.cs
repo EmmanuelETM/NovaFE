@@ -9,6 +9,7 @@ internal static class PlatformSettingMapper
     public static PlatformSettingDto ToDto(SettingDefinition definition, PlatformSettingRecord? overrideRow)
     {
         var overridden = overrideRow is not null;
+        var hints = definition.Hints;
 
         return new PlatformSettingDto(
             Key: definition.Key,
@@ -18,6 +19,9 @@ internal static class PlatformSettingMapper
             ValueType: definition.ValueType,
             Unit: definition.Unit,
             Constraints: definition.Constraints,
+            Options: hints?.Options,
+            Min: hints?.Min,
+            Max: hints?.Max,
             KillSwitch: definition.KillSwitch,
             Sensitive: definition.Sensitive,
             Deprecated: definition.Deprecated,

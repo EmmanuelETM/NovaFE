@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NovaFE.Application.Users.Contracts;
 using NovaFE.Application.Users.GetCurrentUser;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
@@ -18,6 +19,7 @@ public sealed class UsersController(GetCurrentUserUseCase getCurrentUser) : ApiC
 {
     [HttpGet("me")]
     [Authorize(Policy = SecurityPolicies.Authenticated)]
+    [ProducesResponseType(typeof(UserProfileDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Me(CancellationToken ct)
         => (await getCurrentUser.Execute(ct)).Match(Ok, Problem);
 }

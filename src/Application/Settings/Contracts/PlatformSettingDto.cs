@@ -12,6 +12,11 @@ public sealed record PlatformSettingDto(
     string ValueType,
     string? Unit,
     string? Constraints,
+    /// <summary>Opciones válidas (solo <c>option</c>); null en el resto.</summary>
+    IReadOnlyList<string>? Options,
+    /// <summary>Mínimo/máximo (numéricos y duración), ya formateados; null si no aplica.</summary>
+    string? Min,
+    string? Max,
     bool KillSwitch,
     bool Sensitive,
     bool Deprecated,

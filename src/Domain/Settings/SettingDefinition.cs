@@ -87,6 +87,12 @@ public abstract class SettingDefinition
     public virtual string? Constraints => null;
 
     /// <summary>
+    /// Las mismas restricciones en forma estructurada (opciones, rango) para que
+    /// una pantalla arme el control; null si el tipo no aporta ninguna.
+    /// </summary>
+    public virtual SettingHints? Hints => null;
+
+    /// <summary>
     /// Valida un valor crudo (el que llega en el <c>PUT</c> o el que se lee de la
     /// base). No lanza: los errores se devuelven.
     /// </summary>

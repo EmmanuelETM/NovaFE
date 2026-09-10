@@ -51,6 +51,16 @@ public class SettingDefinitionTests
         def.Validate("101").IsError.ShouldBeTrue();
         def.Validate("abc").IsError.ShouldBeTrue();
         def.Constraints.ShouldBe("1–100");
+        def.Hints.ShouldBe(new SettingHints(Min: "1", Max: "100"));
+    }
+
+    [Fact]
+    public void Number_and_option_without_bounds_have_no_hints_or_structured_hints()
+    {
+        new IntegerSetting("x.n", "G", "N", @default: 10).Hints.ShouldBeNull();
+
+        var option = new OptionSetting("x.layout", "G", "Layout", @default: "letter", options: ["letter", "pos"]);
+        option.Hints!.Options.ShouldBe(["letter", "pos"]);
     }
 
     [Fact]
