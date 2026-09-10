@@ -38,6 +38,8 @@ public sealed class OptionSetting : SettingDefinition<string>
 
     public override string? Constraints => string.Join(" · ", Options);
 
+    public override SettingHints? Hints => new(Options: Options);
+
     public override string Format(string value) => value ?? string.Empty;
 
     public override bool TryParse(string raw, out string value)

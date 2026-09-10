@@ -33,6 +33,12 @@ public sealed class IntegerSetting(
         _ => $"{Min}–{Max}",
     };
 
+    public override SettingHints? Hints => Min is null && Max is null
+        ? null
+        : new SettingHints(
+            Min: Min?.ToString(CultureInfo.InvariantCulture),
+            Max: Max?.ToString(CultureInfo.InvariantCulture));
+
     public override string Format(int value) => value.ToString(CultureInfo.InvariantCulture);
 
     public override bool TryParse(string raw, out int value) =>
