@@ -47,6 +47,9 @@ public abstract class SettingDefinition<T> : SettingDefinition
     /// </summary>
     protected virtual ErrorOr<Success> ValidateTyped(T value) => Result.Success;
 
+    public sealed override string Canonicalize(string raw)
+        => raw is not null && TryParse(raw, out var value) ? Format(value) : raw ?? string.Empty;
+
     public sealed override ErrorOr<Success> Validate(string raw)
     {
         if (raw is null || !TryParse(raw, out var value))

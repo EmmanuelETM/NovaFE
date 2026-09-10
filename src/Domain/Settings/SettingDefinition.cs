@@ -91,4 +91,10 @@ public abstract class SettingDefinition
     /// base). No lanza: los errores se devuelven.
     /// </summary>
     public abstract ErrorOr<Success> Validate(string raw);
+
+    /// <summary>
+    /// Devuelve la forma canónica de un valor válido (<c>1</c> → <c>true</c>,
+    /// <c>POS</c> → <c>pos</c>); si no parsea, lo devuelve tal cual.
+    /// </summary>
+    public abstract string Canonicalize(string raw);
 }
