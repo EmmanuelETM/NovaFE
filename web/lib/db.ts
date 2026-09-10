@@ -47,11 +47,22 @@ function build() {
 }
 
 // En dev, Next recarga módulos en cada cambio: sin cachear en globalThis se
-// abriría un pool nuevo por recarga hasta agotar las conexiones.
+// abriría un pool nuevo por recarga hasta agotar las conexiones. El pool se
+// vuelve a construir si cambia el `DATABASE_URL` o el driver — así, si el server
+// arrancó antes de que estuviera puesto, un `Reload env` lo repara sin reinicio.
 const globalForDb = globalThis as unknown as {
   __authDb?: ReturnType<typeof build>;
+  __authDbKey?: string;
 };
 
-export const db: ReturnType<typeof build> = globalForDb.__authDb ?? build();
+const key = `${env.DATABASE_DRIVER}:${env.DATABASE_URL ?? ""}`;
 
-if (process.env.NODE_ENV !== "production") globalForDb.__authDb = db;
+export const db: ReturnType<typeof build> =
+  globalForDb.__authDb && globalForDb.__authDbKey === key
+    ? globalForDb.__authDb
+    : build();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForDb.__authDb = db;
+  globalForDb.__authDbKey = key;
+}
