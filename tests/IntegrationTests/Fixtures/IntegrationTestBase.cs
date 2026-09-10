@@ -27,16 +27,21 @@ public abstract class IntegrationTestBase(DatabaseFixture database) : IAsyncLife
     /// <summary>Las respuestas usan la misma configuración JSON que la API.</summary>
     protected static JsonSerializerOptions Json => JsonSettings.Bulletproof;
 
-    public ValueTask InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         if (!DockerAvailability.IsAvailable)
-            return ValueTask.CompletedTask;
+            return;
+
+        // Cada prueba arranca con la base vacía: ninguna depende del orden. El
+        // reseteo va ANTES de crear la fábrica porque el arranque de la app hace
+        // un warm-load del snapshot de settings; si la base todavía trae los
+        // overrides de la prueba anterior (p. ej. platform.maintenance_mode), la
+        // instancia nueva nace en mantenimiento y responde 503 hasta que el
+        // poller la corrige — una carrera que en CI se pierde.
+        await Database.ResetAsync();
 
         _factory = new ApiFactory(Database.ConnectionString);
         Client = _factory.CreateClient();
-
-        // Cada prueba arranca con la base vacía: ninguna depende del orden.
-        return new ValueTask(Database.ResetAsync());
     }
 
     public ValueTask DisposeAsync()

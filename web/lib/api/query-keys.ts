@@ -33,4 +33,18 @@ export const queryKeys = {
     all: ["platform-settings"] as const,
     list: () => ["platform-settings", "list"] as const,
   },
+
+  /** Usuarios del dashboard (operador): operadores del SaaS y empleados por contribuyente. */
+  platformUsers: {
+    all: ["platform-users"] as const,
+    operators: () => ["platform-users", "operators"] as const,
+    byTenant: (tenantId: string) =>
+      ["platform-users", "by-tenant", tenantId] as const,
+  },
+
+  /** `GET /tenants`: contribuyentes (para el selector). */
+  tenants: {
+    all: ["tenants"] as const,
+    options: () => ["tenants", "options"] as const,
+  },
 } as const;

@@ -127,6 +127,35 @@ public sealed class PlatformUser : Entity<Guid>, IAuditableEntity, ISoftDeletabl
         return Result.Success;
     }
 
+    /// <summary>
+    /// Reactiva a un usuario revocado. Idempotencia estricta (espejo de
+    /// <see cref="Revoke"/>): reactivar a uno que no estaba revocado es un error.
+    /// </summary>
+    public ErrorOr<Success> Reinstate()
+    {
+        if (RevokedAt is null)
+            return PlatformUserErrors.NotRevoked;
+
+        RevokedAt = null;
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Cambia el rol. Solo para usuarios de un contribuyente: <c>admin_sistema</c>
+    /// es exclusivo del operador y no se puede asignar acá. Cambiarlo por el mismo
+    /// rol es un no-op. Se permite aunque el usuario esté revocado (no afecta el acceso).
+    /// </summary>
+    public ErrorOr<Success> ChangeRole(PlatformRole newRole)
+    {
+        ArgumentNullException.ThrowIfNull(newRole);
+
+        if (!newRole.IsTenantRole)
+            return PlatformUserErrors.InvalidRoleForTenant;
+
+        Role = newRole;
+        return Result.Success;
+    }
+
     private static ErrorOr<string> NormalizeEmail(string email)
     {
         if (string.IsNullOrWhiteSpace(email))

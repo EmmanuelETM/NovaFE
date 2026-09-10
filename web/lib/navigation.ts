@@ -3,6 +3,7 @@ import {
   Settings2,
   SlidersHorizontal,
   Users,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,6 +86,14 @@ export const NAVIGATION: readonly NavSection[] = [
     // contribuyente (esa es `/configuracion`, pendiente).
     label: "Plataforma",
     items: [
+      {
+        href: "/plataforma/usuarios",
+        label: "Usuarios",
+        description: "Quién entra a la plataforma y con qué rol",
+        icon: UsersRound,
+        minRole: ROLE.admin_sistema,
+        ready: true,
+      },
       {
         href: "/plataforma/configuracion",
         label: "Configuración",

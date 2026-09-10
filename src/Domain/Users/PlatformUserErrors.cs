@@ -36,6 +36,10 @@ public static class PlatformUserErrors
         code: "PlatformUser.AlreadyRevoked",
         description: "El usuario ya estaba revocado.");
 
+    public static Error NotRevoked => Error.Conflict(
+        code: "PlatformUser.NotRevoked",
+        description: "El usuario no está revocado, no hay nada que reactivar.");
+
     public static Error AuthUserAlreadyLinked => Error.Conflict(
         code: "PlatformUser.AuthUserAlreadyLinked",
         description: "El usuario ya está enlazado a otra cuenta de autenticación.");
