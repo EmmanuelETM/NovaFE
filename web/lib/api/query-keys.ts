@@ -27,4 +27,10 @@ export const queryKeys = {
     list: (filters: Filters) => ["users", "list", filters] as const,
     detail: (id: string) => ["users", "detail", id] as const,
   },
+
+  /** `GET /platform-settings`: la config operativa de la plataforma (operador). */
+  platformSettings: {
+    all: ["platform-settings"] as const,
+    list: () => ["platform-settings", "list"] as const,
+  },
 } as const;

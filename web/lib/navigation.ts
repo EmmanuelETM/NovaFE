@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   Settings2,
+  SlidersHorizontal,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -76,6 +77,21 @@ export const NAVIGATION: readonly NavSection[] = [
         icon: Settings2,
         minRole: ROLE.admin_tenant,
         ready: false,
+      },
+    ],
+  },
+  {
+    // Solo operador del SaaS: la config transversal de la plataforma, no la de un
+    // contribuyente (esa es `/configuracion`, pendiente).
+    label: "Plataforma",
+    items: [
+      {
+        href: "/plataforma/configuracion",
+        label: "Configuración",
+        description: "Los ajustes operativos de la plataforma",
+        icon: SlidersHorizontal,
+        minRole: ROLE.admin_sistema,
+        ready: true,
       },
     ],
   },
