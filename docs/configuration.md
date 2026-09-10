@@ -1,8 +1,11 @@
 # Configuración y settings
 
-> **Documento de diseño / propuesta.** Nada de esto está construido todavía. Fija
-> el modelo antes de escribir la primera tabla, para que la config dinámica y los
-> settings de cliente no crezcan ad-hoc por los módulos.
+> **Estado (2026-09-10).** Pasos 1–3 del orden de trabajo **construidos**: el quick
+> win de `IOptionsMonitor`, el motor de settings de plataforma
+> (`src/Domain/Settings`, `src/Application/Settings`, `src/Infrastructure/Settings`),
+> la API de operador `/api/v1/platform-settings` y el kill-switch de mantenimiento.
+> El resto (pantalla del dashboard, capas de plan, `tenant_settings`) sigue siendo
+> diseño. Donde este doc y el código difieran en un detalle, manda el código.
 
 Un servicio de cumplimiento fiscal tiene que cambiar comportamiento **sin
 desplegar**: pausar un worker en un incidente, activar el modo contingencia
@@ -168,20 +171,21 @@ que uno la necesite (p. ej. timeouts distintos contra TestECF).
 ### `ISettingsReader` (Application)
 
 ```csharp
-Task<T> GetAsync<T>(SettingDefinition<T> def, CancellationToken ct);              // Platform
-Task<T> GetAsync<T>(SettingDefinition<T> def, TenantId tenant, CancellationToken ct); // Plan / Tenant
+T GetValue<T>(SettingDefinition<T> def);   // Platform — síncrono, el snapshot siempre está en memoria
 ```
 
-Tipado, sin strings mágicos. `CachedSettingsReader` (Infrastructure) lo respalda
-con el snapshot en memoria — sin I/O en el acceso normal. El `TenantId` sale de
-`ICurrentTenant`; el worker lo fija por fila (igual que hoy).
+Tipado, sin strings mágicos, **sin `Task` ni `CancellationToken`**: el snapshot
+está siempre en memoria y el refresco es out-of-band. `CachedSettingsReader`
+(Infrastructure, singleton) lo respalda; un override que no parsea contra su
+definición no lanza — se registra y se devuelve el default de código. Las
+sobrecargas por `TenantId` (scope `Plan`/`Tenant`) llegan con el paso 6.
 
 ### Lectura para pantalla
 
-`ListSettingsUseCase` recorre las **definiciones** de `SettingDefinitions.All`
-(no las filas), y por cada una devuelve: metadata (`group`, `label`,
-`description`, `unit`, tipo, validación), valor efectivo, `resolvedFrom` y si está
-sobrescrita. Así un setting recién declarado aparece con su default aunque nunca
+`ListPlatformSettingsUseCase` recorre las **definiciones** de
+`SettingDefinitions.All` (no las filas), y por cada una devuelve: metadata
+(`group`, `label`, `description`, `unit`, tipo, `constraints`), valor efectivo,
+`resolvedFrom` y si está sobrescrita. Así un setting recién declarado aparece con su default aunque nunca
 se haya tocado, y una fila huérfana de una definición borrada se ignora. Es lo que
 consume la pantalla del dashboard — por eso la metadata de presentación va en la
 definición desde el paso 2 del [orden de trabajo](#orden-de-trabajo), no como un
@@ -324,25 +328,26 @@ o Redis sin tocar un solo call site.
 
 | Endpoint | Política | Efecto |
 |---|---|---|
-| `GET /api/v1/platform/settings` | `Operator` (`X-Admin-Key`) | lista **definiciones** (no filas) con valor efectivo y `resolvedFrom` |
-| `PUT /api/v1/platform/settings/{key}` | `Operator` | sobrescribe (capa 2) |
-| `DELETE /api/v1/platform/settings/{key}` | `Operator` | quita la sobrescritura → vuelve al default |
-| `GET /api/v1/tenants/{id}/settings` | `TenantConfig` | definiciones scope `Tenant` + valor efectivo |
-| `PUT` / `DELETE .../settings/{key}` | `TenantConfig` | solo definiciones con `TenantWritable`; RLS |
+| `GET /api/v1/platform-settings` | `Operator` (`X-Admin-Key`) | lista **definiciones** (no filas) con valor efectivo y `resolvedFrom` |
+| `GET /api/v1/platform-settings/{key}` | `Operator` | una definición por clave |
+| `PUT /api/v1/platform-settings/{key}` | `Operator` | sobrescribe (capa 2); cuerpo `{ "value": "…" }` |
+| `DELETE /api/v1/platform-settings/{key}` | `Operator` | quita la sobrescritura → vuelve al default |
+| `GET /api/v1/tenants/{id}/settings` | `TenantConfig` | definiciones scope `Tenant` + valor efectivo *(paso 6)* |
+| `PUT` / `DELETE .../settings/{key}` | `TenantConfig` | solo definiciones con `TenantWritable`; RLS *(paso 6)* |
 
-- **La validación la hace la definición** (`definition.Validate(rawValue)`), no el
-  comando. El `UpdateSettingUseCase` mapea, resuelve el autor, escribe fila +
-  bitácora + `NOTIFY` + bump de generación en una transacción
+- **La validación de forma** va en el `AbstractValidator`; la existencia de la
+  clave (`404`), la deprecación y `definition.Validate(value)` (`400`) las hace el
+  `UpdatePlatformSettingUseCase`. Escribe fila + bitácora + bump de generación en
+  una transacción
   (`IUnitOfWork.ExecuteInTransactionAsync`).
 - **Guardrails**: los límites (`min`/`max`/opciones/regex) viven en la definición;
-  un `PUT` fuera de rango se rechaza con `Error.Validation` → 400.
-- **Settings sensibles** (`Sensitive = true`): el `PUT` exige `?confirm=true`; la
-  UI muestra un modal. (Aprobación 4-ojos = futuro.)
-- **Auto-chequeo al arrancar**: un `IValidateOptions`-equivalente recorre
-  `platform_settings` y loguea (sin fallar) toda fila que ya no parsee contra su
-  definición actual — está siendo ignorada y alguien debe saberlo.
-- **Alerta por ráfaga**: N cambios de setting en una ventana corta → webhook /
-  aviso (posible error o `X-Admin-Key` comprometida).
+  un `PUT` fuera de rango se rechaza con `Error.Validation` → 400. El valor se
+  persiste **canónico** (`1` → `true`, `POS` → `pos`).
+- *(pendiente)* **Settings sensibles** (`Sensitive` ya está en la definición): que
+  el `PUT` exija confirmación explícita.
+- *(pendiente)* **Auto-chequeo al arrancar**: loguear las filas de
+  `platform_settings` que ya no parsean contra su definición.
+- *(pendiente)* **Alerta por ráfaga**: N cambios en una ventana corta → aviso.
 
 ---
 
@@ -417,21 +422,21 @@ funciona". `Program.cs` § "Envío a la DGII" / "Webhooks".
 ## Orden de trabajo
 
 1. ~~Quick win de `IOptionsMonitor` en los workers.~~ ✅
-2. Motor de settings: `SettingDefinition<T>` **con toda la metadata de
-   presentación** (`Group`, `Label`, `Description`, `Unit`, orden) + registro por
-   reflexión + `ISettingsReader` + `CachedSettingsReader` + `platform_settings` +
-   bitácora + `settings_generation` + poll de 10 s. Sin `NOTIFY`.
-3. Endpoints de plataforma completos: `GET` que proyecta **definiciones** (no
-   filas) agrupadas, con valor efectivo y `resolvedFrom`; `PUT` / `DELETE` con
-   validación en la definición. Primeras definiciones: kill-switches y **modo
-   contingencia** (antes de M11).
-4. **Pantalla de settings en el dashboard del operador** — consume el `GET`
-   agrupado y renderiza un control por tipo. La metadata del paso 2 es justo lo
-   que necesita; se construye junto con el resto del dashboard, no después.
+2. ~~Motor de settings: `SettingDefinition`/`SettingDefinition<T>` + subtipos + registro
+   por reflexión + `ISettingsReader`/`CachedSettingsReader` + `platform_settings` +
+   `platform_setting_changes` + `settings_generation` + snapshot en memoria + poll de
+   10 s (pump `ISettingsRefreshPump` + `SettingsGenerationPoller`) + warm-load.~~ ✅
+3. ~~API de operador: `GET /api/v1/platform-settings` (proyecta definiciones agrupadas,
+   valor efectivo, `resolvedFrom`), `GET {key}`, `PUT {key}`, `DELETE {key}`;
+   `MaintenanceModeMiddleware` (503) como primer consumidor real de
+   `platform.maintenance_mode`. `platform.contingency_mode` declarado, sin consumir.~~ ✅
+4. **Pantalla de settings en el dashboard del operador** — consume el `GET` agrupado.
 5. `plans` / `tenant_subscriptions` como capas 3–4, con el módulo de medición.
-6. `tenant_settings` (scope `Tenant`, RLS) + su pantalla en el dashboard del
-   contribuyente, con M15.
-7. *(Diferido)* `LISTEN`/`NOTIFY` cuando 10 s de propagación se sienta lento.
+6. `tenant_settings` (scope `Tenant`, RLS) + `ISettingsReader.GetValue(def, tenantId)`
+   + pantalla del contribuyente, con M15.
+7. *(Diferido)* Fachadas `IOptionsMonitor<XRuntimeOptions>` por módulo; `?confirm`
+   para settings sensibles; auto-chequeo al arrancar; alerta por ráfaga;
+   `GET {key}/history`; `LISTEN`/`NOTIFY` cuando 10 s se sienta lento.
 
 ---
 
