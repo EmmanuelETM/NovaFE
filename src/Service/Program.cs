@@ -340,6 +340,11 @@ try
     // nunca llegarían a un middleware registrado después de ella.
     app.UseMiddleware<AuditLoggingMiddleware>();
 
+    // Kill-switch de mantenimiento: 503 a todo salvo health checks y la API de
+    // settings. Después de la auditoría a propósito, para que el rechazo quede
+    // registrado. Lee el snapshot de settings en memoria (sin E/S).
+    app.UseMiddleware<MaintenanceModeMiddleware>();
+
     // Después de autenticar el esquema por defecto (API key): así el limitador
     // puede particionar por contribuyente y no solo por IP.
     app.UseRateLimiter();
