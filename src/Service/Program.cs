@@ -4,6 +4,7 @@ using NovaFE.Application;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Ecf.Submission;
 using NovaFE.Application.Notifications;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Domain.Common.Json;
 using NovaFE.Infrastructure;
@@ -137,6 +138,17 @@ try
     if (builder.Configuration.GetValue("ExpiryMonitor:Enabled", defaultValue: true))
         builder.Services.AddHostedService<ExpiryMonitorWorker>();
 
+    // Motor de settings runtime (docs/configuration.md): el pump consulta el
+    // contador de generación y recarga el snapshot local si cambió; el poller lo
+    // dispara en intervalo. El warm-load inicial va más abajo, tras las migraciones.
+    builder.Services.AddOptions<SettingsOptions>()
+        .Bind(builder.Configuration.GetSection(SettingsOptions.SectionName))
+        .ValidateDataAnnotations();
+    builder.Services.AddSingleton<ISettingsRefreshPump, SettingsRefreshPump>();
+
+    if (builder.Configuration.GetValue("Settings:PollerEnabled", defaultValue: true))
+        builder.Services.AddHostedService<SettingsGenerationPoller>();
+
     // ==========================================
     //     4. Observabilidad & Health Checks
     // ==========================================
@@ -257,6 +269,23 @@ try
     // activo (por defecto: on en Development, off en el resto). Corre antes de
     // aceptar tráfico.
     await app.MigrateAndSeedDatabaseAsync();
+
+    // Warm-load del snapshot de settings antes de aceptar tráfico: así el
+    // middleware de mantenimiento y cualquier lector ya ven los overrides desde
+    // la primera petición, sin la ventana de "defaults por unos milisegundos".
+    // Best-effort: si la base no responde, se arranca con los defaults de código y
+    // el poller reintenta (docs/configuration.md §"Degradación").
+    try
+    {
+        await using var settingsScope = app.Services.CreateAsyncScope();
+        await settingsScope.ServiceProvider
+            .GetRequiredService<ISettingsCacheInvalidator>()
+            .RefreshNowAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "No se pudo cargar el snapshot de settings al arrancar; se usan los defaults de código");
+    }
 
     // El orden de los middlewares importa. Cada línea está donde está por una razón:
 

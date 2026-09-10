@@ -21,6 +21,11 @@ internal sealed class SettingsGenerationStore(AppDbContext context) : ISettingsG
     }
 
     public Task BumpAsync(CancellationToken ct = default) =>
+        // Upsert: si la fila no existe (p. ej. tras un reseteo de datos en pruebas)
+        // la crea; si existe, incrementa. En producción la fila siempre está.
         context.Database.ExecuteSqlRawAsync(
-            "UPDATE settings_generation SET value = value + 1 WHERE id = 1", ct);
+            """
+            INSERT INTO settings_generation (id, value) VALUES (1, 1)
+            ON CONFLICT (id) DO UPDATE SET value = settings_generation.value + 1
+            """, ct);
 }

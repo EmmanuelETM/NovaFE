@@ -32,6 +32,7 @@ using NovaFE.Infrastructure.Persistence.Sql;
 using NovaFE.Infrastructure.Security;
 using NovaFE.Infrastructure.Sequences.EfCore;
 using NovaFE.Infrastructure.Sequences.Sql;
+using NovaFE.Infrastructure.Settings;
 using NovaFE.Infrastructure.Settings.EfCore;
 using NovaFE.Infrastructure.Settings.Sql;
 using NovaFE.Infrastructure.Signing;
@@ -198,6 +199,11 @@ public static class InfrastructureService
         services.AddScoped<IPlatformSettingReadRepository, PlatformSettingReadRepository>();
         services.AddScoped<IPlatformSettingChangeLog, PlatformSettingChangeLog>();
         services.AddScoped<ISettingsGenerationStore, SettingsGenerationStore>();
+        services.AddScoped<ISettingsSnapshotLoader, SettingsSnapshotLoader>();
+        services.AddScoped<ISettingsCacheInvalidator, SettingsCacheInvalidator>();
+        // Snapshot en memoria + lector tipado: sin estado por petición → singleton.
+        services.AddSingleton<ISettingsSnapshotHolder, SettingsSnapshotHolder>();
+        services.AddSingleton<ISettingsReader, CachedSettingsReader>();
 
         // Firma HMAC: sin estado → singleton. El guard anti-SSRF (resuelve DNS)
         // depende de WebhookSettings, que es transient sobre IOptionsMonitor para
