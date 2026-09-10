@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using NovaFE.Application.Audit.ListAuditLog;
+using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Application.Tenants.CreateApiKey;
 using NovaFE.Application.Tenants.GetEmitterProfile;
 using NovaFE.Application.Tenants.GetTenant;
@@ -8,9 +9,13 @@ using NovaFE.Application.Tenants.ListTenants;
 using NovaFE.Application.Tenants.RegisterTenant;
 using NovaFE.Application.Tenants.RevokeApiKey;
 using NovaFE.Application.Tenants.SetEmitterProfile;
+using NovaFE.Application.Users.ChangeUserRole;
+using NovaFE.Application.Users.Contracts;
 using NovaFE.Application.Users.ListTenantUsers;
 using NovaFE.Application.Users.ProvisionTenantUser;
+using NovaFE.Application.Users.ReinstateUser;
 using NovaFE.Application.Users.RevokeUser;
+using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -38,6 +43,8 @@ public sealed class TenantsController(
     ProvisionTenantUserUseCase provisionUser,
     ListTenantUsersUseCase listUsers,
     RevokeUserUseCase revokeUser,
+    ChangeUserRoleUseCase changeUserRole,
+    ReinstateUserUseCase reinstateUser,
     ListAuditLogUseCase listAuditLog) : ApiController
 {
     [HttpPost]
@@ -49,10 +56,13 @@ public sealed class TenantsController(
             Problem);
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(TenantDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => (await get.Execute(new GetTenantQuery(id), ct)).Match(Ok, Problem);
 
     [HttpGet]
+    [ProducesResponseType(typeof(PagedResult<TenantSummaryDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(
         [FromQuery] ListTenantsQuery query,
         CancellationToken ct)
@@ -116,6 +126,10 @@ public sealed class TenantsController(
     /// persona entra cuando inicia sesión con ese mismo correo en Better Auth.
     /// </summary>
     [HttpPost("{id:guid}/users")]
+    [ProducesResponseType(typeof(PlatformUserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> ProvisionUser(
         Guid id,
         [FromBody] ProvisionUserBody body,
@@ -127,16 +141,46 @@ public sealed class TenantsController(
 
     /// <summary>Los usuarios del contribuyente en el dashboard.</summary>
     [HttpGet("{id:guid}/users")]
+    [ProducesResponseType(typeof(IReadOnlyList<PlatformUserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ListUsers(Guid id, CancellationToken ct)
         => (await listUsers.Execute(new ListTenantUsersQuery(id), ct)).Match(Ok, Problem);
 
+    /// <summary>Cambia el rol de un usuario del contribuyente.</summary>
+    [HttpPatch("{id:guid}/users/{userid:guid}")]
+    [ProducesResponseType(typeof(PlatformUserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ChangeUserRole(
+        Guid id,
+        [FromRoute(Name = "userid")] Guid userId,
+        [FromBody] ChangeRoleBody body,
+        CancellationToken ct)
+        => (await changeUserRole.Execute(new ChangeUserRoleCommand(userId, id, body.Role), ct))
+            .Match(Ok, Problem);
+
     /// <summary>Revoca el acceso de un usuario del contribuyente al dashboard.</summary>
     [HttpDelete("{id:guid}/users/{userid:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> RevokeUser(
         Guid id,
         [FromRoute(Name = "userid")] Guid userId,
         CancellationToken ct)
         => (await revokeUser.Execute(new RevokeUserCommand(userId, id), ct))
+            .Match(_ => NoContent(), Problem);
+
+    /// <summary>Reactiva a un usuario del contribuyente que estaba revocado.</summary>
+    [HttpPost("{id:guid}/users/{userid:guid}/reinstate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ReinstateUser(
+        Guid id,
+        [FromRoute(Name = "userid")] Guid userId,
+        CancellationToken ct)
+        => (await reinstateUser.Execute(new ReinstateUserCommand(userId, id), ct))
             .Match(_ => NoContent(), Problem);
 
     /// <summary>Registro de auditoría del contribuyente (RF-14.4), paginado.</summary>
@@ -172,4 +216,7 @@ public sealed class TenantsController(
     /// es un rol de contribuyente.
     /// </summary>
     public sealed record ProvisionUserBody(string Email, string Role);
+
+    /// <summary>Cuerpo del <c>PATCH .../users/{userId}</c>.</summary>
+    public sealed record ChangeRoleBody(string Role);
 }

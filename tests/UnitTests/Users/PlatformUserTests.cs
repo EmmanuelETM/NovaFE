@@ -109,6 +109,51 @@ public class PlatformUserTests
     }
 
     [Fact]
+    public void Reinstate_clears_the_revocation_and_is_not_idempotent()
+    {
+        var user = PlatformUser.CreateTenantUser("e@cliente.do", TenantId, PlatformRole.Emisor).Value;
+
+        user.Reinstate().IsError.ShouldBeTrue();   // no estaba revocado
+
+        user.Revoke(Now);
+        user.Reinstate().IsError.ShouldBeFalse();
+        user.RevokedAt.ShouldBeNull();
+        user.IsUsable.ShouldBeTrue();
+
+        var again = user.Reinstate();
+        again.IsError.ShouldBeTrue();
+        again.FirstError.Code.ShouldBe("PlatformUser.NotRevoked");
+        again.FirstError.Type.ShouldBe(ErrorType.Conflict);
+    }
+
+    [Fact]
+    public void ChangeRole_sets_a_tenant_role_and_rejects_admin_sistema()
+    {
+        var user = PlatformUser.CreateTenantUser("e@cliente.do", TenantId, PlatformRole.Emisor).Value;
+
+        user.ChangeRole(PlatformRole.Consultor).IsError.ShouldBeFalse();
+        user.Role.ShouldBe(PlatformRole.Consultor);
+
+        // no-op con el mismo rol
+        user.ChangeRole(PlatformRole.Consultor).IsError.ShouldBeFalse();
+
+        var toOperator = user.ChangeRole(PlatformRole.AdminSistema);
+        toOperator.IsError.ShouldBeTrue();
+        toOperator.FirstError.Code.ShouldBe("PlatformUser.InvalidRoleForTenant");
+        user.Role.ShouldBe(PlatformRole.Consultor);
+    }
+
+    [Fact]
+    public void ChangeRole_is_allowed_on_a_revoked_user()
+    {
+        var user = PlatformUser.CreateTenantUser("e@cliente.do", TenantId, PlatformRole.Emisor).Value;
+        user.Revoke(Now);
+
+        user.ChangeRole(PlatformRole.AdminTenant).IsError.ShouldBeFalse();
+        user.Role.ShouldBe(PlatformRole.AdminTenant);
+    }
+
+    [Fact]
     public void PlatformRole_IsTenantRole_excludes_only_admin_sistema()
     {
         PlatformRole.AdminSistema.IsTenantRole.ShouldBeFalse();
