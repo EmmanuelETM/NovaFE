@@ -5,6 +5,7 @@ using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Representation;
 using NovaFE.Application.Sequences.Interfaces;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Signing.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Application.Users.Interfaces;
@@ -31,6 +32,8 @@ using NovaFE.Infrastructure.Persistence.Sql;
 using NovaFE.Infrastructure.Security;
 using NovaFE.Infrastructure.Sequences.EfCore;
 using NovaFE.Infrastructure.Sequences.Sql;
+using NovaFE.Infrastructure.Settings.EfCore;
+using NovaFE.Infrastructure.Settings.Sql;
 using NovaFE.Infrastructure.Signing;
 using NovaFE.Infrastructure.Tenants;
 using NovaFE.Infrastructure.Tenants.EfCore;
@@ -187,6 +190,14 @@ public static class InfrastructureService
         services.AddScoped<IWebhookEndpointReadRepository, WebhookEndpointReadRepository>();
         services.AddScoped<IWebhookDeliveryReadRepository, WebhookDeliveryReadRepository>();
         services.AddScoped<IWebhookOutbox, PostgresWebhookOutbox>();
+
+        // Settings de plataforma (motor de configuración runtime, ver
+        // docs/configuration.md). EF escribe, Dapper lee. El snapshot en memoria,
+        // el lector tipado y el invalidador se registran más abajo.
+        services.AddScoped<IPlatformSettingRepository, PlatformSettingRepository>();
+        services.AddScoped<IPlatformSettingReadRepository, PlatformSettingReadRepository>();
+        services.AddScoped<IPlatformSettingChangeLog, PlatformSettingChangeLog>();
+        services.AddScoped<ISettingsGenerationStore, SettingsGenerationStore>();
 
         // Firma HMAC: sin estado → singleton. El guard anti-SSRF (resuelve DNS)
         // depende de WebhookSettings, que es transient sobre IOptionsMonitor para
