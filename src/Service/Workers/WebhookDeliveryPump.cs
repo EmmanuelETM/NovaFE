@@ -1,7 +1,8 @@
-using NovaFE.Application.Webhooks;
+using Microsoft.Extensions.Options;
 using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Application.Webhooks.Interfaces;
 using NovaFE.Service.Common;
+using NovaFE.Service.Configuration;
 
 namespace NovaFE.Service.Workers;
 
@@ -14,7 +15,7 @@ namespace NovaFE.Service.Workers;
 /// </summary>
 internal sealed class WebhookDeliveryPump(
     IServiceScopeFactory scopeFactory,
-    WebhookSettings settings,
+    IOptionsMonitor<WebhooksOptions> options,
     TimeProvider timeProvider,
     ILogger<WebhookDeliveryPump> logger) : IWebhookDeliveryPump
 {
@@ -27,6 +28,9 @@ internal sealed class WebhookDeliveryPump(
 
     public async Task<int> RunOnceAsync(CancellationToken ct = default)
     {
+        // Se relee por tick: los timeouts y la retención se ajustan en caliente.
+        var settings = options.CurrentValue.ToSettings();
+
         using var claimScope = scopeFactory.CreateScope();
         var outbox = claimScope.ServiceProvider.GetRequiredService<IWebhookOutbox>();
 

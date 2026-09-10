@@ -104,8 +104,11 @@ try
     builder.Services.AddOptions<EcfSubmissionOptions>()
         .Bind(builder.Configuration.GetSection(EcfSubmissionOptions.SectionName))
         .ValidateDataAnnotations();
-    builder.Services.AddSingleton(sp =>
-        sp.GetRequiredService<IOptions<EcfSubmissionOptions>>().Value.ToSettings());
+    // Proyección para la capa Application: transient sobre IOptionsMonitor para
+    // que un cambio de configuración en caliente llegue al próximo scope, sin
+    // reiniciar el proceso. Ver docs/configuration.md.
+    builder.Services.AddTransient(sp =>
+        sp.GetRequiredService<IOptionsMonitor<EcfSubmissionOptions>>().CurrentValue.ToSettings());
     builder.Services.AddSingleton<IEcfSubmissionPump, EcfSubmissionPump>();
 
     if (builder.Configuration.GetValue("EcfSubmission:Enabled", defaultValue: true))
@@ -115,8 +118,11 @@ try
     builder.Services.AddOptions<WebhooksOptions>()
         .Bind(builder.Configuration.GetSection(WebhooksOptions.SectionName))
         .ValidateDataAnnotations();
-    builder.Services.AddSingleton(sp =>
-        sp.GetRequiredService<IOptions<WebhooksOptions>>().Value.ToSettings());
+    // Transient sobre IOptionsMonitor (ver la nota del envío a la DGII, arriba).
+    // Transient, no scoped: la config del HttpClient de entrega lo resuelve desde
+    // el proveedor raíz.
+    builder.Services.AddTransient(sp =>
+        sp.GetRequiredService<IOptionsMonitor<WebhooksOptions>>().CurrentValue.ToSettings());
     builder.Services.AddSingleton<IWebhookDeliveryPump, WebhookDeliveryPump>();
 
     if (builder.Configuration.GetValue("Webhooks:Enabled", defaultValue: true))

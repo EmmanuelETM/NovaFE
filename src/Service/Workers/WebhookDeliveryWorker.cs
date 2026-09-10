@@ -12,16 +12,15 @@ namespace NovaFE.Service.Workers;
 /// </summary>
 internal sealed class WebhookDeliveryWorker(
     IWebhookDeliveryPump pump,
-    IOptions<WebhooksOptions> options,
+    IOptionsMonitor<WebhooksOptions> options,
     ILogger<WebhookDeliveryWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var baseInterval = options.Value.PollInterval;
-        var maxInterval = options.Value.MaxPollInterval;
+        var baseInterval = options.CurrentValue.PollInterval;
         logger.LogInformation(
             "Worker de entrega de webhooks iniciado (intervalo {Interval}, hasta {Max} sin trabajo)",
-            baseInterval, maxInterval);
+            baseInterval, options.CurrentValue.MaxPollInterval);
 
         await SafeDelayAsync(Jitter(baseInterval), stoppingToken);
 
@@ -29,6 +28,11 @@ internal sealed class WebhookDeliveryWorker(
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            // Se releen en cada iteración: un cambio en caliente ajusta el ritmo
+            // sin reiniciar el worker.
+            baseInterval = options.CurrentValue.PollInterval;
+            var maxInterval = options.CurrentValue.MaxPollInterval;
+
             var processed = 0;
 
             try

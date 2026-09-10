@@ -188,8 +188,10 @@ public static class InfrastructureService
         services.AddScoped<IWebhookDeliveryReadRepository, WebhookDeliveryReadRepository>();
         services.AddScoped<IWebhookOutbox, PostgresWebhookOutbox>();
 
-        // Guard anti-SSRF de las URL de webhook (resuelve DNS) + firma HMAC: sin estado.
-        services.AddSingleton<IWebhookUrlPolicy, HttpWebhookUrlPolicy>();
+        // Firma HMAC: sin estado → singleton. El guard anti-SSRF (resuelve DNS)
+        // depende de WebhookSettings, que es transient sobre IOptionsMonitor para
+        // recoger cambios en caliente; por eso este también es transient.
+        services.AddTransient<IWebhookUrlPolicy, HttpWebhookUrlPolicy>();
         services.AddSingleton<IWebhookSignature, HmacWebhookSignature>();
 
         // Cliente de entrega: timeout corto, SIN reintento de Polly (el outbox reintenta).

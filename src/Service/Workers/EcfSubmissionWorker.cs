@@ -11,16 +11,15 @@ namespace NovaFE.Service.Workers;
 /// </summary>
 internal sealed class EcfSubmissionWorker(
     IEcfSubmissionPump pump,
-    IOptions<EcfSubmissionOptions> options,
+    IOptionsMonitor<EcfSubmissionOptions> options,
     ILogger<EcfSubmissionWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var baseInterval = options.Value.PollInterval;
-        var maxInterval = options.Value.MaxPollInterval;
+        var baseInterval = options.CurrentValue.PollInterval;
         logger.LogInformation(
             "Worker de envío a la DGII iniciado (intervalo {Interval}, hasta {Max} sin trabajo)",
-            baseInterval, maxInterval);
+            baseInterval, options.CurrentValue.MaxPollInterval);
 
         // Arranque escalonado entre instancias.
         await SafeDelayAsync(Jitter(baseInterval), stoppingToken);
@@ -29,6 +28,11 @@ internal sealed class EcfSubmissionWorker(
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            // Se releen en cada iteración: un cambio de configuración en caliente
+            // ajusta el ritmo sin reiniciar el worker.
+            baseInterval = options.CurrentValue.PollInterval;
+            var maxInterval = options.CurrentValue.MaxPollInterval;
+
             var processed = 0;
 
             try
