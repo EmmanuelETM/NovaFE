@@ -23,11 +23,16 @@ export const ROLE = {
 export type RoleName = keyof typeof ROLE;
 export type RoleLevel = (typeof ROLE)[keyof typeof ROLE];
 
+/**
+ * Etiquetas visibles. `admin_sistema` va calificado: «Operador» a secas, junto a
+ * «Administrador» (`admin_tenant`), se lee como un ranking cuando en realidad son
+ * ámbitos distintos — uno administra la plataforma, el otro un contribuyente.
+ */
 export const ROLE_LABELS: Record<RoleName, string> = {
   consultor: "Consultor",
   emisor: "Emisor",
   admin_tenant: "Administrador",
-  admin_sistema: "Operador",
+  admin_sistema: "Operador de la plataforma",
 };
 
 /** El nombre de rol de la API → su rango. Desconocido o ausente = 0 (no ve nada). */
