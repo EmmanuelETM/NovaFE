@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogIn, RefreshCw, ShieldAlert } from "lucide-react";
+import { useState } from "react";
+import { LogIn, LogOut, RefreshCw, ShieldAlert } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { authClient } from "@/lib/auth/client";
 
 interface AccessScreenProps {
   /** El estado que devolvió la API, o 0 si no se pudo llegar a ella. */
@@ -20,14 +22,23 @@ interface AccessScreenProps {
  * falla, no hay app que mostrar. Tres casos, que piden cosas distintas:
  *
  * - **401** — no hay sesión (o venció). Enlace a iniciar sesión.
- * - **403** — autenticado pero sin alta en `platform_users`. Que un admin te dé de alta.
+ * - **403** — autenticado pero sin alta en `platform_users`. Que un admin te dé
+ *   de alta, o salir para probar con otra cuenta.
  * - **otro / 0** — la API no respondió. Reintentar.
  */
 export function AccessScreen({ status, message }: AccessScreenProps) {
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
 
   const sinSesion = status === 401;
   const sinAlta = status === 403;
+
+  async function signOut() {
+    setSigningOut(true);
+    await authClient.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 p-6 text-center">
@@ -53,11 +64,20 @@ export function AccessScreen({ status, message }: AccessScreenProps) {
       </div>
 
       {sinSesion ? (
-        <Button render={<Link href="/login" />}>
+        <Link href="/login" className={buttonVariants()}>
           <LogIn aria-hidden />
           Iniciar sesión
+        </Link>
+      ) : sinAlta ? (
+        <Button
+          variant="outline"
+          disabled={signingOut}
+          onClick={() => void signOut()}
+        >
+          <LogOut aria-hidden />
+          Cerrar sesión
         </Button>
-      ) : sinAlta ? null : (
+      ) : (
         <Button variant="outline" onClick={() => router.refresh()}>
           <RefreshCw aria-hidden />
           Reintentar

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "No se pudo iniciar sesión" };
 
@@ -27,7 +27,9 @@ export default async function AuthErrorPage({
           ? "Cancelaste el acceso desde el proveedor."
           : "El proveedor de identidad rechazó la solicitud. Probá de nuevo; si sigue fallando, avisá al equipo."}
       </p>
-      <Button render={<Link href="/login" />}>Volver a intentar</Button>
+      <Link href="/login" className={buttonVariants()}>
+        Volver a intentar
+      </Link>
     </div>
   );
 }
