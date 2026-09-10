@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using NovaFE.Application.Settings.Contracts;
 using NovaFE.Application.Settings.GetPlatformSetting;
 using NovaFE.Application.Settings.ListPlatformSettings;
 using NovaFE.Application.Settings.ResetPlatformSetting;
@@ -26,16 +27,22 @@ public sealed class PlatformSettingsController(
 {
     /// <summary>Todos los settings con su valor efectivo, agrupados en el cliente por <c>group</c>.</summary>
     [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<PlatformSettingDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(CancellationToken ct)
         => (await list.Execute(ct)).Match(Ok, Problem);
 
     /// <summary>Un setting por su clave.</summary>
     [HttpGet("{key}")]
+    [ProducesResponseType(typeof(PlatformSettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(string key, CancellationToken ct)
         => (await get.Execute(new GetPlatformSettingQuery(key), ct)).Match(Ok, Problem);
 
     /// <summary>Crea o reemplaza el override de un setting.</summary>
     [HttpPut("{key}")]
+    [ProducesResponseType(typeof(PlatformSettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(
         string key,
         [FromBody] SetSettingValueBody body,
@@ -44,6 +51,8 @@ public sealed class PlatformSettingsController(
 
     /// <summary>Quita el override: vuelve a regir el default de código.</summary>
     [HttpDelete("{key}")]
+    [ProducesResponseType(typeof(PlatformSettingDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Reset(string key, CancellationToken ct)
         => (await reset.Execute(new ResetPlatformSettingCommand(key), ct)).Match(Ok, Problem);
 

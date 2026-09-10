@@ -3,27 +3,17 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api/client";
+import type { components } from "@/lib/api/schema";
 import { queryKeys } from "@/lib/api/query-keys";
 
 import { roleRank, type RoleLevel } from "./roles";
 
 /**
- * El perfil que devuelve `GET /api/v1/users/me` de la API NovaFE
- * (`UserProfileDto`). Cuando `bun run api:types` genere el schema, cambiar por:
- *
- *     import type { components } from "@/lib/api/schema";
- *     export type CurrentUser = components["schemas"]["UserProfileDto"];
+ * El perfil que devuelve `GET /api/v1/users/me` (`UserProfileDto`). De acá sale la
+ * navegación por rol; `role` es uno de `consultor` | `emisor` | `admin_tenant` |
+ * `admin_sistema` (ver `./roles`), y `tenantId` en `null` = operador del SaaS.
  */
-export interface CurrentUser {
-  id: string;
-  email: string | null;
-  /** `consultor` | `emisor` | `admin_tenant` | `admin_sistema`. Ver `./roles`. */
-  role: string;
-  /** El contribuyente; `null` = operador del SaaS. */
-  tenantId: string | null;
-  /** Razón social del contribuyente, para mostrar. */
-  tenantName: string | null;
-}
+export type CurrentUser = components["schemas"]["UserProfileDto"];
 
 /**
  * Quién soy y qué puedo hacer.
