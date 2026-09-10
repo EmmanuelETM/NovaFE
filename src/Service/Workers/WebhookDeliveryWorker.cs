@@ -1,29 +1,39 @@
+using Microsoft.Extensions.Options;
 using NovaFE.Application.Webhooks.Delivery;
+using NovaFE.Service.Configuration;
 
 namespace NovaFE.Service.Workers;
 
 /// <summary>
 /// Dispara <see cref="IWebhookDeliveryPump.RunOnceAsync"/> en intervalo. Cada tick
 /// es independiente; un fallo se registra y no detiene el worker. Multi-instancia
-/// seguro (el reclamo usa <c>FOR UPDATE SKIP LOCKED</c>).
+/// seguro (el reclamo usa <c>FOR UPDATE SKIP LOCKED</c>). Con la cola vacía la
+/// espera crece hasta <c>Webhooks:MaxPollIntervalSeconds</c>.
 /// </summary>
 internal sealed class WebhookDeliveryWorker(
     IWebhookDeliveryPump pump,
+    IOptions<WebhooksOptions> options,
     ILogger<WebhookDeliveryWorker> logger) : BackgroundService
 {
-    private static readonly TimeSpan Interval = TimeSpan.FromSeconds(5);
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("Worker de entrega de webhooks iniciado (intervalo {Interval})", Interval);
+        var baseInterval = options.Value.PollInterval;
+        var maxInterval = options.Value.MaxPollInterval;
+        logger.LogInformation(
+            "Worker de entrega de webhooks iniciado (intervalo {Interval}, hasta {Max} sin trabajo)",
+            baseInterval, maxInterval);
 
-        await SafeDelayAsync(Jitter(), stoppingToken);
+        await SafeDelayAsync(Jitter(baseInterval), stoppingToken);
+
+        var delay = baseInterval;
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var processed = 0;
+
             try
             {
-                await pump.RunOnceAsync(stoppingToken);
+                processed = await pump.RunOnceAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -34,12 +44,16 @@ internal sealed class WebhookDeliveryWorker(
                 logger.LogError(ex, "El tick del worker de entrega de webhooks falló");
             }
 
-            await SafeDelayAsync(Interval + Jitter(), stoppingToken);
+            delay = processed > 0
+                ? baseInterval
+                : TimeSpan.FromTicks(Math.Min(delay.Ticks * 2, maxInterval.Ticks));
+
+            await SafeDelayAsync(delay + Jitter(delay), stoppingToken);
         }
     }
 
-    private static TimeSpan Jitter()
-        => TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)(Interval.TotalMilliseconds / 2)));
+    private static TimeSpan Jitter(TimeSpan interval)
+        => TimeSpan.FromMilliseconds(Random.Shared.Next(0, (int)(interval.TotalMilliseconds / 2)));
 
     private static async Task SafeDelayAsync(TimeSpan delay, CancellationToken ct)
     {

@@ -114,9 +114,10 @@ al tenant correcto.
 | Clave | Default | |
 |---|---|---|
 | `Enabled` | `true` | Arranca el worker. `false` en pruebas. |
-| `PollIntervalSeconds` | `5` | Ticks del worker. |
+| `PollIntervalSeconds` | `10` | Ticks del worker **con trabajo**. |
+| `MaxPollIntervalSeconds` | `60` | Techo del intervalo con la cola vacía: cada tick vacío duplica la espera hasta acá, y vuelve al base al procesar algo. |
 | `BatchSize` | `25` | Filas por tick. |
-| `StuckAfterMinutes` | `5` | Umbral del reaper. |
+| `StuckAfterMinutes` | `5` | Umbral del reaper (el reap corre a lo sumo 1×/min, no en cada tick). |
 | `SyncWaitBudgetSeconds` | `8` | Presupuesto del fast-path (`0` lo desactiva). |
 | `MaxInlinePolls` | `3` | Consultas rápidas del fast-path. |
 | `InlinePollDelayMillis` | `600` | Espera entre esas consultas. |

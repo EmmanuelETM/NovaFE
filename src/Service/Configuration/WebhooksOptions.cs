@@ -16,6 +16,22 @@ public sealed class WebhooksOptions
     /// <summary>Arranca el worker de entrega. <c>false</c> en pruebas (disparan el pump a mano).</summary>
     public bool Enabled { get; set; } = true;
 
+    /// <summary>Segundos entre ticks del worker de entrega cuando hay trabajo.</summary>
+    [Range(1, 300)]
+    public int PollIntervalSeconds { get; set; } = 10;
+
+    /// <summary>
+    /// Tope del intervalo con la cola vacía: cada tick sin trabajo duplica la
+    /// espera hasta este techo, y vuelve a <see cref="PollIntervalSeconds"/> al
+    /// procesar algo.
+    /// </summary>
+    [Range(1, 600)]
+    public int MaxPollIntervalSeconds { get; set; } = 60;
+
+    /// <summary>Minutos tras los que una entrega atascada en <c>processing</c> se recupera.</summary>
+    [Range(1, 120)]
+    public int StuckAfterMinutes { get; set; } = 5;
+
     /// <summary>Tope de endpoints por contribuyente.</summary>
     [Range(1, 50)]
     public int MaxEndpointsPerTenant { get; set; } = 5;
@@ -39,6 +55,11 @@ public sealed class WebhooksOptions
     [Range(1, 365)]
     public int DeliveriesRetentionDays { get; set; } = 30;
 
+    public TimeSpan PollInterval => TimeSpan.FromSeconds(PollIntervalSeconds);
+
+    public TimeSpan MaxPollInterval =>
+        TimeSpan.FromSeconds(Math.Max(PollIntervalSeconds, MaxPollIntervalSeconds));
+
     public WebhookSettings ToSettings() => new()
     {
         MaxEndpointsPerTenant = MaxEndpointsPerTenant,
@@ -47,5 +68,6 @@ public sealed class WebhooksOptions
         MaxAttempts = MaxAttempts,
         AutoDisableAfterConsecutiveFailures = AutoDisableAfterConsecutiveFailures,
         DeliveriesRetention = TimeSpan.FromDays(DeliveriesRetentionDays),
+        DeliveryStuckAfter = TimeSpan.FromMinutes(StuckAfterMinutes),
     };
 }

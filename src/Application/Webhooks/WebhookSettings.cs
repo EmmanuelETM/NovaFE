@@ -39,6 +39,9 @@ public sealed record WebhookSettings
     /// <summary>Cuánto se conservan las filas <c>delivered</c> / <c>dead</c> (log de entregas).</summary>
     public TimeSpan DeliveriesRetention { get; init; } = TimeSpan.FromDays(30);
 
+    /// <summary>Tras cuánto tiempo una entrega atascada en <c>processing</c> se recupera.</summary>
+    public TimeSpan DeliveryStuckAfter { get; init; } = TimeSpan.FromMinutes(5);
+
     /// <summary>La espera para el reintento número <paramref name="attempts"/> (0 = el primero).</summary>
     public TimeSpan BackoffFor(int attempts)
     {

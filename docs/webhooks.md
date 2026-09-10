@@ -117,9 +117,11 @@ secreto compartido de bajo valor y rotarlo es una llamada.
   en la fila). Al ocurrir un evento, `IWebhookEventQueue` hace *fan-out*: una fila
   por cada endpoint del tenant, habilitado y suscrito a ese tipo. Si no hay
   ninguno, es un no-op.
-- **`WebhookDeliveryWorker`** (`BackgroundService`) dispara un pump en intervalo;
-  reclamo `FOR UPDATE SKIP LOCKED` + `locked_by` por llamada, igual que el envío a
-  la DGII. Multi-instancia seguro.
+- **`WebhookDeliveryWorker`** (`BackgroundService`) dispara un pump en intervalo
+  (`Webhooks:PollIntervalSeconds`, 10s, con trabajo). Con la cola vacía la espera
+  se duplica en cada tick hasta `Webhooks:MaxPollIntervalSeconds` (60s), y vuelve
+  al base al procesar algo. Reclamo `FOR UPDATE SKIP LOCKED` + `locked_by` por
+  llamada, igual que el envío a la DGII. Multi-instancia seguro.
 - **`WebhookDeliveryProcessor`** entrega una fila: `2xx` → `delivered`; cualquier
   otra cosa (incluye timeout y error de conexión) → reprograma con backoff.
 - **Backoff** (config `Webhooks:BackoffLadder`): `10s, 1m, 5m, 30m, 2h, 6h`.
@@ -129,7 +131,8 @@ secreto compartido de bajo valor y rotarlo es una llamada.
 - **Timeout** de cada `POST`: `Webhooks:DeliveryTimeoutSeconds` (10). La
   resiliencia de reintento la da el outbox, no Polly.
 - Las filas `delivered` / `dead` son el **log de entregas**; se purgan tras
-  `Webhooks:DeliveriesRetentionDays` (30).
+  `Webhooks:DeliveriesRetentionDays` (30). La purga corre en un tick vacío, a lo
+  sumo 1×/hora.
 
 ## Suscripciones
 
@@ -175,7 +178,7 @@ la lista → `400`.
 | `IWebhookOutbox` | `PostgresWebhookOutbox` | Fan-out del evento, claim/reschedule/dead/reap/purge |
 | `IWebhookSignature` | `HmacWebhookSignature` | El `X-NovaFE-Signature` |
 | `IWebhookSender` | `HttpWebhookSender` | El `POST` firmado; re-corre el guard antes de conectar |
-| `WebhookDeliveryProcessor` · `IWebhookDeliveryPump` | `WebhookDeliveryPump` + `WebhookDeliveryWorker` (Service) | Un tick: reap + claim + entregar; purga en los ticks vacíos |
+| `WebhookDeliveryProcessor` · `IWebhookDeliveryPump` | `WebhookDeliveryPump` + `WebhookDeliveryWorker` (Service) | Un tick: reap (≤1×/min) + claim + entregar; purga en un tick vacío (≤1×/h). Backoff del intervalo con la cola vacía |
 | `WebhookEvent` (Application) | — | Construye el sobre |
 
 Los eventos del e-CF los emite `EcfSubmissionProcessor` en la **misma transacción**

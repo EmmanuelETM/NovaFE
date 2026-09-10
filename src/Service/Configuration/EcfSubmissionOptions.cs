@@ -14,9 +14,17 @@ public sealed class EcfSubmissionOptions
     /// <summary>Arranca el worker de fondo. <c>false</c> en pruebas (disparan el pump a mano).</summary>
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Segundos entre ticks del worker.</summary>
+    /// <summary>Segundos entre ticks del worker cuando hay trabajo.</summary>
     [Range(1, 300)]
-    public int PollIntervalSeconds { get; set; } = 5;
+    public int PollIntervalSeconds { get; set; } = 10;
+
+    /// <summary>
+    /// Tope del intervalo cuando el worker viene sin trabajo: en cada tick vacío
+    /// se duplica la espera hasta este techo, y vuelve a <see cref="PollIntervalSeconds"/>
+    /// en cuanto procesa algo. Evita martillar la base con la cola vacía.
+    /// </summary>
+    [Range(1, 600)]
+    public int MaxPollIntervalSeconds { get; set; } = 60;
 
     /// <summary>Filas por tick.</summary>
     [Range(1, 500)]
@@ -43,6 +51,9 @@ public sealed class EcfSubmissionOptions
     public int FirstPollDelaySeconds { get; set; } = 30;
 
     public TimeSpan PollInterval => TimeSpan.FromSeconds(PollIntervalSeconds);
+
+    public TimeSpan MaxPollInterval =>
+        TimeSpan.FromSeconds(Math.Max(PollIntervalSeconds, MaxPollIntervalSeconds));
 
     public TimeSpan StuckAfter => TimeSpan.FromMinutes(StuckAfterMinutes);
 
