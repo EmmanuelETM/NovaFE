@@ -74,16 +74,16 @@ export const NAVIGATION: readonly NavSection[] = [
       {
         href: "/configuracion",
         label: "Configuración",
-        description: "Los valores que ajustan el comportamiento",
+        description: "Los ajustes de tu facturación",
         icon: Settings2,
         minRole: ROLE.admin_tenant,
-        ready: false,
+        ready: true,
       },
     ],
   },
   {
     // Solo operador del SaaS: la config transversal de la plataforma, no la de un
-    // contribuyente (esa es `/configuracion`, pendiente).
+    // contribuyente (esa es `/configuracion`).
     label: "Plataforma",
     items: [
       {

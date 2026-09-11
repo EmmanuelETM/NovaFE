@@ -1268,6 +1268,194 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantSettingDto"][];
+                        "application/json": components["schemas"]["TenantSettingDto"][];
+                        "text/json": components["schemas"]["TenantSettingDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/{key}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantSettingChangeDto"][];
+                        "application/json": components["schemas"]["TenantSettingChangeDto"][];
+                        "text/json": components["schemas"]["TenantSettingChangeDto"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetTenantSettingValueBody"];
+                    "text/json": components["schemas"]["SetTenantSettingValueBody"];
+                    "application/*+json": components["schemas"]["SetTenantSettingValueBody"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantSettingDto"];
+                        "application/json": components["schemas"]["TenantSettingDto"];
+                        "text/json": components["schemas"]["TenantSettingDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantSettingDto"];
+                        "application/json": components["schemas"]["TenantSettingDto"];
+                        "text/json": components["schemas"]["TenantSettingDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants": {
         parameters: {
             query?: never;
@@ -2946,6 +3134,9 @@ export interface components {
             value: string;
             confirm: null | boolean;
         };
+        SetTenantSettingValueBody: {
+            value: string;
+        };
         TenantDto: {
             /** Format: uuid */
             id: string;
@@ -2956,6 +3147,34 @@ export interface components {
             status: string;
             /** Format: date-time */
             createdAt: string;
+        };
+        TenantSettingChangeDto: {
+            previousValue: null | string;
+            newValue: null | string;
+            /** Format: date-time */
+            changedAt: string;
+            changedBy: null | string;
+        };
+        TenantSettingDto: {
+            key: string;
+            group: string;
+            label: string;
+            description: null | string;
+            valueType: string;
+            unit: null | string;
+            constraints: null | string;
+            options: null | string[];
+            min: null | string;
+            max: null | string;
+            tenantWritable: boolean;
+            deprecated: boolean;
+            defaultValue: string;
+            effectiveValue: string;
+            isOverridden: boolean;
+            resolvedFrom: string;
+            /** Format: date-time */
+            updatedAt: null | string;
+            updatedBy: null | string;
         };
         TenantSummaryDto: {
             /** Format: uuid */
