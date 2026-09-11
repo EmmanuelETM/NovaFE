@@ -29,6 +29,9 @@ public sealed class ResetPlatformSettingUseCase(
         if (definition is null)
             return SettingErrors.UnknownKey(request.Key);
 
+        if (definition.Sensitive && !request.Confirmed)
+            return SettingErrors.ConfirmationRequired(request.Key);
+
         var previous = (await repository.GetAsync(definition.Key, ct))?.Value;
         if (previous is null)
             return PlatformSettingMapper.ToDto(definition, overrideRow: null);

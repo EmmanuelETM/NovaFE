@@ -16,6 +16,10 @@ public static class SettingErrors
         code: "Setting.Deprecated",
         description: $"El setting «{key}» está obsoleto y no admite nuevos valores.");
 
+    public static Error ConfirmationRequired(string key) => Error.Validation(
+        code: "Setting.ConfirmationRequired",
+        description: $"El setting «{key}» es sensible: el cambio debe confirmarse explícitamente.");
+
     public static Error InvalidValue(string key, string reason) => Error.Validation(
         code: $"Setting.{key}",
         description: reason);
