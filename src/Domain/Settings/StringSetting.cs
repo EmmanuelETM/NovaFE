@@ -16,10 +16,11 @@ public sealed class StringSetting(
     SettingScope scope = SettingScope.Platform,
     bool killSwitch = false,
     bool sensitive = false,
-    bool deprecated = false)
+    bool deprecated = false,
+    bool tenantWritable = false)
     : SettingDefinition<string>(
         key, "string", group, label, @default, description, unit: null,
-        scope, killSwitch, sensitive, deprecated)
+        scope, killSwitch, sensitive, deprecated, tenantWritable)
 {
     private readonly Regex? _pattern = pattern is null
         ? null

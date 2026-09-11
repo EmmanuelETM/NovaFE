@@ -40,4 +40,17 @@ public class SettingDefinitionsRegistryTests
         SettingDefinitions.MaintenanceMode.Sensitive.ShouldBeTrue();
         SettingDefinitions.ContingencyMode.Sensitive.ShouldBeTrue();
     }
+
+    [Fact]
+    public void The_default_representation_layout_is_a_tenant_writable_option()
+    {
+        var def = SettingDefinitions.RepresentationDefaultLayout;
+
+        def.Scope.ShouldBe(SettingScope.Tenant);
+        def.TenantWritable.ShouldBeTrue();
+        def.Options.ShouldBe(new[] { "letter", "pos" });
+        def.Validate("pos").IsError.ShouldBeFalse();
+        def.Validate("POS").IsError.ShouldBeFalse();
+        def.Validate("a4").IsError.ShouldBeTrue();
+    }
 }

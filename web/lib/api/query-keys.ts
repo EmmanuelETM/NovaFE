@@ -35,6 +35,13 @@ export const queryKeys = {
     history: (key: string) => ["platform-settings", "history", key] as const,
   },
 
+  /** `GET /settings`: la config self-serve del contribuyente. */
+  tenantSettings: {
+    all: ["tenant-settings"] as const,
+    list: () => ["tenant-settings", "list"] as const,
+    history: (key: string) => ["tenant-settings", "history", key] as const,
+  },
+
   /** Usuarios del dashboard (operador): operadores del SaaS y empleados por contribuyente. */
   platformUsers: {
     all: ["platform-users"] as const,

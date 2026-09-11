@@ -62,6 +62,12 @@ public class AppDbContext(
     /// <summary>Bitácora append-only de cambios de settings (tabla <c>platform_setting_changes</c>).</summary>
     internal DbSet<PlatformSettingChange> PlatformSettingChanges => Set<PlatformSettingChange>();
 
+    /// <summary>Overrides de settings por contribuyente (tabla <c>tenant_settings</c>). <c>ITenantOwned</c>, con RLS.</summary>
+    internal DbSet<TenantSetting> TenantSettings => Set<TenantSetting>();
+
+    /// <summary>Bitácora append-only de cambios de settings de tenant (tabla <c>tenant_setting_changes</c>).</summary>
+    internal DbSet<TenantSettingChange> TenantSettingChanges => Set<TenantSettingChange>();
+
     /// <summary>
     /// Tenant de la petición en curso. Los filtros globales de consulta de las
     /// entidades <see cref="ITenantOwned"/> lo leen; EF Core lo re-evalúa en cada

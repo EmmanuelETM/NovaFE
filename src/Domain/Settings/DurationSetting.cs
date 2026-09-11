@@ -20,10 +20,11 @@ public sealed partial class DurationSetting(
     SettingScope scope = SettingScope.Platform,
     bool killSwitch = false,
     bool sensitive = false,
-    bool deprecated = false)
+    bool deprecated = false,
+    bool tenantWritable = false)
     : SettingDefinition<TimeSpan>(
         key, "duration", group, label, @default, description, unit: null,
-        scope, killSwitch, sensitive, deprecated)
+        scope, killSwitch, sensitive, deprecated, tenantWritable)
 {
     public TimeSpan? Min { get; } = min;
 

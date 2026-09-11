@@ -205,6 +205,14 @@ public static class InfrastructureService
         // Snapshot en memoria + lector tipado: sin estado por petición → singleton.
         services.AddSingleton<ISettingsSnapshotHolder, SettingsSnapshotHolder>();
         services.AddSingleton<ISettingsReader, CachedSettingsReader>();
+
+        // Settings de tenant (scope Tenant, tabla tenant_settings con RLS). El
+        // lector vive por scope: lee las filas del tenant bajo demanda y cae a la
+        // capa de plataforma. No hay snapshot ni bump de generación (ver docs).
+        services.AddScoped<ITenantSettingRepository, TenantSettingRepository>();
+        services.AddScoped<ITenantSettingReadRepository, TenantSettingReadRepository>();
+        services.AddScoped<ITenantSettingChangeLog, TenantSettingChangeLog>();
+        services.AddScoped<ITenantSettingsReader, ScopedTenantSettingsReader>();
         // Al arrancar, avisa de overrides huérfanos o corruptos que la resolución ignora.
         services.AddHostedService<SettingsStartupAudit>();
 
