@@ -10,10 +10,11 @@ public sealed class BooleanSetting(
     SettingScope scope = SettingScope.Platform,
     bool killSwitch = false,
     bool sensitive = false,
-    bool deprecated = false)
+    bool deprecated = false,
+    bool tenantWritable = false)
     : SettingDefinition<bool>(
         key, "boolean", group, label, @default, description, unit: null,
-        scope, killSwitch, sensitive, deprecated)
+        scope, killSwitch, sensitive, deprecated, tenantWritable)
 {
     public override string Format(bool value) => value ? "true" : "false";
 

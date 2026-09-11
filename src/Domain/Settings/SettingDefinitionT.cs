@@ -24,8 +24,9 @@ public abstract class SettingDefinition<T> : SettingDefinition
         SettingScope scope,
         bool killSwitch,
         bool sensitive,
-        bool deprecated)
-        : base(key, valueType, group, label, description, unit, scope, killSwitch, sensitive, deprecated)
+        bool deprecated,
+        bool tenantWritable)
+        : base(key, valueType, group, label, description, unit, scope, killSwitch, sensitive, deprecated, tenantWritable)
     {
         Default = @default;
     }

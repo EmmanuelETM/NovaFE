@@ -69,8 +69,10 @@ public sealed class EcfController(
             .Match(xml => Content(xml, "application/xml; charset=utf-8"), Problem);
 
     /// <summary>
-    /// La Representación Impresa en PDF. <c>?layout=letter</c> (por defecto) o
-    /// <c>pos</c>; <c>?download=true</c> la descarga en vez de abrirla en el navegador.
+    /// La Representación Impresa en PDF. <c>?layout=letter</c> o <c>pos</c>; si se
+    /// omite, rige el formato por defecto del contribuyente
+    /// (<c>representation.default_layout</c>, que cae en Carta). <c>?download=true</c>
+    /// la descarga en vez de abrirla en el navegador.
     /// </summary>
     [HttpGet("{id:guid}/representation")]
     [Authorize(Policy = SecurityPolicies.EcfRead)]
@@ -79,7 +81,7 @@ public sealed class EcfController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetRepresentation(
         Guid id,
-        [FromQuery] RepresentationLayout layout,
+        [FromQuery] RepresentationLayout? layout,
         [FromQuery] bool download,
         CancellationToken ct)
         => (await getRepresentation.Execute(new GetEcfRepresentationQuery(id, layout), ct))

@@ -16,10 +16,11 @@ public sealed class IntegerSetting(
     SettingScope scope = SettingScope.Platform,
     bool killSwitch = false,
     bool sensitive = false,
-    bool deprecated = false)
+    bool deprecated = false,
+    bool tenantWritable = false)
     : SettingDefinition<int>(
         key, "integer", group, label, @default, description, unit,
-        scope, killSwitch, sensitive, deprecated)
+        scope, killSwitch, sensitive, deprecated, tenantWritable)
 {
     public int? Min { get; } = min;
 

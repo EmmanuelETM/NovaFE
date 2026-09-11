@@ -3,13 +3,18 @@ using Microsoft.Extensions.Logging;
 using NovaFE.Application.Common;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Ecf;
+using NovaFE.Domain.Settings;
 
 namespace NovaFE.Application.Ecf.Representation;
 
-/// <param name="Layout">Formato de página; por defecto Carta.</param>
-public sealed record GetEcfRepresentationQuery(Guid Id, RepresentationLayout Layout = RepresentationLayout.Letter);
+/// <param name="Layout">
+/// Formato de página. <c>null</c> = usar el formato por defecto del contribuyente
+/// (setting <c>representation.default_layout</c>, que a su vez cae en Carta).
+/// </param>
+public sealed record GetEcfRepresentationQuery(Guid Id, RepresentationLayout? Layout = null);
 
 /// <summary>El PDF de la Representación Impresa y el nombre de archivo sugerido.</summary>
 public sealed record EcfRepresentationResult(byte[] Pdf, string FileName);
@@ -22,6 +27,7 @@ public sealed record EcfRepresentationResult(byte[] Pdf, string FileName);
 public sealed class GetEcfRepresentationUseCase(
     ILoggerFactory loggerFactory,
     ICurrentTenant currentTenant,
+    ITenantSettingsReader tenantSettings,
     IEcfReadRepository ecf,
     IEcfRepresentationReader reader,
     IRepresentationRenderer renderer)
@@ -42,14 +48,25 @@ public sealed class GetEcfRepresentationUseCase(
         if (xml is null)
             return EcfErrors.NotFound(request.Id);
 
+        var layout = request.Layout ?? await ResolveDefaultLayoutAsync(ct);
+
         var verification = new RepresentationVerification(dto.SecurityCode, dto.QrUrl);
         var dgii = new RepresentationDgiiStatus(
             dto.Status, dto.Dgii?.StatusCode, dto.Dgii?.Status, dto.Dgii?.TrackId);
 
         var model = reader.Read(xml, verification, dgii);
-        var pdf = renderer.Render(model, request.Layout);
+        var pdf = renderer.Render(model, layout);
 
-        var suffix = request.Layout == RepresentationLayout.Pos ? "-pos" : string.Empty;
+        var suffix = layout == RepresentationLayout.Pos ? "-pos" : string.Empty;
         return new EcfRepresentationResult(pdf, $"{dto.Encf}{suffix}.pdf");
+    }
+
+    private async Task<RepresentationLayout> ResolveDefaultLayoutAsync(CancellationToken ct)
+    {
+        var value = await tenantSettings.GetValueAsync(SettingDefinitions.RepresentationDefaultLayout, ct);
+
+        return Enum.TryParse<RepresentationLayout>(value, ignoreCase: true, out var layout)
+            ? layout
+            : RepresentationLayout.Letter;
     }
 }

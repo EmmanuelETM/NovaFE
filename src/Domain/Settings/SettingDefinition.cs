@@ -25,7 +25,8 @@ public abstract class SettingDefinition
         SettingScope scope,
         bool killSwitch,
         bool sensitive,
-        bool deprecated)
+        bool deprecated,
+        bool tenantWritable)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(valueType);
@@ -42,6 +43,7 @@ public abstract class SettingDefinition
         KillSwitch = killSwitch;
         Sensitive = sensitive;
         Deprecated = deprecated;
+        TenantWritable = tenantWritable;
     }
 
     /// <summary>Clave namespaced y estable: <c>platform.maintenance_mode</c>.</summary>
@@ -62,7 +64,11 @@ public abstract class SettingDefinition
     /// <summary>Unidad a mostrar junto al valor (<c>segundos</c>, <c>días</c>…), si aplica.</summary>
     public string? Unit { get; }
 
-    /// <summary>Capas de resolución que aplican. En este slice solo <see cref="SettingScope.Platform"/>.</summary>
+    /// <summary>
+    /// Capas de resolución que aplican. Hoy <see cref="SettingScope.Platform"/>
+    /// (default → override de plataforma) y <see cref="SettingScope.Tenant"/>
+    /// (además la fila de <c>tenant_settings</c>, vía <c>ITenantSettingsReader</c>).
+    /// </summary>
     public SettingScope Scope { get; }
 
     /// <summary>
@@ -76,6 +82,13 @@ public abstract class SettingDefinition
 
     /// <summary>Oculto en la pantalla; sigue resolviendo. Rechaza nuevos overrides.</summary>
     public bool Deprecated { get; }
+
+    /// <summary>
+    /// Scope <see cref="SettingScope.Tenant"/>: <c>true</c> si lo edita el propio
+    /// contribuyente (self-serve, política <c>TenantConfig</c>); <c>false</c> si solo
+    /// lo ajusta el operador por-tenant. Sin efecto en los otros scopes.
+    /// </summary>
+    public bool TenantWritable { get; }
 
     /// <summary>El <see cref="Default"/> serializado a texto (lo que se compara con la fila de override).</summary>
     public abstract string SerializedDefault { get; }

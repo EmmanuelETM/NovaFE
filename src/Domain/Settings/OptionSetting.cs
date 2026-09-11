@@ -19,9 +19,10 @@ public sealed class OptionSetting : SettingDefinition<string>
         SettingScope scope = SettingScope.Platform,
         bool killSwitch = false,
         bool sensitive = false,
-        bool deprecated = false)
+        bool deprecated = false,
+        bool tenantWritable = false)
         : base(key, "option", group, label, @default, description, unit: null,
-            scope, killSwitch, sensitive, deprecated)
+            scope, killSwitch, sensitive, deprecated, tenantWritable)
     {
         ArgumentNullException.ThrowIfNull(options);
         if (options.Count == 0)

@@ -132,4 +132,44 @@ public sealed class RowLevelSecurityTests(DatabaseFixture database) : Integratio
         check.Parameters.AddWithValue("b", TenantB);
         (await check.ExecuteScalarAsync()).ShouldBe(true);
     }
+
+    [RequiresDockerFact]
+    public async Task Tenant_settings_are_isolated_per_tenant()
+    {
+        await SeedTenantSettingAsync(TenantA, "pos");
+        await SeedTenantSettingAsync(TenantB, "letter");
+
+        await using (var asA = await OpenAsync(Database.RestrictedConnectionString, TenantA))
+        {
+            await using var read = asA.CreateCommand();
+            read.CommandText = "SELECT count(*) FROM tenant_settings";
+            (await read.ExecuteScalarAsync()).ShouldBe(1L);
+
+            // WITH CHECK: no puede escribir una fila para otro tenant.
+            await using var insert = asA.CreateCommand();
+            insert.CommandText =
+                """
+                INSERT INTO tenant_settings (id, tenant_id, key, environment, value, created_at)
+                VALUES (gen_random_uuid(), @b, 'representation.default_layout', '', 'pos', now())
+                """;
+            insert.Parameters.AddWithValue("b", TenantB);
+
+            var ex = await Should.ThrowAsync<PostgresException>(() => insert.ExecuteNonQueryAsync());
+            ex.SqlState.ShouldBe("42501");
+        }
+    }
+
+    private async Task SeedTenantSettingAsync(Guid tenantId, string value)
+    {
+        await using var connection = await OpenAsync(Database.ConnectionString, tenantId: null);
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText =
+            """
+            INSERT INTO tenant_settings (id, tenant_id, key, environment, value, created_at)
+            VALUES (gen_random_uuid(), @tid, 'representation.default_layout', '', @value, now())
+            """;
+        cmd.Parameters.AddWithValue("tid", tenantId);
+        cmd.Parameters.AddWithValue("value", value);
+        await cmd.ExecuteNonQueryAsync();
+    }
 }

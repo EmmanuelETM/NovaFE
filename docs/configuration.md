@@ -1,11 +1,15 @@
 # Configuración y settings
 
-> **Estado (2026-09-10).** Pasos 1–3 del orden de trabajo **construidos**: el quick
-> win de `IOptionsMonitor`, el motor de settings de plataforma
+> **Estado (2026-09-11).** Pasos 1–5 y el paso 7 (settings de tenant) **construidos**:
+> el quick win de `IOptionsMonitor`, el motor de settings de plataforma
 > (`src/Domain/Settings`, `src/Application/Settings`, `src/Infrastructure/Settings`),
-> la API de operador `/api/v1/platform-settings` y el kill-switch de mantenimiento.
-> El resto (pantalla del dashboard, capas de plan, `tenant_settings`) sigue siendo
-> diseño. Donde este doc y el código difieran en un detalle, manda el código.
+> la API de operador `/api/v1/platform-settings` con historial y `confirm`, la
+> pantalla `/plataforma/configuracion`, y ahora `tenant_settings` + RLS +
+> `ITenantSettingsReader` + la API self-serve `/api/v1/settings` + la pantalla
+> `/configuracion` del contribuyente (primer setting: `representation.default_layout`).
+> Falta el paso 6 (capas `plans`/`tenant_subscriptions`, con medición) y el path
+> de operador `/api/v1/tenants/{id}/settings`. Donde este doc y el código difieran
+> en un detalle, manda el código.
 
 Un servicio de cumplimiento fiscal tiene que cambiar comportamiento **sin
 desplegar**: pausar un worker en un incidente, activar el modo contingencia
@@ -177,8 +181,30 @@ T GetValue<T>(SettingDefinition<T> def);   // Platform — síncrono, el snapsho
 Tipado, sin strings mágicos, **sin `Task` ni `CancellationToken`**: el snapshot
 está siempre en memoria y el refresco es out-of-band. `CachedSettingsReader`
 (Infrastructure, singleton) lo respalda; un override que no parsea contra su
-definición no lanza — se registra y se devuelve el default de código. Las
-sobrecargas por `TenantId` (scope `Plan`/`Tenant`) llegan con el paso 6.
+definición no lanza — se registra y se devuelve el default de código.
+
+### `ITenantSettingsReader` (Application) — scope `Tenant`
+
+```csharp
+Task<T> GetValueAsync<T>(SettingDefinition<T> def, CancellationToken ct);
+```
+
+Para los settings de scope `Tenant`. **Sí** es asíncrono y **sí** toca la base la
+primera vez: `tenant_settings` tiene RLS y su contenido **no** entra al snapshot
+global (que se carga en un scope de fondo sin tenant, donde un rol restringido
+vería 0 filas). `ScopedTenantSettingsReader` (Infrastructure, **scoped**) lee las
+filas del tenant de la petición bajo demanda —dentro del scope, donde
+`app.tenant_id` está fijado— y las memoriza por petición. El tenant es implícito
+(`ICurrentTenant`), no se pasa a mano.
+
+Resolución: `fila tenant_settings → override de plataforma → default de código`
+(capas 5 → 2 → 1). Si no hay fila de tenant, delega en `ISettingsReader`. Un
+override de tenant corrupto no lanza: se registra y se cae a la capa siguiente.
+Un `PUT` de tenant **no** toca `settings_generation` (no hay snapshot que
+invalidar). Primer consumidor real: `GetEcfRepresentationUseCase` lee
+`representation.default_layout` cuando la descarga de la RI no trae `?layout`.
+
+Las capas 3–4 (`plans`/`tenant_subscriptions`) llegan con el paso 6.
 
 ### Lectura para pantalla
 
@@ -214,7 +240,13 @@ Dos tablas con la misma forma; la separación es por aislamiento.
 | Tabla | RLS | Filas | Análoga a |
 |---|---|---|---|
 | `platform_settings` | **no** (tabla de sistema) | override global, scope Platform/Plan/Tenant capa 2 | `audit_log`, `api_keys` |
-| `tenant_settings` | **sí** (`ITenantOwned`) | override por contribuyente, scope Tenant capa 5 | `webhook_endpoints` |
+| `tenant_settings` | **sí** (`ITenantOwned`, RLS) | override por contribuyente, scope Tenant capa 5 | `webhook_endpoints` |
+
+`tenant_settings` lleva un `id` sustituto como PK y un índice único
+`(tenant_id, key, environment)`; `TenantStampingInterceptor` estampa el
+`tenant_id`. Su bitácora `tenant_setting_changes` también es `ITenantOwned` + RLS.
+Un `PUT`/`DELETE` de tenant escribe fila + bitácora en una transacción, **sin**
+bump de `settings_generation` (ningún snapshot cachea valores de tenant).
 
 ```
 key            text        -- FK lógica a una SettingDefinition
@@ -332,8 +364,10 @@ o Redis sin tocar un solo call site.
 | `GET /api/v1/platform-settings/{key}` | `Operator` | una definición por clave |
 | `PUT /api/v1/platform-settings/{key}` | `Operator` | sobrescribe (capa 2); cuerpo `{ "value": "…" }` |
 | `DELETE /api/v1/platform-settings/{key}` | `Operator` | quita la sobrescritura → vuelve al default |
-| `GET /api/v1/tenants/{id}/settings` | `TenantConfig` | definiciones scope `Tenant` + valor efectivo *(paso 6)* |
-| `PUT` / `DELETE .../settings/{key}` | `TenantConfig` | solo definiciones con `TenantWritable`; RLS *(paso 6)* |
+| `GET /api/v1/settings` | `TenantConfig` (`admin_tenant`) | definiciones scope `Tenant` **`TenantWritable`** + valor efectivo (`tenant`/`platform`/`default`) |
+| `GET /api/v1/settings/{key}/history` | `TenantConfig` | la bitácora del tenant para esa clave |
+| `PUT` / `DELETE /api/v1/settings/{key}` | `TenantConfig` | override del propio contribuyente; RLS. Una clave que no sea de tenant → `404` |
+| `GET/PUT/DELETE /api/v1/tenants/{id}/settings` | `Operator` | el operador ajusta los settings de un tenant concreto *(pendiente)* |
 
 - **La validación de forma** va en el `AbstractValidator`; la existencia de la
   clave (`404`), la deprecación y `definition.Validate(value)` (`400`) las hace el
@@ -441,8 +475,10 @@ funciona". `Program.cs` § "Envío a la DGII" / "Webhooks".
    auto-chequeo al arrancar (`SettingsStartupAudit`); `confirm` para settings
    `Sensitive` (`maintenance_mode`, `contingency_mode`).~~ ✅
 6. `plans` / `tenant_subscriptions` como capas 3–4, con el módulo de medición.
-7. `tenant_settings` (scope `Tenant`, RLS) + `ISettingsReader.GetValue(def, tenantId)`
-   + pantalla del contribuyente, con M15.
+7. ~~`tenant_settings` (scope `Tenant`, RLS) + `ITenantSettingsReader` (scoped, async,
+   resolución 5→2→1) + API self-serve `/api/v1/settings` + pantalla `/configuracion`
+   del contribuyente. Primer setting: `representation.default_layout`.~~ ✅ — falta
+   solo el path de operador `/api/v1/tenants/{id}/settings`.
 8. *(Diferido)* Fachadas `IOptionsMonitor<XRuntimeOptions>` por módulo; alerta por
    ráfaga; `LISTEN`/`NOTIFY` cuando 10 s se sienta lento.
 

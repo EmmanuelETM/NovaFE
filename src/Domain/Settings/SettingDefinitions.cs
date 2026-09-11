@@ -37,6 +37,22 @@ public static class SettingDefinitions
         killSwitch: true,
         sensitive: true);
 
+    /// <summary>
+    /// Formato por defecto de la Representación Impresa de un contribuyente
+    /// (<c>letter</c> o <c>pos</c>). Rige cuando la descarga de la RI no trae
+    /// <c>?layout</c>. Scope <see cref="SettingScope.Tenant"/>: lo edita el propio
+    /// contribuyente desde el dashboard.
+    /// </summary>
+    public static readonly OptionSetting RepresentationDefaultLayout = new(
+        key: "representation.default_layout",
+        group: "Representación Impresa",
+        label: "Formato por defecto",
+        @default: "letter",
+        options: ["letter", "pos"],
+        description: "El formato de la Representación Impresa cuando la descarga no especifica uno.",
+        scope: SettingScope.Tenant,
+        tenantWritable: true);
+
     private static readonly SettingDefinition[] AllDefinitions = BuildRegistry();
 
     /// <summary>Todas las definiciones declaradas, ordenadas por grupo y etiqueta.</summary>
