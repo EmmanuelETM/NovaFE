@@ -27,6 +27,11 @@ public class UpdatePlatformSettingUseCaseTests : UseCaseTestBase
         LoggerFactory, new UpdatePlatformSettingCommandValidator(),
         _repository, _changeLog, _generation, _invalidator, _uow);
 
+    // Todos los settings del catálogo hoy son `Sensitive`, así que las pruebas de
+    // operación normal confirman; el gate de confirmación tiene sus propias pruebas.
+    private static UpdatePlatformSettingCommand Confirmed(string key, string value) =>
+        new(key, value, Confirmed: true);
+
     [Fact]
     public async Task Persists_the_canonical_value_logs_the_change_bumps_and_refreshes()
     {
@@ -34,7 +39,7 @@ public class UpdatePlatformSettingUseCaseTests : UseCaseTestBase
             .Returns((PlatformSettingRecord?)null,
                      new PlatformSettingRecord("platform.maintenance_mode", "", "true", Clock.GetUtcNow(), "op"));
 
-        var result = await Sut().Execute(new UpdatePlatformSettingCommand("platform.maintenance_mode", "1"));
+        var result = await Sut().Execute(Confirmed("platform.maintenance_mode", "1"));
 
         result.IsError.ShouldBeFalse();
         result.Value.EffectiveValue.ShouldBe("true");
@@ -59,7 +64,7 @@ public class UpdatePlatformSettingUseCaseTests : UseCaseTestBase
     [Fact]
     public async Task Rejects_an_invalid_value_with_validation()
     {
-        var result = await Sut().Execute(new UpdatePlatformSettingCommand("platform.maintenance_mode", "quizás"));
+        var result = await Sut().Execute(Confirmed("platform.maintenance_mode", "quizás"));
 
         result.IsError.ShouldBeTrue();
         result.FirstError.Type.ShouldBe(ErrorType.Validation);
@@ -72,10 +77,27 @@ public class UpdatePlatformSettingUseCaseTests : UseCaseTestBase
         _repository.GetAsync("platform.maintenance_mode", Arg.Any<CancellationToken>())
             .Returns(new PlatformSettingRecord("platform.maintenance_mode", "", "true", Clock.GetUtcNow(), "op"));
 
-        var result = await Sut().Execute(new UpdatePlatformSettingCommand("platform.maintenance_mode", "true"));
+        var result = await Sut().Execute(Confirmed("platform.maintenance_mode", "true"));
 
         result.IsError.ShouldBeFalse();
         await _generation.DidNotReceive().BumpAsync(Arg.Any<CancellationToken>());
         await _invalidator.DidNotReceive().RefreshNowAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task A_sensitive_setting_needs_confirmation()
+    {
+        var unconfirmed = await Sut().Execute(new UpdatePlatformSettingCommand("platform.maintenance_mode", "true"));
+
+        unconfirmed.IsError.ShouldBeTrue();
+        unconfirmed.FirstError.Code.ShouldBe("Setting.ConfirmationRequired");
+        await _repository.DidNotReceive().UpsertAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        _repository.GetAsync("platform.maintenance_mode", Arg.Any<CancellationToken>())
+            .Returns((PlatformSettingRecord?)null,
+                     new PlatformSettingRecord("platform.maintenance_mode", "", "true", Clock.GetUtcNow(), "op"));
+
+        var confirmed = await Sut().Execute(Confirmed("platform.maintenance_mode", "true"));
+        confirmed.IsError.ShouldBeFalse();
     }
 }

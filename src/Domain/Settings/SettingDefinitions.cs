@@ -21,7 +21,8 @@ public static class SettingDefinitions
         label: "Modo mantenimiento",
         @default: false,
         description: "Rechaza todo el tráfico con 503 salvo health checks y la API de settings.",
-        killSwitch: true);
+        killSwitch: true,
+        sensitive: true);
 
     /// <summary>
     /// Modo contingencia (Decreto 587-24, M11): emitir con envío diferido cuando la
@@ -33,7 +34,8 @@ public static class SettingDefinitions
         label: "Modo contingencia",
         @default: false,
         description: "Reservado para M11 (contingencia DGII). Sin efecto todavía.",
-        killSwitch: true);
+        killSwitch: true,
+        sensitive: true);
 
     private static readonly SettingDefinition[] AllDefinitions = BuildRegistry();
 

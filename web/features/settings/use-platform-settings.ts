@@ -19,13 +19,16 @@ export function usePlatformSettings() {
   });
 }
 
-/** Sobrescribe el valor de un setting. */
+/** Sobrescribe el valor de un setting. `confirm` lo exige un setting sensible. */
 export function useUpdatePlatformSetting() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: { key: string; value: string }) =>
-      api.put<PlatformSetting>(path(input.key), { value: input.value }),
+    mutationFn: (input: { key: string; value: string; confirm?: boolean }) =>
+      api.put<PlatformSetting>(path(input.key), {
+        value: input.value,
+        confirm: input.confirm,
+      }),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.platformSettings.all,
@@ -41,7 +44,10 @@ export function useResetPlatformSetting() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (key: string) => api.delete<PlatformSetting>(path(key)),
+    mutationFn: (input: { key: string; confirm?: boolean }) =>
+      api.delete<PlatformSetting>(
+        `${path(input.key)}${input.confirm ? "?confirm=true" : ""}`,
+      ),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.platformSettings.all,

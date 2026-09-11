@@ -25,13 +25,15 @@ public class ResetPlatformSettingUseCaseTests : UseCaseTestBase
     private ResetPlatformSettingUseCase Sut() => new(
         LoggerFactory, _repository, _changeLog, _generation, _invalidator, _uow);
 
+    private static ResetPlatformSettingCommand Confirmed(string key) => new(key, Confirmed: true);
+
     [Fact]
     public async Task Removes_the_override_and_logs_new_value_null()
     {
         _repository.GetAsync("platform.maintenance_mode", Arg.Any<CancellationToken>())
             .Returns(new PlatformSettingRecord("platform.maintenance_mode", "", "true", Clock.GetUtcNow(), "op"));
 
-        var result = await Sut().Execute(new ResetPlatformSettingCommand("platform.maintenance_mode"));
+        var result = await Sut().Execute(Confirmed("platform.maintenance_mode"));
 
         result.IsError.ShouldBeFalse();
         result.Value.ResolvedFrom.ShouldBe("default");
@@ -49,7 +51,7 @@ public class ResetPlatformSettingUseCaseTests : UseCaseTestBase
         _repository.GetAsync("platform.maintenance_mode", Arg.Any<CancellationToken>())
             .Returns((PlatformSettingRecord?)null);
 
-        var result = await Sut().Execute(new ResetPlatformSettingCommand("platform.maintenance_mode"));
+        var result = await Sut().Execute(Confirmed("platform.maintenance_mode"));
 
         result.IsError.ShouldBeFalse();
         await _generation.DidNotReceive().BumpAsync(Arg.Any<CancellationToken>());
@@ -58,9 +60,19 @@ public class ResetPlatformSettingUseCaseTests : UseCaseTestBase
     [Fact]
     public async Task Rejects_an_unknown_key()
     {
-        var result = await Sut().Execute(new ResetPlatformSettingCommand("nope.not.here"));
+        var result = await Sut().Execute(new ResetPlatformSettingCommand("nope.not.here", Confirmed: true));
 
         result.IsError.ShouldBeTrue();
         result.FirstError.Type.ShouldBe(ErrorType.NotFound);
+    }
+
+    [Fact]
+    public async Task A_sensitive_setting_needs_confirmation()
+    {
+        var result = await Sut().Execute(new ResetPlatformSettingCommand("platform.maintenance_mode"));
+
+        result.IsError.ShouldBeTrue();
+        result.FirstError.Code.ShouldBe("Setting.ConfirmationRequired");
+        await _repository.DidNotReceive().RemoveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 }

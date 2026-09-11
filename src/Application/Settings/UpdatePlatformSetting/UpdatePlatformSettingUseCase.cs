@@ -34,6 +34,9 @@ public sealed class UpdatePlatformSettingUseCase(
         if (definition.Deprecated)
             return SettingErrors.Deprecated(request.Key);
 
+        if (definition.Sensitive && !request.Confirmed)
+            return SettingErrors.ConfirmationRequired(request.Key);
+
         var validation = definition.Validate(request.Value);
         if (validation.IsError)
             return validation.Errors;

@@ -99,7 +99,7 @@ Cada definición declara:
 | `Scope` | `Platform` · `Plan` · `Tenant` (ver [Resolución](#resolución-en-capas)) |
 | `Default` | valor de código; **siempre válido** (una prueba lo verifica) |
 | `TenantWritable` | scope `Tenant`: ¿lo edita el contribuyente, o solo el operador por-tenant? |
-| `Sensitive` | el `PUT` exige confirmación explícita (`?confirm=true`) |
+| `Sensitive` | el `PUT`/`DELETE` exige `confirm` (si no → `400 Setting.ConfirmationRequired`) |
 | `Deprecated` | oculto en la UI; sigue resolviendo; se loguea si aún está sobrescrito |
 | validación por tipo | rango, opciones, regex, longitud |
 
@@ -343,10 +343,16 @@ o Redis sin tocar un solo call site.
 - **Guardrails**: los límites (`min`/`max`/opciones/regex) viven en la definición;
   un `PUT` fuera de rango se rechaza con `Error.Validation` → 400. El valor se
   persiste **canónico** (`1` → `true`, `POS` → `pos`).
-- *(pendiente)* **Settings sensibles** (`Sensitive` ya está en la definición): que
-  el `PUT` exija confirmación explícita.
-- *(pendiente)* **Auto-chequeo al arrancar**: loguear las filas de
-  `platform_settings` que ya no parsean contra su definición.
+- **Settings sensibles**: un `SettingDefinition` con `Sensitive` exige `confirm`
+  en el `PUT` (cuerpo) / `?confirm=true` en el `DELETE`, si no → `400`
+  `Setting.ConfirmationRequired`. Hoy `maintenance_mode` y `contingency_mode` lo son.
+- **Historial**: `GET /api/v1/platform-settings/{key}/history` lee
+  `platform_setting_changes` (más reciente primero). El autor se guarda como el
+  correo del operador (`ICurrentUser.UserName`), no el id opaco; el `GET` de la
+  lista trae `updatedBy`/`updatedAt` de la última entrada de la bitácora.
+- **Auto-chequeo al arrancar**: `SettingsStartupAudit` (`IHostedService`) loguea al
+  arrancar los overrides huérfanos (clave borrada) o corruptos (valor que ya no
+  parsea) que la resolución ignora en silencio. No falla el arranque.
 - *(pendiente)* **Alerta por ráfaga**: N cambios en una ventana corta → aviso.
 
 ---
@@ -430,13 +436,15 @@ funciona". `Program.cs` § "Envío a la DGII" / "Webhooks".
    valor efectivo, `resolvedFrom`), `GET {key}`, `PUT {key}`, `DELETE {key}`;
    `MaintenanceModeMiddleware` (503) como primer consumidor real de
    `platform.maintenance_mode`. `platform.contingency_mode` declarado, sin consumir.~~ ✅
-4. **Pantalla de settings en el dashboard del operador** — consume el `GET` agrupado.
-5. `plans` / `tenant_subscriptions` como capas 3–4, con el módulo de medición.
-6. `tenant_settings` (scope `Tenant`, RLS) + `ISettingsReader.GetValue(def, tenantId)`
+4. ~~Pantalla de settings en el dashboard del operador (`/plataforma/configuracion`).~~ ✅
+5. ~~Cierre del motor: `GET {key}/history` + "modificado por/cuándo" en la fila;
+   auto-chequeo al arrancar (`SettingsStartupAudit`); `confirm` para settings
+   `Sensitive` (`maintenance_mode`, `contingency_mode`).~~ ✅
+6. `plans` / `tenant_subscriptions` como capas 3–4, con el módulo de medición.
+7. `tenant_settings` (scope `Tenant`, RLS) + `ISettingsReader.GetValue(def, tenantId)`
    + pantalla del contribuyente, con M15.
-7. *(Diferido)* Fachadas `IOptionsMonitor<XRuntimeOptions>` por módulo; `?confirm`
-   para settings sensibles; auto-chequeo al arrancar; alerta por ráfaga;
-   `GET {key}/history`; `LISTEN`/`NOTIFY` cuando 10 s se sienta lento.
+8. *(Diferido)* Fachadas `IOptionsMonitor<XRuntimeOptions>` por módulo; alerta por
+   ráfaga; `LISTEN`/`NOTIFY` cuando 10 s se sienta lento.
 
 ---
 

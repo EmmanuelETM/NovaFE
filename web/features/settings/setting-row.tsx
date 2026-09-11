@@ -17,7 +17,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
+import { formatDate } from "@/lib/format";
+
 import { SettingControl } from "./setting-control";
+import { SettingHistoryDialog } from "./setting-history-dialog";
 import type { PlatformSetting } from "./types";
 import {
   useResetPlatformSetting,
@@ -52,13 +55,15 @@ export function SettingRow({ setting }: { setting: PlatformSetting }) {
   const busy = update.isPending || reset.isPending;
   const controlId = `setting-${setting.key}`;
 
+  const needsConfirm = setting.killSwitch || setting.sensitive;
+
   const save = () => {
     setConfirmSave(false);
-    update.mutate({ key: setting.key, value: draft });
+    update.mutate({ key: setting.key, value: draft, confirm: true });
   };
 
   const onSaveClick = () => {
-    if (setting.killSwitch) setConfirmSave(true);
+    if (needsConfirm) setConfirmSave(true);
     else save();
   };
 
@@ -95,6 +100,19 @@ export function SettingRow({ setting }: { setting: PlatformSetting }) {
           {setting.constraints && <> · {setting.constraints}</>}
           {setting.unit && <> · {setting.unit}</>}
         </p>
+
+        {setting.isOverridden && (
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
+            {setting.updatedAt && (
+              <span>
+                Modificado
+                {setting.updatedBy && <> por {setting.updatedBy}</>} ·{" "}
+                {formatDate(setting.updatedAt)}
+              </span>
+            )}
+            <SettingHistoryDialog setting={setting} />
+          </div>
+        )}
       </div>
 
       <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
@@ -139,7 +157,7 @@ export function SettingRow({ setting }: { setting: PlatformSetting }) {
       <AlertDialog open={confirmSave} onOpenChange={setConfirmSave}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Cambiar un interruptor crítico</AlertDialogTitle>
+            <AlertDialogTitle>Cambiar un ajuste crítico</AlertDialogTitle>
             <AlertDialogDescription>
               «{setting.label}» afecta el comportamiento de toda la plataforma.
               El cambio surte efecto en segundos.
@@ -165,7 +183,7 @@ export function SettingRow({ setting }: { setting: PlatformSetting }) {
             <AlertDialogAction
               onClick={() => {
                 setConfirmReset(false);
-                reset.mutate(setting.key);
+                reset.mutate({ key: setting.key, confirm: true });
               }}
             >
               Restablecer

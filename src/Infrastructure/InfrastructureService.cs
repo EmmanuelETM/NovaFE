@@ -197,6 +197,7 @@ public static class InfrastructureService
         // el lector tipado y el invalidador se registran más abajo.
         services.AddScoped<IPlatformSettingRepository, PlatformSettingRepository>();
         services.AddScoped<IPlatformSettingReadRepository, PlatformSettingReadRepository>();
+        services.AddScoped<IPlatformSettingChangeReadRepository, PlatformSettingChangeReadRepository>();
         services.AddScoped<IPlatformSettingChangeLog, PlatformSettingChangeLog>();
         services.AddScoped<ISettingsGenerationStore, SettingsGenerationStore>();
         services.AddScoped<ISettingsSnapshotLoader, SettingsSnapshotLoader>();
@@ -204,6 +205,8 @@ public static class InfrastructureService
         // Snapshot en memoria + lector tipado: sin estado por petición → singleton.
         services.AddSingleton<ISettingsSnapshotHolder, SettingsSnapshotHolder>();
         services.AddSingleton<ISettingsReader, CachedSettingsReader>();
+        // Al arrancar, avisa de overrides huérfanos o corruptos que la resolución ignora.
+        services.AddHostedService<SettingsStartupAudit>();
 
         // Firma HMAC: sin estado → singleton. El guard anti-SSRF (resuelve DNS)
         // depende de WebhookSettings, que es transient sobre IOptionsMonitor para

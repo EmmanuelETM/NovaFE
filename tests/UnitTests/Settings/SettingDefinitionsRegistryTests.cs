@@ -33,4 +33,11 @@ public class SettingDefinitionsRegistryTests
         SettingDefinitions.FindByKey("platform.maintenance_mode").ShouldBe(SettingDefinitions.MaintenanceMode);
         SettingDefinitions.FindByKey("nope.not.here").ShouldBeNull();
     }
+
+    [Fact]
+    public void The_kill_switches_are_marked_sensitive()
+    {
+        SettingDefinitions.MaintenanceMode.Sensitive.ShouldBeTrue();
+        SettingDefinitions.ContingencyMode.Sensitive.ShouldBeTrue();
+    }
 }

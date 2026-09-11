@@ -8,8 +8,9 @@ public sealed class MaintenanceModeTests(DatabaseFixture database) : Integration
 {
     private const string ToggleUrl = "/api/v1/platform-settings/platform.maintenance_mode";
 
+    // maintenance_mode es sensible → `confirm: true`.
     private Task<HttpResponseMessage> SetMaintenanceAsync(bool on) =>
-        Client.PutAsJsonAsync(ToggleUrl, new { value = on ? "true" : "false" });
+        Client.PutAsJsonAsync(ToggleUrl, new { value = on ? "true" : "false", confirm = true });
 
     [RequiresDockerFact]
     public async Task Blocks_regular_traffic_with_503_but_keeps_health_and_settings_reachable()
