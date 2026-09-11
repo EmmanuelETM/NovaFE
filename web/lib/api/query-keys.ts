@@ -32,6 +32,7 @@ export const queryKeys = {
   platformSettings: {
     all: ["platform-settings"] as const,
     list: () => ["platform-settings", "list"] as const,
+    history: (key: string) => ["platform-settings", "history", key] as const,
   },
 
   /** Usuarios del dashboard (operador): operadores del SaaS y empleados por contribuyente. */

@@ -8,3 +8,7 @@ export type PlatformSetting = components["schemas"]["PlatformSettingDto"];
 
 /** Cuerpo del `PUT /api/v1/platform-settings/{key}`. */
 export type SetSettingValueBody = components["schemas"]["SetSettingValueBody"];
+
+/** Una entrada del historial de un setting (`PlatformSettingChangeDto`). */
+export type PlatformSettingChange =
+  components["schemas"]["PlatformSettingChangeDto"];
