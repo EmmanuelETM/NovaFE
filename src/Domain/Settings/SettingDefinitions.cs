@@ -53,6 +53,96 @@ public static class SettingDefinitions
         scope: SettingScope.Tenant,
         tenantWritable: true);
 
+    /// <summary>Lista separada por comas, cada tramo en formato de atajo de duración (<c>5m</c>, <c>2h</c>, <c>1d</c>).</summary>
+    private const string LadderPattern = @"^\d+[smhd](,\d+[smhd])*$";
+
+    /// <summary>
+    /// Reprogramación de las consultas de estado tras el envío a la DGII (RF-04.3).
+    /// Antes hardcoded en <c>EcfSubmissionSettings.PollLadder</c>, sin ningún camino
+    /// de configuración.
+    /// </summary>
+    public static readonly StringSetting SubmissionPollLadder = new(
+        key: "submission.poll_ladder",
+        group: "Envío a la DGII",
+        label: "Ladder de consultas de estado",
+        @default: "5m,30m,30m",
+        pattern: LadderPattern,
+        allowEmpty: false,
+        description: "Lista separada por comas (p. ej. \"5m,30m,30m\"); al agotarse, el comprobante pasa a revisión manual.");
+
+    /// <summary>
+    /// Backoff de los reintentos de envío ante fallos de transporte (RF-04.7).
+    /// Antes hardcoded en <c>EcfSubmissionSettings.SubmitBackoff</c>.
+    /// </summary>
+    public static readonly StringSetting SubmissionBackoff = new(
+        key: "submission.backoff",
+        group: "Envío a la DGII",
+        label: "Backoff de envío",
+        @default: "2m,10m,30m,2h",
+        pattern: LadderPattern,
+        allowEmpty: false,
+        description: "Lista separada por comas; al agotarse, el envío se marca failed.");
+
+    /// <summary>Filas de la cola de envío que procesa el worker por tick.</summary>
+    public static readonly IntegerSetting SubmissionBatchSize = new(
+        key: "submission.batch_size",
+        group: "Envío a la DGII",
+        label: "Tamaño de lote",
+        @default: 25,
+        min: 1,
+        max: 500,
+        description: "Filas de la cola de envío a la DGII procesadas por cada tick del worker.");
+
+    /// <summary>Espera antes de cada reintento de entrega de un webhook (índice = intento).</summary>
+    public static readonly StringSetting WebhooksBackoffLadder = new(
+        key: "webhooks.backoff_ladder",
+        group: "Webhooks",
+        label: "Backoff de entrega",
+        @default: "10s,1m,5m,30m,2h,6h",
+        pattern: LadderPattern,
+        allowEmpty: false,
+        description: "Lista separada por comas; pasado el final se usa el último valor.");
+
+    /// <summary>Intentos de entrega de un webhook antes de marcar la fila dead.</summary>
+    public static readonly IntegerSetting WebhooksMaxAttempts = new(
+        key: "webhooks.max_attempts",
+        group: "Webhooks",
+        label: "Intentos máximos",
+        @default: 7,
+        min: 1,
+        max: 20,
+        description: "Intentos de entrega antes de marcar la fila dead.");
+
+    /// <summary>Fallos de entrega seguidos tras los que un endpoint se deshabilita solo.</summary>
+    public static readonly IntegerSetting WebhooksAutoDisableAfterFailures = new(
+        key: "webhooks.auto_disable_after_failures",
+        group: "Webhooks",
+        label: "Auto-deshabilitar tras",
+        @default: 20,
+        min: 0,
+        max: 1000,
+        description: "Fallos de entrega seguidos tras los que un endpoint se deshabilita solo. 0 lo desactiva.");
+
+    /// <summary>Timeout de cada POST de entrega de un webhook.</summary>
+    public static readonly DurationSetting WebhooksDeliveryTimeout = new(
+        key: "webhooks.delivery_timeout",
+        group: "Webhooks",
+        label: "Timeout de entrega",
+        @default: TimeSpan.FromSeconds(10),
+        min: TimeSpan.FromSeconds(1),
+        max: TimeSpan.FromSeconds(60),
+        description: "Timeout de cada POST de entrega de un webhook.");
+
+    /// <summary>Filas del outbox de entrega de webhooks que procesa el worker por tick.</summary>
+    public static readonly IntegerSetting WebhooksBatchSize = new(
+        key: "webhooks.batch_size",
+        group: "Webhooks",
+        label: "Tamaño de lote",
+        @default: 50,
+        min: 1,
+        max: 500,
+        description: "Filas del outbox de entrega procesadas por cada tick del worker.");
+
     private static readonly SettingDefinition[] AllDefinitions = BuildRegistry();
 
     /// <summary>Todas las definiciones declaradas, ordenadas por grupo y etiqueta.</summary>
