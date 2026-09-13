@@ -16,6 +16,10 @@ public static class EcfErrors
         code: "Ecf.TooManyLines",
         description: $"El comprobante tiene {count} líneas; el máximo para este tipo es {max}.");
 
+    public static Error TooManyPaymentMethods(int count, int max) => Error.Validation(
+        code: "Ecf.TooManyPaymentMethods",
+        description: $"El comprobante tiene {count} formas de pago; el máximo es {max}.");
+
     public static Error NonContiguousLineNumbers => Error.Validation(
         code: "Ecf.NonContiguousLineNumbers",
         description: "Los números de línea deben ir de 1 a N, sin saltos ni repetidos.");

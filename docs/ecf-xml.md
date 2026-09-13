@@ -194,6 +194,12 @@ motor fiscal no los usa; ver plan):
   `CantidadReferencia`/`UnidadReferencia`, `PrecioUnitarioReferencia`,
   `TablaSubcantidad`, `FechaElaboracion`/`FechaVencimientoItem`, `Mineria` (solo
   32/33/34/46). Passthrough, se intercalan entre `UnidadMedida` y `PrecioUnitarioItem`.
+- **`TablaFormasPago`** (`EcfHeader.Payment.Methods` → `EcfPaymentMethod`) —
+  hasta `EcfDocument.MaxPaymentMethods` (7, XSD `maxOccurs="7"` idéntico en
+  31/32/33/41/44/45/46/47 y en RFCE 32; **34 y 43 no llevan el bloque**).
+  Más de 7 → `Ecf.TooManyPaymentMethods`, validado en `EcfDocument.Create`
+  antes de firmar (si no, el conteo de más solo se detectaba al validar el
+  XML firmado contra el XSD — un fallo de cliente disfrazado de defecto interno).
 - **`DescuentosORecargos`** (Sección D, `EcfHeader.GlobalAdjustments` →
   `EcfGlobalAdjustment`) — descuentos/recargos globales; sección **condicional**
   (obligatoriedad 2) en todos menos 43/47 (`Ecf.BlockNotApplicable`). Va tras
