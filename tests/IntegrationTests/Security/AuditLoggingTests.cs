@@ -73,7 +73,7 @@ public sealed class AuditLoggingTests(DatabaseFixture database) : IntegrationTes
 
         (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        using var scope = Factory.Services.CreateScope();
+        await using var scope = Factory.Services.CreateAsyncScope();
         var purger = scope.ServiceProvider.GetRequiredService<IAuditLogPurger>();
 
         // Todavía "reciente": un umbral generoso no la toca.
