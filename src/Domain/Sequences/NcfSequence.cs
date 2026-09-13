@@ -20,8 +20,12 @@ public sealed class NcfSequence : Entity<Guid>, ITenantOwned, IAuditableEntity, 
     /// <summary>Umbral de stock bajo: 20 % del rango autorizado (RF-07.3).</summary>
     private const double LowStockFraction = 0.20;
 
-    /// <summary>Tope de secuencias por tipo en CerteCF (RF-07 tabla por ambiente).</summary>
-    private const long CertMaxSequential = 10_000_000;
+    /// <summary>
+    /// Tope de secuencias por tipo en CerteCF (RF-07 tabla por ambiente). Público
+    /// porque <c>RegisterSequenceRangeCommandValidator</c> (fail-fast, sin E/S) lo
+    /// reusa en vez de duplicar el literal.
+    /// </summary>
+    public const long CertMaxSequential = 10_000_000;
 
     // Requerido por EF Core.
     private NcfSequence()

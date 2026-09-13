@@ -12,9 +12,6 @@ namespace NovaFE.Application.Sequences.RegisterSequenceRange;
 /// </summary>
 public sealed class RegisterSequenceRangeCommandValidator : AbstractValidator<RegisterSequenceRangeCommand>
 {
-    /// <summary>Tope de secuencias por tipo en CerteCF (RF-07, tabla por ambiente).</summary>
-    private const long CertMaxSequential = 10_000_000;
-
     private static readonly string KnownEnvironments =
         string.Join(", ", DgiiEnvironment.GetAll().Select(e => e.Name));
 
@@ -22,7 +19,7 @@ public sealed class RegisterSequenceRangeCommandValidator : AbstractValidator<Re
         string.Join(", ", EcfType.GetAll().Select(t => t.Id));
 
     private static readonly string CertMaxSequentialText =
-        CertMaxSequential.ToString("N0", CultureInfo.InvariantCulture);
+        NcfSequence.CertMaxSequential.ToString("N0", CultureInfo.InvariantCulture);
 
     public RegisterSequenceRangeCommandValidator(TimeProvider timeProvider)
     {
@@ -60,7 +57,7 @@ public sealed class RegisterSequenceRangeCommandValidator : AbstractValidator<Re
                 .Equal(1).WithMessage("En CerteCF las secuencias siempre empiezan en 1.");
 
             RuleFor(x => x.RangeTo)
-                .LessThanOrEqualTo(CertMaxSequential)
+                .LessThanOrEqualTo(NcfSequence.CertMaxSequential)
                 .WithMessage($"En CerteCF el rango por tipo no puede exceder {CertMaxSequentialText} secuencias.");
         });
     }
