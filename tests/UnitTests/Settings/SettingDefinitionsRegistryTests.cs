@@ -53,4 +53,32 @@ public class SettingDefinitionsRegistryTests
         def.Validate("POS").IsError.ShouldBeFalse();
         def.Validate("a4").IsError.ShouldBeTrue();
     }
+
+    [Fact]
+    public void The_low_stock_fraction_is_a_bounded_platform_decimal()
+    {
+        var def = SettingDefinitions.SequenceLowStockFraction;
+
+        def.Scope.ShouldBe(SettingScope.Platform);
+        def.TenantWritable.ShouldBeFalse();
+        def.Validate("0.20").IsError.ShouldBeFalse();
+        def.Validate("1").IsError.ShouldBeFalse();
+        def.Validate("0").IsError.ShouldBeTrue();
+        def.Validate("1.01").IsError.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("notifications.certificate_expiry_thresholds_days", "90,30,15,7")]
+    [InlineData("notifications.sequence_expiry_thresholds_days", "30,7")]
+    public void The_expiry_threshold_settings_are_platform_scoped_and_reject_malformed_lists(string key, string validList)
+    {
+        var def = SettingDefinitions.FindByKey(key).ShouldBeOfType<StringSetting>();
+
+        def.Scope.ShouldBe(SettingScope.Platform);
+        def.TenantWritable.ShouldBeFalse();
+        def.Validate(validList).IsError.ShouldBeFalse();
+        def.Validate("abc").IsError.ShouldBeTrue();
+        def.Validate("30,-7").IsError.ShouldBeTrue();
+        def.Validate("").IsError.ShouldBeTrue();
+    }
 }

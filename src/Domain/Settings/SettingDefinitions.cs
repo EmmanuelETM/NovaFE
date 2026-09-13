@@ -53,6 +53,52 @@ public static class SettingDefinitions
         scope: SettingScope.Tenant,
         tenantWritable: true);
 
+    /// <summary>Lista separada por comas de enteros positivos (días).</summary>
+    private const string DaysListPattern = @"^\d+(,\d+)*$";
+
+    /// <summary>
+    /// Fracción de stock restante a partir de la cual una secuencia se considera
+    /// baja (RF-07.3). Antes hardcoded en dos lugares con el mismo valor:
+    /// <c>NcfSequence.IsLowStock</c> (dominio, sin consumidor real) y
+    /// <c>NcfSequenceDto.IsLowStock</c> (el que sí usa <c>ExpiryScan</c> y el
+    /// <c>GET /sequences</c>).
+    /// </summary>
+    public static readonly DecimalSetting SequenceLowStockFraction = new(
+        key: "sequences.low_stock_fraction",
+        group: "Secuencias e-NCF",
+        label: "Fracción de stock bajo",
+        @default: 0.20m,
+        min: 0.01m,
+        max: 1m,
+        description: "Fracción del rango autorizado restante a partir de la cual una secuencia se considera con stock bajo.");
+
+    /// <summary>
+    /// Umbrales (días antes del vencimiento) para el aviso escalonado de
+    /// certificados (RF-01.6). Antes hardcoded en <c>ExpiryScan</c>, sin ningún
+    /// camino de configuración.
+    /// </summary>
+    public static readonly StringSetting CertificateExpiryThresholdsDays = new(
+        key: "notifications.certificate_expiry_thresholds_days",
+        group: "Vencimientos",
+        label: "Umbrales de certificados",
+        @default: "90,30,15,7",
+        pattern: DaysListPattern,
+        allowEmpty: false,
+        description: "Días antes del vencimiento del certificado en los que se avisa, separados por coma.");
+
+    /// <summary>
+    /// Umbrales (días antes del vencimiento) para el aviso escalonado de
+    /// secuencias e-NCF (RF-01.6). Antes hardcoded en <c>ExpiryScan</c>.
+    /// </summary>
+    public static readonly StringSetting SequenceExpiryThresholdsDays = new(
+        key: "notifications.sequence_expiry_thresholds_days",
+        group: "Vencimientos",
+        label: "Umbrales de secuencias",
+        @default: "30,7",
+        pattern: DaysListPattern,
+        allowEmpty: false,
+        description: "Días antes del vencimiento de la secuencia en los que se avisa, separados por coma.");
+
     private static readonly SettingDefinition[] AllDefinitions = BuildRegistry();
 
     /// <summary>Todas las definiciones declaradas, ordenadas por grupo y etiqueta.</summary>
