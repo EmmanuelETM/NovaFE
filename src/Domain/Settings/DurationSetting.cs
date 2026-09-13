@@ -44,7 +44,15 @@ public sealed partial class DurationSetting(
 
     public override string Format(TimeSpan value) => value.ToString("c", CultureInfo.InvariantCulture);
 
-    public override bool TryParse(string raw, out TimeSpan value)
+    public override bool TryParse(string raw, out TimeSpan value) => TryParseAny(raw, out value);
+
+    /// <summary>
+    /// El mismo parseo de <see cref="TryParse"/> (atajo <c>&lt;n&gt;&lt;s|m|h|d&gt;</c> o
+    /// formato invariante de <see cref="TimeSpan"/>), expuesto estático para
+    /// consumidores que no tienen a mano una instancia de <see cref="DurationSetting"/>
+    /// — p. ej. <c>DurationLadder</c> al interpretar una lista separada por comas.
+    /// </summary>
+    public static bool TryParseAny(string raw, out TimeSpan value)
     {
         value = TimeSpan.Zero;
         var trimmed = raw?.Trim();

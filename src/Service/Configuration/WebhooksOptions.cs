@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks;
+using NovaFE.Domain.Settings;
 
 namespace NovaFE.Service.Configuration;
 
@@ -39,18 +41,6 @@ public sealed class WebhooksOptions
     /// <summary>Exige <c>https</c> en la URL de destino. <c>false</c> solo en Development.</summary>
     public bool RequireHttps { get; set; } = true;
 
-    /// <summary>Timeout de cada POST de entrega (segundos).</summary>
-    [Range(1, 60)]
-    public int DeliveryTimeoutSeconds { get; set; } = 10;
-
-    /// <summary>Intentos de entrega antes de marcar la fila <c>dead</c>.</summary>
-    [Range(1, 20)]
-    public int MaxAttempts { get; set; } = 7;
-
-    /// <summary>Fallos de entrega seguidos tras los que un endpoint se deshabilita solo. 0 lo desactiva.</summary>
-    [Range(0, 1000)]
-    public int AutoDisableAfterConsecutiveFailures { get; set; } = 20;
-
     /// <summary>Días que se conservan las filas <c>delivered</c> / <c>dead</c> (log de entregas).</summary>
     [Range(1, 365)]
     public int DeliveriesRetentionDays { get; set; } = 30;
@@ -60,14 +50,27 @@ public sealed class WebhooksOptions
     public TimeSpan MaxPollInterval =>
         TimeSpan.FromSeconds(Math.Max(PollIntervalSeconds, MaxPollIntervalSeconds));
 
-    public WebhookSettings ToSettings() => new()
+    /// <summary>
+    /// <c>DeliveryTimeout</c>, <c>MaxAttempts</c>, <c>AutoDisableAfterConsecutiveFailures</c>
+    /// y <c>BackoffLadder</c> son settings runtime (grupo "Webhooks") — antes
+    /// bootstrap (los tres primeros) o hardcoded sin ningún camino de configuración
+    /// (el ladder); ver docs/configuration.md.
+    /// </summary>
+    public WebhookSettings ToSettings(ISettingsReader settingsReader)
     {
-        MaxEndpointsPerTenant = MaxEndpointsPerTenant,
-        RequireHttps = RequireHttps,
-        DeliveryTimeout = TimeSpan.FromSeconds(DeliveryTimeoutSeconds),
-        MaxAttempts = MaxAttempts,
-        AutoDisableAfterConsecutiveFailures = AutoDisableAfterConsecutiveFailures,
-        DeliveriesRetention = TimeSpan.FromDays(DeliveriesRetentionDays),
-        DeliveryStuckAfter = TimeSpan.FromMinutes(StuckAfterMinutes),
-    };
+        var defaults = new WebhookSettings();
+
+        return new WebhookSettings
+        {
+            MaxEndpointsPerTenant = MaxEndpointsPerTenant,
+            RequireHttps = RequireHttps,
+            DeliveryTimeout = settingsReader.GetValue(SettingDefinitions.WebhooksDeliveryTimeout),
+            MaxAttempts = settingsReader.GetValue(SettingDefinitions.WebhooksMaxAttempts),
+            AutoDisableAfterConsecutiveFailures = settingsReader.GetValue(SettingDefinitions.WebhooksAutoDisableAfterFailures),
+            BackoffLadder = DurationLadder.Parse(
+                settingsReader.GetValue(SettingDefinitions.WebhooksBackoffLadder), defaults.BackoffLadder),
+            DeliveriesRetention = TimeSpan.FromDays(DeliveriesRetentionDays),
+            DeliveryStuckAfter = TimeSpan.FromMinutes(StuckAfterMinutes),
+        };
+    }
 }

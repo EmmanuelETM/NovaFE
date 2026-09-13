@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using NovaFE.Application.Ecf.Submission;
+using NovaFE.Application.Settings.Interfaces;
+using NovaFE.Domain.Settings;
 
 namespace NovaFE.Service.Configuration;
 
@@ -25,10 +27,6 @@ public sealed class EcfSubmissionOptions
     /// </summary>
     [Range(1, 600)]
     public int MaxPollIntervalSeconds { get; set; } = 60;
-
-    /// <summary>Filas por tick.</summary>
-    [Range(1, 500)]
-    public int BatchSize { get; set; } = 25;
 
     /// <summary>Minutos tras los que una fila atascada en <c>processing</c> se recupera.</summary>
     [Range(1, 120)]
@@ -59,12 +57,26 @@ public sealed class EcfSubmissionOptions
 
     public TimeSpan SyncWaitBudget => TimeSpan.FromSeconds(SyncWaitBudgetSeconds);
 
-    /// <summary>Proyecta los tiempos que necesitan las capas internas.</summary>
-    public EcfSubmissionSettings ToSettings() => new()
+    /// <summary>
+    /// Proyecta los tiempos que necesitan las capas internas. <c>PollLadder</c> y
+    /// <c>SubmitBackoff</c> son settings runtime (<c>submission.poll_ladder</c> /
+    /// <c>submission.backoff</c>) — antes hardcoded, sin ningún camino de
+    /// configuración; ver docs/configuration.md.
+    /// </summary>
+    public EcfSubmissionSettings ToSettings(ISettingsReader settingsReader)
     {
-        SyncWaitBudget = SyncWaitBudget,
-        MaxInlinePolls = MaxInlinePolls,
-        InlinePollDelay = TimeSpan.FromMilliseconds(InlinePollDelayMillis),
-        FirstPollDelay = TimeSpan.FromSeconds(FirstPollDelaySeconds),
-    };
+        var defaults = new EcfSubmissionSettings();
+
+        return new EcfSubmissionSettings
+        {
+            SyncWaitBudget = SyncWaitBudget,
+            MaxInlinePolls = MaxInlinePolls,
+            InlinePollDelay = TimeSpan.FromMilliseconds(InlinePollDelayMillis),
+            FirstPollDelay = TimeSpan.FromSeconds(FirstPollDelaySeconds),
+            PollLadder = DurationLadder.Parse(
+                settingsReader.GetValue(SettingDefinitions.SubmissionPollLadder), defaults.PollLadder),
+            SubmitBackoff = DurationLadder.Parse(
+                settingsReader.GetValue(SettingDefinitions.SubmissionBackoff), defaults.SubmitBackoff),
+        };
+    }
 }

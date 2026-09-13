@@ -75,4 +75,45 @@ public class SettingDefinitionsRegistryTests
         SettingDefinitions.IdempotencyRetention.Validate("10m").IsError.ShouldBeTrue();
         SettingDefinitions.AuditLogRetention.Validate("1d").IsError.ShouldBeTrue();
     }
+
+    [Theory]
+    [InlineData("submission.poll_ladder", "1m,2m")]
+    [InlineData("submission.backoff", "1m,2h")]
+    [InlineData("webhooks.backoff_ladder", "10s,1d")]
+    public void The_ladder_settings_are_platform_scoped_and_reject_malformed_lists(string key, string validList)
+    {
+        var def = SettingDefinitions.FindByKey(key).ShouldBeOfType<StringSetting>();
+
+        def.Scope.ShouldBe(SettingScope.Platform);
+        def.TenantWritable.ShouldBeFalse();
+        def.Validate(validList).IsError.ShouldBeFalse();
+        def.Validate("abc").IsError.ShouldBeTrue();
+        def.Validate("5x,1m").IsError.ShouldBeTrue();
+        def.Validate("").IsError.ShouldBeTrue();
+        def.Validate(",").IsError.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("submission.batch_size")]
+    [InlineData("webhooks.max_attempts")]
+    [InlineData("webhooks.auto_disable_after_failures")]
+    [InlineData("webhooks.batch_size")]
+    public void The_new_integer_settings_are_platform_scoped(string key)
+    {
+        var def = SettingDefinitions.FindByKey(key).ShouldBeOfType<IntegerSetting>();
+
+        def.Scope.ShouldBe(SettingScope.Platform);
+        def.TenantWritable.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void The_webhooks_delivery_timeout_is_a_bounded_duration()
+    {
+        var def = SettingDefinitions.WebhooksDeliveryTimeout;
+
+        def.Scope.ShouldBe(SettingScope.Platform);
+        def.Validate("10s").IsError.ShouldBeFalse();
+        def.Validate("500ms").IsError.ShouldBeTrue();
+        def.Validate("2m").IsError.ShouldBeTrue();
+    }
 }

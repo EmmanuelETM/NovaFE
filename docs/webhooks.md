@@ -120,16 +120,18 @@ secreto compartido de bajo valor y rotarlo es una llamada.
 - **`WebhookDeliveryWorker`** (`BackgroundService`) dispara un pump en intervalo
   (`Webhooks:PollIntervalSeconds`, 10s, con trabajo). Con la cola vacía la espera
   se duplica en cada tick hasta `Webhooks:MaxPollIntervalSeconds` (60s), y vuelve
-  al base al procesar algo. Reclamo `FOR UPDATE SKIP LOCKED` + `locked_by` por
-  llamada, igual que el envío a la DGII. Multi-instancia seguro.
+  al base al procesar algo. Reclama `webhooks.batch_size` filas por tick (setting
+  runtime, default 50; antes hardcoded) con `FOR UPDATE SKIP LOCKED` +
+  `locked_by` por llamada, igual que el envío a la DGII. Multi-instancia seguro.
 - **`WebhookDeliveryProcessor`** entrega una fila: `2xx` → `delivered`; cualquier
   otra cosa (incluye timeout y error de conexión) → reprograma con backoff.
-- **Backoff** (config `Webhooks:BackoffLadder`): `10s, 1m, 5m, 30m, 2h, 6h`.
-  Tras `Webhooks:MaxAttempts` (7) → `dead`. Un endpoint con
-  `Webhooks:AutoDisableAfterConsecutiveFailures` (20) fallos seguidos se
-  deshabilita solo (el cliente lo re-habilita con `PATCH`).
-- **Timeout** de cada `POST`: `Webhooks:DeliveryTimeoutSeconds` (10). La
-  resiliencia de reintento la da el outbox, no Polly.
+- **Backoff** (setting runtime `webhooks.backoff_ladder`, `/api/v1/platform-settings`):
+  `10s, 1m, 5m, 30m, 2h, 6h`. Antes hardcoded sin ningún camino de
+  configuración — ver docs/configuration.md. Tras `webhooks.max_attempts` (7)
+  → `dead`. Un endpoint con `webhooks.auto_disable_after_failures` (20) fallos
+  seguidos se deshabilita solo (el cliente lo re-habilita con `PATCH`).
+- **Timeout** de cada `POST`: setting runtime `webhooks.delivery_timeout` (10s).
+  La resiliencia de reintento la da el outbox, no Polly.
 - Las filas `delivered` / `dead` son el **log de entregas**; se purgan tras
   `Webhooks:DeliveriesRetentionDays` (30). La purga corre en un tick vacío, a lo
   sumo 1×/hora.
@@ -185,9 +187,12 @@ Los eventos del e-CF los emite `EcfSubmissionProcessor` en la **misma transacci�
 que la transición `IssuedEcf.Mark*` (`PersistAndNotifyAsync`), reusando
 `EcfDtoAssembler.From(ecf)` para el `data.object`.
 
-Config `Webhooks`: `Enabled` (true), `MaxEndpointsPerTenant` (5),
-`RequireHttps` (true), `DeliveryTimeoutSeconds` (10), `MaxAttempts` (7),
-`AutoDisableAfterConsecutiveFailures` (20), `DeliveriesRetentionDays` (30).
+Config bootstrap `Webhooks`: `Enabled` (true), `MaxEndpointsPerTenant` (5),
+`RequireHttps` (true), `DeliveriesRetentionDays` (30). El resto —
+`webhooks.delivery_timeout`, `webhooks.max_attempts`,
+`webhooks.auto_disable_after_failures`, `webhooks.backoff_ladder`,
+`webhooks.batch_size`— son settings runtime (`/api/v1/platform-settings`,
+grupo "Webhooks"; ver docs/configuration.md).
 
 ## Fuera de alcance (v1)
 
