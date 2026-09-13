@@ -90,6 +90,49 @@ El claim es un `UPDATE ... SET status='processing', locked_by=<token> WHERE id I
 locked_by=<token>` — reclama y suelta el lock enseguida, sin transacción abierta
 durante la llamada HTTP a la DGII.
 
+## Resiliencia (circuit breaker)
+
+Los tres clientes HTTP de la DGII (`IDgiiAuthClient` y los dos nombrados
+`dgii-ecf`/`dgii-fc` de `DgiiSubmissionClient`) usan
+`.AddStandardResilienceHandler()` (`Microsoft.Extensions.Http.Resilience`).
+Defaults de la librería:
+
+| Estrategia | Default |
+|---|---|
+| Circuit breaker | `FailureRatio` 10%, `MinimumThroughput` 100, `SamplingDuration` 30s, `BreakDuration` 5s |
+| Retry | 3 intentos, backoff exponencial + jitter, 2s |
+| Attempt timeout | 10s |
+| Total request timeout | 30s |
+
+`MinimumThroughput = 100` no tiene sentido al volumen real de tráfico contra
+la DGII (por tenant, facturación) — el circuito nunca junta 100 peticiones en
+30s ni sumando todos los tenants, así que quedaba efectivamente decorativo:
+nunca abre aunque la DGII esté completamente caída. Se overridea vía
+`Dgii:Resilience` (sección que bindea `HttpStandardResilienceOptions`
+completo — cualquier sub-propiedad no listada sigue en el default de la
+librería):
+
+| Clave (`Dgii:Resilience:CircuitBreaker`) | Valor | Por qué |
+|---|---|---|
+| `MinimumThroughput` | `5` | Representativo a la escala de tráfico actual — el breaker es compartido por *todos* los tenants del cliente nombrado, así que una caída real de la DGII genera varios fallos casi simultáneos. |
+| `FailureRatio` | `0.5` | Con una muestra tan chica, un ratio bajo (10%) abriría el circuito por un par de fallos aislados. La mitad de un puñado de intentos fallando es más honesto. |
+| `BreakDuration` | `30s` | 5s no vale la pena contra un servicio realmente caído; 30s no choca con el fast-path del `POST /ecf` (`SyncWaitBudgetSeconds` ~8s, corre antes de que el circuito llegue a abrirse en el caso normal). |
+| `SamplingDuration` | `30s` (sin cambio) | Cumple la validación de la librería (`≥ 2×AttemptTimeout`, que sigue en 10s). |
+
+`Retry`/`AttemptTimeout`/`TotalRequestTimeout` quedan en los defaults de la
+librería — no forman parte de este ajuste.
+
+Cada cliente nombrado (`dgii-auth`, `dgii-ecf`, `dgii-fc`) tiene su **propio**
+circuito — comparten los mismos valores de configuración, pero no se
+fusionan: una caída del dominio `fc.dgii.gov.do` no abre el circuito de
+`ecf.dgii.gov.do`.
+
+`HttpErrorMapper` ya traduce `BrokenCircuitException` (circuito abierto) a
+`Errors.Http.CircuitOpen` — ver `src/Infrastructure/Http/HttpErrorMapper.cs`.
+Esto **no** es contingencia (M11, `IndicadorEnvioDiferido`): solo evita
+martillar un servicio caído; qué hace la app "en contingencia" sigue fuera de
+alcance (ver más abajo).
+
 ## Ladders (RF-04.3 / RF-04.7)
 
 - **Polling** (worker): +30 s (primera), luego +5 min, +30 min, +30 min. Al
