@@ -152,6 +152,28 @@ public sealed class SequencesEndpointsTests(DatabaseFixture database) : Integrat
     public async Task Sequence_endpoints_require_a_credential()
         => (await Client.GetAsync("/api/v1/sequences")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 
+    [RequiresDockerFact]
+    public async Task Overriding_the_low_stock_fraction_setting_changes_is_low_stock()
+    {
+        await RegisterAndActAsTenantAsync("130000042");
+
+        var register = await Client.PostAsJsonAsync("/api/v1/sequences", Range(type: 31, rangeFrom: 1, rangeTo: 10));
+        register.EnsureSuccessStatusCode();
+        var id = (await LeerAsync<IdResponse>(register))!.Id;
+
+        // Sin consumir nada (remaining == capacity == 10): al 20% (default) no es low-stock.
+        (await LeerAsync<SequenceResponse>(await Client.GetAsync($"/api/v1/sequences/{id}")))!
+            .IsLowStock.ShouldBeFalse();
+
+        (await Client.PutAsJsonAsync(
+            "/api/v1/platform-settings/sequences.low_stock_fraction", new { value = "1" }))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Al 100%, remaining(10) <= ceil(10*1) siempre es cierto.
+        (await LeerAsync<SequenceResponse>(await Client.GetAsync($"/api/v1/sequences/{id}")))!
+            .IsLowStock.ShouldBeTrue();
+    }
+
     private sealed record SequenceResponse(
         Guid Id, string Environment, int Type, string TypeName, string Series,
         long RangeFrom, long RangeTo, long Next, long Capacity, long Remaining,
