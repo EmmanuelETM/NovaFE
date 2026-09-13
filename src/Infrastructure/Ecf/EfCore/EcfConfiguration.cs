@@ -96,5 +96,10 @@ internal sealed class EcfConfiguration : IEntityTypeConfiguration<IssuedEcf>
         builder.HasIndex(e => new { e.TenantId, e.CreatedAt });
         builder.HasIndex(e => new { e.TenantId, e.Encf });
         builder.HasIndex(e => new { e.TenantId, e.Status });
+
+        // Detección de duplicados por huella (comprador + tipo + monto + fecha +
+        // ambiente); solo aplica cuando el comprador trae RNC/cédula.
+        builder.HasIndex(e => new { e.TenantId, e.Environment, e.Type, e.BuyerRnc, e.MontoTotal, e.IssueDate })
+            .HasFilter("buyer_rnc is not null and is_deleted = false");
     }
 }

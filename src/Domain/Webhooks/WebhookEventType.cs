@@ -15,6 +15,13 @@ public static class WebhookEventType
     public const string EcfReview = "ecf.review";
     public const string EcfFailed = "ecf.failed";
 
+    /// <summary>
+    /// Detección por huella (RF-12.7 + detección de duplicados): modo
+    /// <c>observar</c> — el e-CF se emitió igual, pero se parece a uno reciente
+    /// del mismo comprador (RNC/cédula, obligatorio para esta detección).
+    /// </summary>
+    public const string EcfDuplicateSuspected = "ecf.duplicate_suspected";
+
     public const string CertificateExpiring = "certificate.expiring";
     public const string CertificateExpired = "certificate.expired";
 
@@ -38,6 +45,7 @@ public static class WebhookEventType
         EcfRejected,
         EcfReview,
         EcfFailed,
+        EcfDuplicateSuspected,
         CertificateExpiring,
         CertificateExpired,
         SequenceLow,

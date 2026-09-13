@@ -14,5 +14,21 @@ public interface IEcfReadRepository
     /// <summary>El id del comprobante con ese <c>NumeroFacturaInterna</c>, si existe (dedup de negocio).</summary>
     Task<Guid?> FindByInternalNumberAsync(Guid tenantId, string internalNumber, CancellationToken ct = default);
 
+    /// <summary>
+    /// El comprobante más reciente con la misma huella (comprador, tipo, monto,
+    /// fecha de emisión y ambiente) emitido a partir de <paramref name="windowStart"/>,
+    /// si existe (detección de duplicados). <paramref name="buyerRnc"/> es
+    /// obligatorio — sin RNC/cédula no hay huella confiable.
+    /// </summary>
+    Task<(Guid Id, string Encf)?> FindRecentDuplicateAsync(
+        Guid tenantId,
+        string environment,
+        int type,
+        string buyerRnc,
+        decimal montoTotal,
+        DateOnly issueDate,
+        DateTimeOffset windowStart,
+        CancellationToken ct = default);
+
     Task<PagedResult<EcfSummaryDto>> ListAsync(Guid tenantId, EcfListFilter filter, CancellationToken ct = default);
 }

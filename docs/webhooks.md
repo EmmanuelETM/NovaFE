@@ -42,6 +42,21 @@ transición del agregado (`IssuedEcf.Mark*`).
 ya lo tiene en la respuesta. `webhook.ping` es un evento sintético para probar un
 endpoint (`POST /webhooks/{id}/ping`).
 
+### Duplicado sospechado (detección por huella)
+
+| Evento | Se dispara cuando |
+|---|---|
+| `ecf.duplicate_suspected` | Modo `observar` de `ecf.duplicate_detection_mode`: el e-CF se emitió igual, pero coincide en huella (comprador + tipo + monto + fecha + ambiente) con uno reciente |
+
+A diferencia del resto, el `data.object` **no** es el `EcfDto` desnudo — es
+`{ ecf: EcfDto, previousEcfId, previousEncf }`, con una referencia al
+comprobante con el que coincidió la huella. Se emite desde `IssueEcfUseCase`
+(no desde `EcfSubmissionProcessor`), en la misma transacción que
+`ecf.AddAsync`. Exige RNC/cédula del comprador — sin identificador (p. ej.
+consumo bajo DOP 250,000 sin identificar al comprador) no se evalúa nada, para
+no marcar como "duplicadas" facturas de compradores distintos que coinciden
+en monto. Ver `docs/ecf-duplicate-detection.md`.
+
 ### Vencimientos (RF-01.6 — ver [`expiry-monitor.md`](expiry-monitor.md))
 
 | Evento | Se dispara cuando |

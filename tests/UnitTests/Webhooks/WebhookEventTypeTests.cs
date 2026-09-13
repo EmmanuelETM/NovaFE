@@ -45,7 +45,7 @@ public class WebhookEventTypeTests
         WebhookEventType.Subscribable.ShouldBe(
         [
             "ecf.submitted", "ecf.accepted", "ecf.accepted_conditional",
-            "ecf.rejected", "ecf.review", "ecf.failed",
+            "ecf.rejected", "ecf.review", "ecf.failed", "ecf.duplicate_suspected",
             "certificate.expiring", "certificate.expired",
             "sequence.low", "sequence.exhausted", "sequence.expiring", "sequence.expired",
         ], ignoreOrder: true);

@@ -156,4 +156,14 @@ public static class EcfErrors
     public static Error IdempotencyKeyConflict => Error.Conflict(
         code: "Ecf.IdempotencyKeyConflict",
         description: "La Idempotency-Key ya se usó con un cuerpo distinto. Use una clave nueva para una petición distinta.");
+
+    /// <summary>
+    /// Detección por huella (modo <c>bloquear</c>): mismo comprador (RNC/cédula),
+    /// tipo, monto, fecha y ambiente que <paramref name="previousEncf"/>, emitido
+    /// dentro de la ventana configurada.
+    /// </summary>
+    public static Error DuplicateSuspected(string previousEncf) => Error.Conflict(
+        code: "Ecf.DuplicateSuspected",
+        description: $"Parece el mismo comprobante que {previousEncf}, emitido hace poco. " +
+            "Si es un comprobante distinto, revise el monto o el comprador, o ajuste el modo de detección de duplicados.");
 }
