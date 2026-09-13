@@ -53,6 +53,44 @@ public static class SettingDefinitions
         scope: SettingScope.Tenant,
         tenantWritable: true);
 
+    /// <summary>
+    /// Ventana tras la cual una fila <c>pending</c> de <c>idempotency_keys</c> se
+    /// considera abandonada y se puede reclamar (mismo <c>Idempotency-Key</c>
+    /// reintentado). Antes hardcoded en <c>PostgresIdempotencyStore</c>.
+    /// </summary>
+    public static readonly DurationSetting IdempotencyStalePendingWindow = new(
+        key: "idempotency.stale_pending_window",
+        group: "Idempotencia",
+        label: "Ventana de reclamo",
+        @default: TimeSpan.FromMinutes(10),
+        min: TimeSpan.FromMinutes(1),
+        description: "Tras cuánto tiempo una clave de idempotencia en curso se considera abandonada y se puede reclamar.");
+
+    /// <summary>
+    /// Antigüedad a partir de la cual una fila de <c>idempotency_keys</c>
+    /// (completada, o pendiente y abandonada) se purga.
+    /// </summary>
+    public static readonly DurationSetting IdempotencyRetention = new(
+        key: "idempotency.retention",
+        group: "Idempotencia",
+        label: "Retención",
+        @default: TimeSpan.FromDays(7),
+        min: TimeSpan.FromHours(1),
+        description: "Antigüedad a partir de la cual se purga una clave de idempotencia ya resuelta.");
+
+    /// <summary>
+    /// Antigüedad a partir de la cual una fila de <c>audit_log</c> (RF-14.4) se
+    /// purga. La purga la hace <c>AuditLogPurger</c>, separada de
+    /// <c>AuditLogWriter</c> (que sigue siendo insert-only).
+    /// </summary>
+    public static readonly DurationSetting AuditLogRetention = new(
+        key: "audit_log.retention",
+        group: "Auditoría",
+        label: "Retención",
+        @default: TimeSpan.FromDays(180),
+        min: TimeSpan.FromDays(30),
+        description: "Antigüedad a partir de la cual se purga una fila del registro de auditoría.");
+
     private static readonly SettingDefinition[] AllDefinitions = BuildRegistry();
 
     /// <summary>Todas las definiciones declaradas, ordenadas por grupo y etiqueta.</summary>

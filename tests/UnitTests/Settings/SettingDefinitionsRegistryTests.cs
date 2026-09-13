@@ -53,4 +53,26 @@ public class SettingDefinitionsRegistryTests
         def.Validate("POS").IsError.ShouldBeFalse();
         def.Validate("a4").IsError.ShouldBeTrue();
     }
+
+    [Theory]
+    [InlineData("idempotency.stale_pending_window", "10m")]
+    [InlineData("idempotency.retention", "7d")]
+    [InlineData("audit_log.retention", "180d")]
+    public void The_retention_settings_are_platform_scoped_durations(string key, string shorthand)
+    {
+        var def = SettingDefinitions.FindByKey(key).ShouldBeOfType<DurationSetting>();
+
+        def.Scope.ShouldBe(SettingScope.Platform);
+        def.TenantWritable.ShouldBeFalse();
+        def.Validate(shorthand).IsError.ShouldBeFalse();
+        def.Validate("-5m").IsError.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void The_retention_minimums_reject_values_below_them()
+    {
+        SettingDefinitions.IdempotencyStalePendingWindow.Validate("30s").IsError.ShouldBeTrue();
+        SettingDefinitions.IdempotencyRetention.Validate("10m").IsError.ShouldBeTrue();
+        SettingDefinitions.AuditLogRetention.Validate("1d").IsError.ShouldBeTrue();
+    }
 }

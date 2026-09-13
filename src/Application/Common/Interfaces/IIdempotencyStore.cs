@@ -33,4 +33,11 @@ public interface IIdempotencyStore
 
     Task CompleteAsync(
         Guid tenantId, string key, Guid resourceId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Purga filas ya resueltas: completadas, o pendientes y abandonadas
+    /// (más viejas que <c>olderThan</c> — muy por encima de la ventana de
+    /// reclamo, nunca compite con una fila en curso). Devuelve cuántas se borraron.
+    /// </summary>
+    Task<int> PurgeAsync(TimeSpan olderThan, CancellationToken ct = default);
 }
