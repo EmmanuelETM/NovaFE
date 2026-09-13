@@ -17,9 +17,6 @@ namespace NovaFE.Domain.Sequences;
 /// </summary>
 public sealed class NcfSequence : Entity<Guid>, ITenantOwned, IAuditableEntity, ISoftDeletable
 {
-    /// <summary>Umbral de stock bajo: 20 % del rango autorizado (RF-07.3).</summary>
-    private const double LowStockFraction = 0.20;
-
     /// <summary>Tope de secuencias por tipo en CerteCF (RF-07 tabla por ambiente).</summary>
     private const long CertMaxSequential = 10_000_000;
 
@@ -92,8 +89,12 @@ public sealed class NcfSequence : Entity<Guid>, ITenantOwned, IAuditableEntity, 
     /// <summary>Ya se entregaron todas las secuencias del rango.</summary>
     public bool IsExhausted => Next > RangeTo;
 
-    /// <summary>El stock cayó al 20 % o menos del rango autorizado (RF-07.3).</summary>
-    public bool IsLowStock => Remaining <= (long)Math.Ceiling(Capacity * LowStockFraction);
+    /// <summary>
+    /// El stock cayó a <paramref name="lowStockFraction"/> o menos del rango
+    /// autorizado (RF-07.3; default de la plataforma 20 % —
+    /// <c>sequences.low_stock_fraction</c>, ver <c>docs/configuration.md</c>).
+    /// </summary>
+    public bool IsLowStock(decimal lowStockFraction) => Remaining <= (long)Math.Ceiling(Capacity * lowStockFraction);
 
     /// <summary>El rango venció respecto a <paramref name="today"/> (calendario dominicano).</summary>
     public bool IsExpired(DateOnly today) => ExpiresOn is { } expiry && today > expiry;

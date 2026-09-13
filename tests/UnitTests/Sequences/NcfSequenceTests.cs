@@ -122,10 +122,24 @@ public class NcfSequenceTests
             sequence.Allocate(Today);
 
         sequence.Remaining.ShouldBe(3);
-        sequence.IsLowStock.ShouldBeFalse();
+        sequence.IsLowStock(0.20m).ShouldBeFalse();
 
         sequence.Allocate(Today);
         sequence.Remaining.ShouldBe(2);
-        sequence.IsLowStock.ShouldBeTrue();
+        sequence.IsLowStock(0.20m).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Low_stock_threshold_is_driven_by_the_given_fraction()
+    {
+        var sequence = Authorize(from: 1, to: 10);
+
+        for (var i = 0; i < 4; i++)
+            sequence.Allocate(Today);
+
+        // Quedan 6 de 10 (60%): no es low-stock al 20%, sí lo es al 60%.
+        sequence.Remaining.ShouldBe(6);
+        sequence.IsLowStock(0.20m).ShouldBeFalse();
+        sequence.IsLowStock(0.60m).ShouldBeTrue();
     }
 }

@@ -2,6 +2,8 @@ using Dapper;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Sequences.Contracts;
 using NovaFE.Application.Sequences.Interfaces;
+using NovaFE.Application.Settings.Interfaces;
+using NovaFE.Domain.Settings;
 using NovaFE.Infrastructure.Persistence.Sql;
 
 namespace NovaFE.Infrastructure.Sequences.Sql;
@@ -9,11 +11,13 @@ namespace NovaFE.Infrastructure.Sequences.Sql;
 /// <summary>
 /// Lectura de rangos de secuencias con Dapper. Filtra por <c>tenant_id</c>
 /// explícitamente (en local/tests la app corre como superusuario y RLS no aplica).
-/// La capacidad y el stock restante se calculan en SQL.
+/// La capacidad, el stock restante y si está bajo (RF-07.3, con el setting runtime
+/// <c>sequences.low_stock_fraction</c>) se calculan en SQL.
 /// </summary>
 internal sealed class NcfSequenceReadRepository(
     IDbSession session,
-    ICurrentTenant currentTenant) : INcfSequenceReadRepository
+    ICurrentTenant currentTenant,
+    ISettingsReader settingsReader) : INcfSequenceReadRepository
 {
     private const string Columns =
         """
@@ -26,6 +30,8 @@ internal sealed class NcfSequenceReadRepository(
         "next"                              AS "Next",
         (range_to - range_from + 1)         AS "Capacity",
         greatest(range_to - "next" + 1, 0)  AS "Remaining",
+        (greatest(range_to - "next" + 1, 0)
+            <= ceiling((range_to - range_from + 1) * @lowStockFraction)) AS "IsLowStock",
         expires_on                          AS "ExpiresOn",
         active                              AS "Active",
         created_at                          AS "CreatedAt"
@@ -45,7 +51,7 @@ internal sealed class NcfSequenceReadRepository(
         return await connection.QuerySingleOrDefaultAsync<NcfSequenceDto>(
             new CommandDefinition(
                 sql,
-                new { id, tenantId = currentTenant.TenantId },
+                new { id, tenantId = currentTenant.TenantId, lowStockFraction = LowStockFraction },
                 session.Transaction,
                 cancellationToken: ct));
     }
@@ -65,10 +71,12 @@ internal sealed class NcfSequenceReadRepository(
         var rows = await connection.QueryAsync<NcfSequenceDto>(
             new CommandDefinition(
                 sql,
-                new { tenantId = currentTenant.TenantId },
+                new { tenantId = currentTenant.TenantId, lowStockFraction = LowStockFraction },
                 session.Transaction,
                 cancellationToken: ct));
 
         return rows.AsList();
     }
+
+    private decimal LowStockFraction => settingsReader.GetValue(SettingDefinitions.SequenceLowStockFraction);
 }
