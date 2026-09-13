@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Options;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Application.Webhooks.Interfaces;
+using NovaFE.Domain.Settings;
 using NovaFE.Service.Common;
 using NovaFE.Service.Configuration;
 
@@ -16,11 +18,10 @@ namespace NovaFE.Service.Workers;
 internal sealed class WebhookDeliveryPump(
     IServiceScopeFactory scopeFactory,
     IOptionsMonitor<WebhooksOptions> options,
+    ISettingsReader settingsReader,
     TimeProvider timeProvider,
     ILogger<WebhookDeliveryPump> logger) : IWebhookDeliveryPump
 {
-    private const int BatchSize = 50;
-
     /// <summary>La purga del log viejo es mantenimiento: basta una vez por hora.</summary>
     private static readonly TimeSpan PurgeInterval = TimeSpan.FromHours(1);
 
@@ -29,7 +30,7 @@ internal sealed class WebhookDeliveryPump(
     public async Task<int> RunOnceAsync(CancellationToken ct = default)
     {
         // Se relee por tick: los timeouts y la retención se ajustan en caliente.
-        var settings = options.CurrentValue.ToSettings();
+        var settings = options.CurrentValue.ToSettings(settingsReader);
 
         using var claimScope = scopeFactory.CreateScope();
         var outbox = claimScope.ServiceProvider.GetRequiredService<IWebhookOutbox>();
@@ -38,7 +39,7 @@ internal sealed class WebhookDeliveryPump(
         if (reaped > 0)
             logger.LogInformation("Recuperadas {Count} entregas de webhook atascadas", reaped);
 
-        var batch = await outbox.ClaimBatchAsync(BatchSize, ct);
+        var batch = await outbox.ClaimBatchAsync(settingsReader.GetValue(SettingDefinitions.WebhooksBatchSize), ct);
 
         // En un tick sin trabajo se aprovecha para purgar el log viejo — pero a lo
         // sumo una vez por hora, no en cada tick ocioso.

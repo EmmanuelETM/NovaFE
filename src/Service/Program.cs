@@ -109,7 +109,8 @@ try
     // que un cambio de configuración en caliente llegue al próximo scope, sin
     // reiniciar el proceso. Ver docs/configuration.md.
     builder.Services.AddTransient(sp =>
-        sp.GetRequiredService<IOptionsMonitor<EcfSubmissionOptions>>().CurrentValue.ToSettings());
+        sp.GetRequiredService<IOptionsMonitor<EcfSubmissionOptions>>().CurrentValue
+            .ToSettings(sp.GetRequiredService<ISettingsReader>()));
     builder.Services.AddSingleton<IEcfSubmissionPump, EcfSubmissionPump>();
 
     if (builder.Configuration.GetValue("EcfSubmission:Enabled", defaultValue: true))
@@ -123,7 +124,8 @@ try
     // Transient, no scoped: la config del HttpClient de entrega lo resuelve desde
     // el proveedor raíz.
     builder.Services.AddTransient(sp =>
-        sp.GetRequiredService<IOptionsMonitor<WebhooksOptions>>().CurrentValue.ToSettings());
+        sp.GetRequiredService<IOptionsMonitor<WebhooksOptions>>().CurrentValue
+            .ToSettings(sp.GetRequiredService<ISettingsReader>()));
     builder.Services.AddSingleton<IWebhookDeliveryPump, WebhookDeliveryPump>();
 
     if (builder.Configuration.GetValue("Webhooks:Enabled", defaultValue: true))

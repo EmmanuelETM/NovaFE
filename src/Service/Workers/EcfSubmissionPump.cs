@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Options;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Submission;
+using NovaFE.Application.Settings.Interfaces;
+using NovaFE.Domain.Settings;
 using NovaFE.Service.Common;
 using NovaFE.Service.Configuration;
 
@@ -15,6 +17,7 @@ namespace NovaFE.Service.Workers;
 internal sealed class EcfSubmissionPump(
     IServiceScopeFactory scopeFactory,
     IOptionsMonitor<EcfSubmissionOptions> options,
+    ISettingsReader settingsReader,
     TimeProvider timeProvider,
     ILogger<EcfSubmissionPump> logger) : IEcfSubmissionPump
 {
@@ -39,7 +42,7 @@ internal sealed class EcfSubmissionPump(
                 logger.LogInformation("Recuperadas {Count} filas de envío atascadas", reaped);
         }
 
-        var batch = await queue.ClaimBatchAsync(opts.BatchSize, ct);
+        var batch = await queue.ClaimBatchAsync(settingsReader.GetValue(SettingDefinitions.SubmissionBatchSize), ct);
 
         var processed = 0;
         foreach (var item in batch)
