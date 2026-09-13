@@ -21,6 +21,13 @@ public sealed class EcfDocument
     public const int MaxLines = 1000;
 
     /// <summary>
+    /// Máximo de formas de pago en <c>&lt;TablaFormasPago&gt;</c> (XSD
+    /// <c>maxOccurs="7"</c> — idéntico en 31/32/33/41/44/45/46/47 y en RFCE;
+    /// 34/43 no llevan el bloque).
+    /// </summary>
+    public const int MaxPaymentMethods = 7;
+
+    /// <summary>
     /// Umbral de la DGII (DOP) que separa la Factura de Consumo de "bajo monto".
     /// Manda la identificación del comprador (tipo 32 y las NC/ND que modifican un
     /// 32 ≥ este monto) y el ruteo a RFCE.
@@ -223,6 +230,8 @@ public sealed class EcfDocument
             errors.Add(EcfErrors.TooManySubtotals);
         if (header.Pagination is { Count: > 1000 })
             errors.Add(EcfErrors.TooManyPages);
+        if (header.Payment.Methods.Count > MaxPaymentMethods)
+            errors.Add(EcfErrors.TooManyPaymentMethods(header.Payment.Methods.Count, MaxPaymentMethods));
 
         if (header.Shipping is { } shipping)
         {

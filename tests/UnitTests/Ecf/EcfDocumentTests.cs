@@ -44,6 +44,40 @@ public class EcfDocumentTests
             .FirstError.Code.ShouldBe("Ecf.NonContiguousLineNumbers");
 
     [Fact]
+    public void Create_rejects_more_than_seven_payment_methods()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            Payment = EcfTestData.Payment() with
+            {
+                Methods = Enumerable.Range(0, EcfDocument.MaxPaymentMethods + 1)
+                    .Select(_ => new EcfPaymentMethod(PaymentMethodType.Cash, 100m))
+                    .ToArray(),
+            },
+        };
+
+        EcfDocument.Create(EcfType.CreditoFiscal, header, [EcfTestData.Line()])
+            .FirstError.Code.ShouldBe("Ecf.TooManyPaymentMethods");
+    }
+
+    [Fact]
+    public void Create_allows_exactly_the_payment_methods_limit()
+    {
+        var header = EcfTestData.Header(31) with
+        {
+            Payment = EcfTestData.Payment() with
+            {
+                Methods = Enumerable.Range(0, EcfDocument.MaxPaymentMethods)
+                    .Select(_ => new EcfPaymentMethod(PaymentMethodType.Cash, 100m))
+                    .ToArray(),
+            },
+        };
+
+        EcfDocument.Create(EcfType.CreditoFiscal, header, [EcfTestData.Line()])
+            .IsError.ShouldBeFalse();
+    }
+
+    [Fact]
     public void Credito_fiscal_needs_a_sequence_expiry()
     {
         var header = EcfTestData.Header(31) with { SequenceExpiresOn = null };
