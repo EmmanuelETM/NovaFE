@@ -20,7 +20,7 @@ POST {EcfBaseUrl}/{ambiente}/autenticacion/api/autenticacion/validarsemilla
 
 | Interfaz (Application) | Impl (Infrastructure) | Rol |
 |---|---|---|
-| `IDgiiAuthClient` | `DgiiAuthClient` | HTTP puro: `GetSeedAsync`, `ValidateSeedAsync`. Cliente con resiliencia (`AddResilientHttpClient`: reintentos, circuit breaker, timeouts). Los fallos de red → `Errors.Http.*` vía `HttpErrorMapper`. |
+| `IDgiiAuthClient` | `DgiiAuthClient` | HTTP puro: `GetSeedAsync`, `ValidateSeedAsync`. Cliente con resiliencia (`AddResilientHttpClient`: reintentos, circuit breaker, timeouts — tuning y defaults en `docs/dgii-submission.md` §Resiliencia). Los fallos de red → `Errors.Http.*` vía `HttpErrorMapper`. |
 | `IDgiiTokenCache` | `DistributedCacheDgiiTokenCache` | Caché por `(tenant, ambiente)` sobre `IDistributedCache` (en memoria hoy; Redis igual). La entrada expira sola cuando el token vence. Nunca en base de datos. |
 | `IDgiiTokenProvider` | `DgiiTokenProvider` | Orquesta: caché → semilla → firma → validar → guardar. **Renovación proactiva** (RF-01.3): si el token vence dentro de `TokenRenewalBufferMinutes` (default 5), se renueva antes. |
 
