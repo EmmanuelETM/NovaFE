@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
+using NovaFE.Application.Common.Interfaces;
 using NovaFE.IntegrationTests.Fixtures;
 
 namespace NovaFE.IntegrationTests.Security;
@@ -61,6 +63,28 @@ public sealed class AuditLoggingTests(DatabaseFixture database) : IntegrationTes
 
         denied.StatusCode.ShouldBe(403);
         denied.Succeeded.ShouldBeFalse();
+    }
+
+    [RequiresDockerFact]
+    public async Task Purge_leaves_recent_rows_alone_but_deletes_old_ones()
+    {
+        var (tenantId, token) = await OnboardAsync();
+        UseApiKey(token);
+
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        using var scope = Factory.Services.CreateScope();
+        var purger = scope.ServiceProvider.GetRequiredService<IAuditLogPurger>();
+
+        // Todavía "reciente": un umbral generoso no la toca.
+        (await purger.PurgeAsync(TimeSpan.FromDays(1))).ShouldBe(0);
+
+        // Cualquier fila cuenta como vieja con un umbral de 0.
+        (await purger.PurgeAsync(TimeSpan.Zero)).ShouldBeGreaterThanOrEqualTo(1);
+
+        var page = await LeerAsync<AuditPage>(
+            await Client.GetAsync($"/api/v1/tenants/{tenantId}/audit-log"));
+        page!.Items.ShouldBeEmpty();
     }
 
     private sealed record SandboxResponse(Guid TenantId, string ApiKey);

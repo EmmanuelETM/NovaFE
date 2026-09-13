@@ -1,5 +1,7 @@
 using Dapper;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Settings.Interfaces;
+using NovaFE.Domain.Settings;
 using NovaFE.Infrastructure.Persistence.Sql;
 
 namespace NovaFE.Infrastructure.Persistence.Idempotency;
@@ -8,17 +10,17 @@ namespace NovaFE.Infrastructure.Persistence.Idempotency;
 /// Almacén de idempotencia sobre <c>idempotency_keys</c>. <see cref="BeginAsync"/>
 /// reserva la clave con <c>INSERT … ON CONFLICT DO NOTHING</c>; si ya existía,
 /// decide entre replay, conflicto o "en curso" según su estado y su hash. Una fila
-/// <c>pending</c> más vieja que <see cref="StalePendingMinutes"/> se considera
-/// abandonada y se puede reclamar.
+/// <c>pending</c> más vieja que <see cref="SettingDefinitions.IdempotencyStalePendingWindow"/>
+/// se considera abandonada y se puede reclamar.
 /// </summary>
-internal sealed class PostgresIdempotencyStore(IDbSession session, TimeProvider timeProvider) : IIdempotencyStore
+internal sealed class PostgresIdempotencyStore(
+    IDbSession session, TimeProvider timeProvider, ISettingsReader settingsReader) : IIdempotencyStore
 {
-    private const int StalePendingMinutes = 10;
-
     public async Task<IdempotencyOutcome> BeginAsync(
         Guid tenantId, string key, string requestHash, CancellationToken ct = default)
     {
         var now = timeProvider.GetUtcNow();
+        var staleAfter = settingsReader.GetValue(SettingDefinitions.IdempotencyStalePendingWindow);
         var connection = await session.GetConnectionAsync(ct);
 
         var reserved = await connection.ExecuteScalarAsync<Guid?>(new CommandDefinition(
@@ -41,7 +43,7 @@ internal sealed class PostgresIdempotencyStore(IDbSession session, TimeProvider 
             FROM idempotency_keys
             WHERE tenant_id = @tenantId AND key = @key
             """,
-            new { tenantId, key, staleBefore = now.AddMinutes(-StalePendingMinutes) },
+            new { tenantId, key, staleBefore = now - staleAfter },
             session.Transaction, cancellationToken: ct));
 
         if (existing is null)
@@ -66,7 +68,7 @@ internal sealed class PostgresIdempotencyStore(IDbSession session, TimeProvider 
               AND status = 'pending' AND created_at <= @staleBefore
             RETURNING id
             """,
-            new { tenantId, key, requestHash, now, staleBefore = now.AddMinutes(-StalePendingMinutes) },
+            new { tenantId, key, requestHash, now, staleBefore = now - staleAfter },
             session.Transaction, cancellationToken: ct));
 
         return reclaimed is not null
@@ -85,6 +87,21 @@ internal sealed class PostgresIdempotencyStore(IDbSession session, TimeProvider 
             WHERE tenant_id = @tenantId AND key = @key
             """,
             new { tenantId, key, resourceId, now = timeProvider.GetUtcNow() },
+            session.Transaction, cancellationToken: ct));
+    }
+
+    public async Task<int> PurgeAsync(TimeSpan olderThan, CancellationToken ct = default)
+    {
+        var connection = await session.GetConnectionAsync(ct);
+        var cutoff = timeProvider.GetUtcNow() - olderThan;
+
+        return await connection.ExecuteAsync(new CommandDefinition(
+            """
+            DELETE FROM idempotency_keys
+            WHERE (status = 'completed' AND completed_at < @cutoff)
+               OR (status = 'pending' AND created_at < @cutoff)
+            """,
+            new { cutoff },
             session.Transaction, cancellationToken: ct));
     }
 

@@ -185,6 +185,7 @@ public static class InfrastructureService
         services.AddScoped<IEcfSubmissionQueue, PostgresEcfSubmissionQueue>();
         services.AddScoped<IIdempotencyStore, PostgresIdempotencyStore>();
         services.AddScoped<IAuditLogWriter, AuditLogWriter>();
+        services.AddScoped<IAuditLogPurger, AuditLogPurger>();
         services.AddScoped<IAuditLogReadRepository, AuditLogReadRepository>();
         services.AddScoped<IExpiryNotificationLog, PostgresExpiryNotificationLog>();
         services.AddScoped<IWebhookEndpointRepository, WebhookEndpointRepository>();
