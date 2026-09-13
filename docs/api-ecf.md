@@ -62,6 +62,7 @@ POST   /api/v1/ecf/{id}/retry      reencolar el envío (solo failed / review) �
 | **Auth** | Header `X-API-Key` con un token `sk_nfe_…` del contribuyente (el tenant **y el ambiente** salen de la key). En Development también sirve `X-Tenant-Id`. Ver `docs/api-auth.md`. |
 | **`Idempotency-Key`** (header, opcional) | Reintento seguro del `POST`. Misma clave + mismo cuerpo → **`200`** con la respuesta original. Misma clave + cuerpo distinto → **`409`**. Petición en curso → **`409`**. Tabla `idempotency_keys` en PostgreSQL. |
 | **`internalNumber`** (body → `<NumeroFacturaInterna>`) | Dedup de negocio: un comprobante por `(tenant, internalNumber)` (índice único parcial). Repetido → **`200`** con el existente. |
+| **Detección de duplicados por huella** | Capa aparte, no depende de lo que mande el cliente. Settings `ecf.duplicate_detection_mode` (`off` default / `observar` / `bloquear`) y `..._window`. En `bloquear`, un comprobante con el mismo comprador (RNC/cédula — **obligatorio**, si no hay no se evalúa nada), tipo, monto, fecha y ambiente que uno reciente → **`409 Ecf.DuplicateSuspected`**. Ver `docs/ecf-duplicate-detection.md`. |
 
 ---
 
