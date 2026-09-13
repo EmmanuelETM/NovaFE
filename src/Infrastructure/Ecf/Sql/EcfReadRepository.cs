@@ -93,6 +93,44 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
             new CommandDefinition(sql, new { tenantId, internalNumber }, session.Transaction, cancellationToken: ct));
     }
 
+    public async Task<(Guid Id, string Encf)?> FindRecentDuplicateAsync(
+        Guid tenantId,
+        string environment,
+        int type,
+        string buyerRnc,
+        decimal montoTotal,
+        DateOnly issueDate,
+        DateTimeOffset windowStart,
+        CancellationToken ct = default)
+    {
+        const string sql =
+            """
+            SELECT id AS "Id", encf AS "Encf"
+            FROM issued_ecf
+            WHERE tenant_id = @tenantId
+              AND environment = @environment
+              AND ecf_type = @type
+              AND buyer_rnc = @buyerRnc
+              AND monto_total = @montoTotal
+              AND issue_date = @issueDate
+              AND is_deleted = false
+              AND created_at >= @windowStart
+            ORDER BY created_at DESC
+            LIMIT 1
+            """;
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        var match = await connection.QuerySingleOrDefaultAsync<DuplicateMatch>(
+            new CommandDefinition(
+                sql,
+                new { tenantId, environment, type, buyerRnc, montoTotal, issueDate, windowStart },
+                session.Transaction,
+                cancellationToken: ct));
+
+        return match is null ? null : (match.Id, match.Encf);
+    }
+
     public async Task<PagedResult<EcfSummaryDto>> ListAsync(
         Guid tenantId, EcfListFilter filter, CancellationToken ct = default)
     {
@@ -152,4 +190,6 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
 
         return new PagedResult<EcfSummaryDto>(items.AsList(), total, filter.Page, filter.PageSize);
     }
+
+    private sealed record DuplicateMatch(Guid Id, string Encf);
 }

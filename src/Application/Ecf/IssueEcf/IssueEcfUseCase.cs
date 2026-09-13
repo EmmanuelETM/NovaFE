@@ -9,9 +9,14 @@ using NovaFE.Application.Ecf.Contracts;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Submission;
 using NovaFE.Application.Sequences.Interfaces;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Tenants.Interfaces;
+using NovaFE.Application.Webhooks;
+using NovaFE.Application.Webhooks.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Ecf;
+using NovaFE.Domain.Settings;
+using NovaFE.Domain.Webhooks;
 using Microsoft.Extensions.Logging;
 
 namespace NovaFE.Application.Ecf.IssueEcf;
@@ -35,6 +40,8 @@ public sealed class IssueEcfUseCase(
     IEcfSubmissionQueue submissionQueue,
     IEcfSubmissionFastPath submissionFastPath,
     EcfSubmissionSettings submissionSettings,
+    IWebhookOutbox webhookOutbox,
+    ISettingsReader settingsReader,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
     : CommandUseCase<IssueEcfCommand, IssueEcfResult>(loggerFactory, validator)
@@ -106,6 +113,29 @@ public sealed class IssueEcfUseCase(
             return document.Errors;
         }
 
+        // Detección de duplicados por huella (comprador + tipo + monto + fecha +
+        // ambiente). Exige RNC/cédula del comprador: sin identificador no hay
+        // huella confiable (p. ej. consumo < DOP 250,000 con "CONSUMIDOR FINAL"
+        // repetido en todas las facturas — el nombre no distingue compradores).
+        var duplicateMode = settingsReader.GetValue(SettingDefinitions.EcfDuplicateDetectionMode);
+        (Guid Id, string Encf)? duplicateMatch = null;
+
+        if (duplicateMode != "off" && document.Value.Header.Buyer.Rnc is { } buyerRnc)
+        {
+            var window = settingsReader.GetValue(SettingDefinitions.EcfDuplicateDetectionWindow);
+            duplicateMatch = await ecfReads.FindRecentDuplicateAsync(
+                tenantId, environment.Name, type.Id, buyerRnc.Value, document.Value.Totals.MontoTotal,
+                document.Value.Header.IssueDate, timeProvider.GetUtcNow() - window, ct);
+
+            if (duplicateMatch is { } blocked && duplicateMode == "bloquear")
+            {
+                Logger.LogWarning(
+                    "e-NCF {Encf} quemado: huella duplicada del comprobante {PreviousEncf}",
+                    encf.Value, blocked.Encf);
+                return EcfErrors.DuplicateSuspected(blocked.Encf);
+            }
+        }
+
         var signed = await signer.SignAsync(document.Value, environment, ct);
         if (signed.IsError)
         {
@@ -119,11 +149,20 @@ public sealed class IssueEcfUseCase(
 
         var issued = IssuedEcf.FromSigned(document.Value, signed.Value, environment, expectConditional);
 
-        // Outbox transaccional: el comprobante y su fila de envío se guardan juntos.
+        // Outbox transaccional: el comprobante, su fila de envío y (si aplica) el
+        // aviso de duplicado sospechado se guardan juntos.
         await unitOfWork.ExecuteInTransactionAsync(async token =>
         {
             await ecf.AddAsync(issued, token);
             await submissionQueue.EnqueueSubmitAsync(issued.Id, tenantId, environment, token);
+
+            if (duplicateMatch is { } observed && duplicateMode == "observar")
+            {
+                var payload = new EcfDuplicateSuspectedPayload(EcfDtoAssembler.From(issued), observed.Id, observed.Encf);
+                await webhookOutbox.EnqueueAsync(
+                    WebhookEvent.Create(WebhookEventType.EcfDuplicateSuspected, payload, timeProvider.GetUtcNow()),
+                    tenantId, token);
+            }
         }, ct);
 
         if (key is not null)
