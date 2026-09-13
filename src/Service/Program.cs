@@ -3,6 +3,7 @@ using Asp.Versioning;
 using NovaFE.Application;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Ecf.Submission;
+using NovaFE.Application.Maintenance;
 using NovaFE.Application.Notifications;
 using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks.Delivery;
@@ -137,6 +138,17 @@ try
 
     if (builder.Configuration.GetValue("ExpiryMonitor:Enabled", defaultValue: true))
         builder.Services.AddHostedService<ExpiryMonitorWorker>();
+
+    // Purga por retención (idempotency_keys + audit_log): tablas de sistema sin
+    // ningún otro mecanismo de limpieza. Los tiempos de retención son settings
+    // runtime (SettingDefinitions.IdempotencyRetention/AuditLogRetention).
+    builder.Services.AddOptions<RetentionOptions>()
+        .Bind(builder.Configuration.GetSection(RetentionOptions.SectionName))
+        .ValidateDataAnnotations();
+    builder.Services.AddSingleton<IRetentionPump, RetentionPump>();
+
+    if (builder.Configuration.GetValue("Retention:Enabled", defaultValue: true))
+        builder.Services.AddHostedService<RetentionWorker>();
 
     // Motor de settings runtime (docs/configuration.md): el pump consulta el
     // contador de generación y recarga el snapshot local si cambió; el poller lo

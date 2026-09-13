@@ -65,4 +65,45 @@ public sealed class IdempotencyStoreTests(DatabaseFixture database) : Integratio
         await using (scopeB)
             (await storeB.BeginAsync(tenantB, "shared", "hashZ")).Decision.ShouldBe(IdempotencyDecision.Proceed);
     }
+
+    [RequiresDockerFact]
+    public async Task Purge_leaves_recent_completed_keys_alone_but_deletes_old_ones()
+    {
+        var tenant = Guid.CreateVersion7();
+
+        var (store, scope) = await StoreAsync(tenant);
+        await using (scope)
+        {
+            await store.BeginAsync(tenant, "key-purge-completed", "hashA");
+            await store.CompleteAsync(tenant, "key-purge-completed", Guid.CreateVersion7());
+
+            // Todavía "reciente": un umbral generoso no la toca.
+            (await store.PurgeAsync(TimeSpan.FromDays(1))).ShouldBe(0);
+
+            // Cualquier fila completada cuenta como vieja con un umbral de 0.
+            (await store.PurgeAsync(TimeSpan.Zero)).ShouldBe(1);
+
+            // La clave ya no existe: la misma clave y el mismo cuerpo procede de nuevo, no hace replay.
+            (await store.BeginAsync(tenant, "key-purge-completed", "hashA")).Decision
+                .ShouldBe(IdempotencyDecision.Proceed);
+        }
+    }
+
+    [RequiresDockerFact]
+    public async Task Purge_also_clears_abandoned_pending_keys_that_were_never_retried()
+    {
+        var tenant = Guid.CreateVersion7();
+
+        var (store, scope) = await StoreAsync(tenant);
+        await using (scope)
+        {
+            await store.BeginAsync(tenant, "key-purge-pending", "hashA");
+
+            (await store.PurgeAsync(TimeSpan.FromDays(1))).ShouldBe(0);
+            (await store.PurgeAsync(TimeSpan.Zero)).ShouldBe(1);
+
+            (await store.BeginAsync(tenant, "key-purge-pending", "hashA")).Decision
+                .ShouldBe(IdempotencyDecision.Proceed);
+        }
+    }
 }

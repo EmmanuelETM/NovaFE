@@ -65,6 +65,23 @@ terminar, igual queremos que quede el registro.
   poder registrar acciones de operador y peticiones anónimas rechazadas, que no
   tienen tenant.
 
+## Retención
+
+La tabla no crece para siempre: un worker de mantenimiento (`RetentionWorker`,
+`src/Service/Workers/`, cada `Retention:IntervalHours` — 6 por defecto) purga
+las filas más viejas que el setting runtime `audit_log.retention` (`Platform`,
+180 días por defecto, mínimo 30 — `docs/configuration.md`).
+
+El borrado va en `AuditLogPurger` (`src/Infrastructure/Persistence/Audit/`),
+una clase **separada** de `AuditLogWriter` a propósito: `AuditLogWriter` sigue
+siendo literalmente insert-only (ningún método `UPDATE`/`DELETE`), que es la
+garantía de inmutabilidad que le importa a RF-14.4 — que ningún camino de
+request pueda alterar o borrar una fila individual. La purga por antigüedad es
+un trabajo de sistema aparte, explícito y auditable por su propio código; no
+compromete esa garantía, solo acota cuánto tiempo se conservan filas ya viejas.
+`IIdempotencyStore.PurgeAsync` (`idempotency_keys`) sigue el mismo patrón y
+corre en el mismo worker — ver `docs/configuration.md`.
+
 ## Lectura: `GET /api/v1/tenants/{id}/audit-log`
 
 Recurso de operador (`X-Admin-Key`), paginado (`?page=&pageSize=`, mismo
@@ -86,7 +103,5 @@ inmutabilidad no dependa solo de que el código nunca llame a esos métodos.
 
 - Filtros adicionales en el listado (por acción, rango de fechas, actor) — hoy
   solo pagina por `occurred_at DESC`.
-- Retención/archivado — la tabla crece sin límite; una política de purga es un
-  slice de operaciones aparte.
 - Auditar el cuerpo de la petición/respuesta.
 - Un listado global (todos los tenants a la vez) — hoy es siempre por tenant.
