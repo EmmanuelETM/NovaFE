@@ -1,9 +1,11 @@
 using NovaFE.Application.Certificates.Interfaces;
 using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Sequences.Interfaces;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks;
 using NovaFE.Application.Webhooks.Interfaces;
 using NovaFE.Domain.Common;
+using NovaFE.Domain.Settings;
 using NovaFE.Domain.Webhooks;
 using Microsoft.Extensions.Logging;
 
@@ -21,12 +23,14 @@ public sealed class ExpiryScan(
     IWebhookOutbox webhookOutbox,
     IExpiryNotificationLog log,
     IUnitOfWork unitOfWork,
+    ISettingsReader settingsReader,
     TimeProvider timeProvider,
     ILogger<ExpiryScan> logger)
 {
-    // RF-01.6: alertas escalonadas antes del vencimiento.
-    private static readonly int[] CertificateThresholdsDays = [90, 30, 15, 7];
-    private static readonly int[] SequenceThresholdsDays = [30, 7];
+    // RF-01.6: alertas escalonadas antes del vencimiento — defaults de respaldo
+    // si el setting runtime queda corrupto (nunca debería, se valida al escribir).
+    private static readonly int[] CertificateThresholdsDaysFallback = [90, 30, 15, 7];
+    private static readonly int[] SequenceThresholdsDaysFallback = [30, 7];
 
     public async Task RunForCurrentTenantAsync(Guid tenantId, CancellationToken ct = default)
     {
@@ -39,6 +43,9 @@ public sealed class ExpiryScan(
 
     private async Task ScanCertificatesAsync(Guid tenantId, DateTimeOffset now, CancellationToken ct)
     {
+        var thresholds = ParseThresholds(
+            settingsReader.GetValue(SettingDefinitions.CertificateExpiryThresholdsDays), CertificateThresholdsDaysFallback);
+
         foreach (var cert in await certificates.ListAsync(ct))
         {
             if (!string.Equals(cert.Status, "Active", StringComparison.Ordinal))
@@ -52,7 +59,7 @@ public sealed class ExpiryScan(
             }
 
             var daysLeft = (int)Math.Floor((cert.ValidTo - now).TotalDays);
-            var crossed = CertificateThresholdsDays.Where(t => daysLeft <= t).Select(t => $"expiring:{t}").ToArray();
+            var crossed = thresholds.Where(t => daysLeft <= t).Select(t => $"expiring:{t}").ToArray();
 
             if (crossed.Length > 0)
                 await NotifyAsync("certificate", cert.Id, crossed,
@@ -62,6 +69,9 @@ public sealed class ExpiryScan(
 
     private async Task ScanSequencesAsync(Guid tenantId, DateTimeOffset now, DateOnly today, CancellationToken ct)
     {
+        var thresholds = ParseThresholds(
+            settingsReader.GetValue(SettingDefinitions.SequenceExpiryThresholdsDays), SequenceThresholdsDaysFallback);
+
         foreach (var seq in await sequences.ListAsync(ct))
         {
             if (!seq.Active)
@@ -89,12 +99,35 @@ public sealed class ExpiryScan(
             }
 
             var daysLeft = expiresOn.DayNumber - today.DayNumber;
-            var crossed = SequenceThresholdsDays.Where(t => daysLeft <= t).Select(t => $"expiring:{t}").ToArray();
+            var crossed = thresholds.Where(t => daysLeft <= t).Select(t => $"expiring:{t}").ToArray();
 
             if (crossed.Length > 0)
                 await NotifyAsync("sequence", seq.Id, crossed,
                     WebhookEventType.SequenceExpiring, seq, tenantId, now, ct);
         }
+    }
+
+    /// <summary>
+    /// Interpreta un setting tipo "lista de días" (p. ej. <c>"90,30,15,7"</c>). Un
+    /// token que no parsea cae al <paramref name="fallback"/> completo — igual
+    /// criterio que <c>CachedSettingsReader</c>: un override corrupto nunca lanza.
+    /// </summary>
+    private static IReadOnlyList<int> ParseThresholds(string raw, IReadOnlyList<int> fallback)
+    {
+        var parts = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0)
+            return fallback;
+
+        var result = new List<int>(parts.Length);
+        foreach (var part in parts)
+        {
+            if (!int.TryParse(part, out var value) || value <= 0)
+                return fallback;
+
+            result.Add(value);
+        }
+
+        return result;
     }
 
     /// <summary>

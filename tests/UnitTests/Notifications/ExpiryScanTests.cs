@@ -7,8 +7,10 @@ using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Notifications;
 using NovaFE.Application.Sequences.Contracts;
 using NovaFE.Application.Sequences.Interfaces;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks.Contracts;
 using NovaFE.Application.Webhooks.Interfaces;
+using NovaFE.Domain.Settings;
 
 namespace NovaFE.UnitTests.Notifications;
 
@@ -16,12 +18,14 @@ public class ExpiryScanTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 15, 12, 0, 0, TimeSpan.Zero);
     private static readonly Guid TenantId = Guid.CreateVersion7();
+    private const decimal DefaultLowStockFraction = 0.20m;
 
     private readonly ICertificateReadRepository _certs = Substitute.For<ICertificateReadRepository>();
     private readonly INcfSequenceReadRepository _sequences = Substitute.For<INcfSequenceReadRepository>();
     private readonly IWebhookOutbox _outbox = Substitute.For<IWebhookOutbox>();
     private readonly IExpiryNotificationLog _log = Substitute.For<IExpiryNotificationLog>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
+    private readonly ISettingsReader _settingsReader = Substitute.For<ISettingsReader>();
     private readonly FakeTimeProvider _clock = new(Now);
 
     public ExpiryScanTests()
@@ -32,10 +36,16 @@ public class ExpiryScanTests
             .Returns(true);
         _uow.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>())
             .Returns(call => ((Func<CancellationToken, Task>)call[0]).Invoke(call.Arg<CancellationToken>()));
+
+        // Mismos defaults que el setting: nada de esto cambia el comportamiento
+        // hoy, solo prueba que la ruta de lectura funciona igual.
+        _settingsReader.GetValue(SettingDefinitions.CertificateExpiryThresholdsDays).Returns("90,30,15,7");
+        _settingsReader.GetValue(SettingDefinitions.SequenceExpiryThresholdsDays).Returns("30,7");
+        _settingsReader.GetValue(SettingDefinitions.SequenceLowStockFraction).Returns(DefaultLowStockFraction);
     }
 
     private ExpiryScan Sut() => new(
-        _certs, _sequences, _outbox, _log, _uow, _clock, NullLogger<ExpiryScan>.Instance);
+        _certs, _sequences, _outbox, _log, _uow, _settingsReader, _clock, NullLogger<ExpiryScan>.Instance);
 
     private static CertificateDto Cert(DateTimeOffset validTo, string status = "Active") => new(
         Guid.CreateVersion7(), "Test", "130000001", "CN=x", "CN=ca", "abc",
@@ -43,8 +53,13 @@ public class ExpiryScanTests
 
     private static NcfSequenceDto Seq(
         long rangeTo = 100, long next = 1, DateOnly? expiresOn = null, bool active = true)
-        => new(Guid.CreateVersion7(), "Test", 31, "E", 1, rangeTo, next,
-            rangeTo, Math.Max(rangeTo - next + 1, 0), expiresOn, active, Now.AddYears(-1));
+    {
+        var remaining = Math.Max(rangeTo - next + 1, 0);
+        var isLowStock = remaining <= (long)Math.Ceiling(rangeTo * DefaultLowStockFraction);
+
+        return new(Guid.CreateVersion7(), "Test", 31, "E", 1, rangeTo, next,
+            rangeTo, remaining, isLowStock, expiresOn, active, Now.AddYears(-1));
+    }
 
     private Task Run() => Sut().RunForCurrentTenantAsync(TenantId);
 
