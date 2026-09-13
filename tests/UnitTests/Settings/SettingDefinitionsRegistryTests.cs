@@ -53,4 +53,29 @@ public class SettingDefinitionsRegistryTests
         def.Validate("POS").IsError.ShouldBeFalse();
         def.Validate("a4").IsError.ShouldBeTrue();
     }
+
+    [Fact]
+    public void The_duplicate_detection_mode_defaults_to_off_with_three_options()
+    {
+        var def = SettingDefinitions.EcfDuplicateDetectionMode;
+
+        def.Scope.ShouldBe(SettingScope.Platform);
+        def.TenantWritable.ShouldBeFalse();
+        def.SerializedDefault.ShouldBe("off");
+        def.Options.ShouldBe(new[] { "off", "observar", "bloquear" });
+        def.Validate("bloquear").IsError.ShouldBeFalse();
+        def.Validate("BLOQUEAR").IsError.ShouldBeFalse();
+        def.Validate("bloqueando").IsError.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void The_duplicate_detection_window_is_bounded_in_minutes_to_hours()
+    {
+        var def = SettingDefinitions.EcfDuplicateDetectionWindow;
+
+        def.Scope.ShouldBe(SettingScope.Platform);
+        def.Validate("5m").IsError.ShouldBeFalse();
+        def.Validate("10s").IsError.ShouldBeTrue();
+        def.Validate("2h").IsError.ShouldBeTrue();
+    }
 }

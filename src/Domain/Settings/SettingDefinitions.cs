@@ -53,6 +53,34 @@ public static class SettingDefinitions
         scope: SettingScope.Tenant,
         tenantWritable: true);
 
+    /// <summary>
+    /// Detección de e-CF duplicados por huella (comprador + tipo + monto + fecha +
+    /// ambiente): <c>off</c> no hace nada, <c>observar</c> emite
+    /// <c>ecf.duplicate_suspected</c> sin bloquear, <c>bloquear</c> rechaza con
+    /// <c>409</c>. Exige que el comprador traiga RNC/cédula — sin identificador no
+    /// hay huella confiable (p. ej. facturas de consumo &lt; DOP 250,000 con
+    /// "CONSUMIDOR FINAL" repetido, donde el nombre no distingue compradores
+    /// distintos). Default <c>off</c>: es comportamiento nuevo que podría rechazar
+    /// negocio legítimo si se activa sin pensarlo.
+    /// </summary>
+    public static readonly OptionSetting EcfDuplicateDetectionMode = new(
+        key: "ecf.duplicate_detection_mode",
+        group: "Emisión de e-CF",
+        label: "Detección de duplicados",
+        @default: "off",
+        options: ["off", "observar", "bloquear"],
+        description: "Detección de e-CF duplicados por huella (comprador con RNC/cédula + tipo + monto + fecha).");
+
+    /// <summary>Ventana dentro de la cual dos comprobantes con la misma huella se consideran duplicados.</summary>
+    public static readonly DurationSetting EcfDuplicateDetectionWindow = new(
+        key: "ecf.duplicate_detection_window",
+        group: "Emisión de e-CF",
+        label: "Ventana de detección",
+        @default: TimeSpan.FromMinutes(5),
+        min: TimeSpan.FromSeconds(30),
+        max: TimeSpan.FromHours(1),
+        description: "Dos comprobantes con la misma huella emitidos dentro de esta ventana se consideran el mismo.");
+
     private static readonly SettingDefinition[] AllDefinitions = BuildRegistry();
 
     /// <summary>Todas las definiciones declaradas, ordenadas por grupo y etiqueta.</summary>
