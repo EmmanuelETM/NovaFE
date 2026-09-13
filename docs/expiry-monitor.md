@@ -10,12 +10,17 @@ facturar; esto lo avisa con antelación.
 
 | Evento | Se dispara cuando | Umbrales |
 |---|---|---|
-| `certificate.expiring` | El certificado activo se acerca a `ValidTo` | 90 / 30 / 15 / 7 días |
+| `certificate.expiring` | El certificado activo se acerca a `ValidTo` | `notifications.certificate_expiry_thresholds_days` (default `90,30,15,7` días) |
 | `certificate.expired` | `now ≥ ValidTo` | — |
-| `sequence.expiring` | El rango se acerca a `ExpiresOn` (31-dic del año siguiente a la autorización) | 30 / 7 días |
+| `sequence.expiring` | El rango se acerca a `ExpiresOn` (31-dic del año siguiente a la autorización) | `notifications.sequence_expiry_thresholds_days` (default `30,7` días) |
 | `sequence.expired` | `hoy > ExpiresOn` (calendario dominicano) | — |
-| `sequence.low` | El stock cayó al 20 % o menos del rango (RF-07.3, `NcfSequence.IsLowStock`) | — |
+| `sequence.low` | El stock cayó al umbral o menos del rango (RF-07.3, `NcfSequenceDto.IsLowStock`) | `sequences.low_stock_fraction` (default 20 %) |
 | `sequence.exhausted` | No quedan secuencias por entregar | — |
+
+Los tres umbrales son settings runtime (`/api/v1/platform-settings`, grupos
+"Vencimientos" y "Secuencias e-NCF") — antes hardcoded en `ExpiryScan` sin
+ningún camino de configuración, ni siquiera bootstrap. Ver
+`docs/configuration.md`.
 
 El `data.object` del sobre es el recurso tal cual lo devuelve su `GET`
 (`CertificateDto` / `NcfSequenceDto`); el consumidor lee `validTo` / `expiresOn` /

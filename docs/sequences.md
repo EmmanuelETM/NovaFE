@@ -40,7 +40,7 @@ chequeo de vencimiento va **antes** que el de stock (RF-07.4).
 | Interfaz (Application) | Impl (Infrastructure) | Rol |
 |---|---|---|
 | `INcfSequenceRepository` | `NcfSequenceRepository` (EF Core) | Escritura: alta de rangos, chequeo de serie activa duplicada. |
-| `INcfSequenceReadRepository` | `NcfSequenceReadRepository` (Dapper) | Lectura: `capacity` y `remaining` se calculan en SQL; `IsLowStock` y `TypeName` en el read model. |
+| `INcfSequenceReadRepository` | `NcfSequenceReadRepository` (Dapper) | Lectura: `capacity`, `remaining` e `isLowStock` (RF-07.3, con el setting runtime `sequences.low_stock_fraction`, default 20%) se calculan en SQL; `TypeName` en el read model. |
 | `INcfSequenceAllocator` | `NcfSequenceAllocator` (EF Core) | **Asignación atómica** (RF-07.2). |
 
 `NcfSequence` (agregado, `ITenantOwned`): un rango autorizado. `Authorize(...)`
