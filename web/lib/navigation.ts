@@ -1,4 +1,5 @@
 import {
+  Activity,
   LayoutDashboard,
   Settings2,
   SlidersHorizontal,
@@ -99,6 +100,15 @@ export const NAVIGATION: readonly NavSection[] = [
         label: "Configuración",
         description: "Los ajustes operativos de la plataforma",
         icon: SlidersHorizontal,
+        minRole: ROLE.admin_sistema,
+        ready: true,
+      },
+      {
+        href: "/plataforma/operacion",
+        label: "Operación",
+        description:
+          "Latido de los workers, los outbox y las secuencias, en vivo",
+        icon: Activity,
         minRole: ROLE.admin_sistema,
         ready: true,
       },

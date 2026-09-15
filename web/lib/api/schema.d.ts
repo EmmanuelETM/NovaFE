@@ -828,6 +828,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ops/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["OpsStatusDto"];
+                        "application/json": components["schemas"]["OpsStatusDto"];
+                        "text/json": components["schemas"]["OpsStatusDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform-settings": {
         parameters: {
             query?: never;
@@ -2833,6 +2870,24 @@ export interface components {
             idempotencyKey?: null | string;
             declaredTotals?: null | components["schemas"]["EcfDeclaredTotalsPayload"];
         };
+        OpsStatusDto: {
+            /** Format: date-time */
+            generatedAt: string;
+            workers: components["schemas"]["WorkerStatusDto"][];
+            ecfSubmissionOutbox: components["schemas"]["OutboxStatusDto"];
+            webhookOutbox: components["schemas"]["OutboxStatusDto"];
+            sequencesAtRisk: components["schemas"]["SequenceAtRiskDto"][];
+        };
+        OutboxStatusDto: {
+            /** Format: int32 */
+            pending: number | string;
+            /** Format: int32 */
+            processing: number | string;
+            /** Format: int32 */
+            dead: number | string;
+            /** Format: date-time */
+            oldestPendingAt: null | string;
+        };
         PagedResultOfEcfSummaryDto: {
             items: components["schemas"]["EcfSummaryDto"][];
             /** Format: int32 */
@@ -3121,6 +3176,12 @@ export interface components {
             environment?: null | string;
             sequenceTypes?: null | (number | string)[];
         };
+        SequenceAtRiskDto: {
+            tenantName: string;
+            type: string;
+            /** Format: int64 */
+            remaining: number | string;
+        };
         SetEmitterProfileBody: {
             address: string;
             municipality: null | string;
@@ -3208,6 +3269,13 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        WorkerStatusDto: {
+            name: string;
+            /** Format: date-time */
+            lastBeatAt: string;
+            maxSilence: string;
+            healthy: boolean;
         };
     };
     responses: never;

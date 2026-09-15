@@ -55,4 +55,10 @@ export const queryKeys = {
     all: ["tenants"] as const,
     options: () => ["tenants", "options"] as const,
   },
+
+  /** `GET /ops/status`: latido de workers, outbox y secuencias (operador). */
+  ops: {
+    all: ["ops"] as const,
+    status: () => ["ops", "status"] as const,
+  },
 } as const;

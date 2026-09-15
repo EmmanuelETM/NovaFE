@@ -1,3 +1,4 @@
+using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Notifications;
 using NovaFE.Service.Configuration;
 using Microsoft.Extensions.Options;

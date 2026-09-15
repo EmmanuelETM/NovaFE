@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Service.Configuration;
 

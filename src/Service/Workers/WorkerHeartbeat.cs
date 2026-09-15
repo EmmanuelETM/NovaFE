@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using NovaFE.Application.Common.Interfaces;
 
 namespace NovaFE.Service.Workers;
 

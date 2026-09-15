@@ -1,3 +1,4 @@
+using NovaFE.Application.Common.Interfaces;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace NovaFE.Service.Workers;
