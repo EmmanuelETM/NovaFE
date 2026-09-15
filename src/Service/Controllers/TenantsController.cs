@@ -70,11 +70,13 @@ public sealed class TenantsController(
 
     /// <summary>El perfil fiscal del emisor (dirección, ubicación, teléfonos, ambiente).</summary>
     [HttpGet("{id:guid}/emitter-profile")]
+    [ProducesResponseType(typeof(EmitterProfileDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetEmitterProfile(Guid id, CancellationToken ct)
         => (await getEmitterProfile.Execute(new GetEmitterProfileQuery(id), ct)).Match(Ok, Problem);
 
     /// <summary>Crea o reemplaza el perfil fiscal del emisor (upsert).</summary>
     [HttpPut("{id:guid}/emitter-profile")]
+    [ProducesResponseType(typeof(EmitterProfileDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> SetEmitterProfile(
         Guid id,
         [FromBody] SetEmitterProfileBody body,
@@ -97,6 +99,7 @@ public sealed class TenantsController(
     /// la <b>única</b> vez que se puede ver: guárdalo.
     /// </summary>
     [HttpPost("{id:guid}/api-keys")]
+    [ProducesResponseType(typeof(ApiKeyCreatedDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateApiKey(
         Guid id,
         [FromBody] CreateApiKeyBody? body,
@@ -109,6 +112,7 @@ public sealed class TenantsController(
 
     /// <summary>Las API keys del contribuyente (sin los tokens).</summary>
     [HttpGet("{id:guid}/api-keys")]
+    [ProducesResponseType(typeof(IReadOnlyList<ApiKeyDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> ListApiKeys(Guid id, CancellationToken ct)
         => (await listApiKeys.Execute(new ListApiKeysQuery(id), ct)).Match(Ok, Problem);
 

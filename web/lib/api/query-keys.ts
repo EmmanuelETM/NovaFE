@@ -50,10 +50,15 @@ export const queryKeys = {
       ["platform-users", "by-tenant", tenantId] as const,
   },
 
-  /** `GET /tenants`: contribuyentes (para el selector). */
+  /** `GET /tenants`: contribuyentes (para el selector, el listado y el detalle). */
   tenants: {
     all: ["tenants"] as const,
     options: () => ["tenants", "options"] as const,
+    list: (filters: Filters) => ["tenants", "list", filters] as const,
+    detail: (id: string) => ["tenants", "detail", id] as const,
+    certificates: (id: string) => ["tenants", "certificates", id] as const,
+    sequences: (id: string) => ["tenants", "sequences", id] as const,
+    apiKeys: (id: string) => ["tenants", "api-keys", id] as const,
   },
 
   /** `GET /ops/status`: latido de workers, outbox y secuencias (operador). */

@@ -34,9 +34,13 @@ async function request<T>(
   init: RequestInit,
   query?: Query,
 ): Promise<T> {
+  const isForm = init.body instanceof FormData;
+
   const response = await fetch(withQuery(path, query), {
     ...init,
-    headers: { "Content-Type": "application/json", ...init.headers },
+    headers: isForm
+      ? init.headers
+      : { "Content-Type": "application/json", ...init.headers },
   });
 
   if (!response.ok)
@@ -56,6 +60,15 @@ export const api = {
 
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
+
+  /**
+   * Igual que `post`, pero para `multipart/form-data` (subir un archivo). No
+   * fija `Content-Type`: el navegador le agrega el `boundary` solo cuando el
+   * cuerpo es un `FormData` y no hay esa cabecera puesta (ver `isForm` en
+   * `request`).
+   */
+  postForm: <T>(path: string, form: FormData) =>
+    request<T>(path, { method: "POST", body: form }),
 
   patch: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),

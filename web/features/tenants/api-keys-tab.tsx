@@ -1,0 +1,307 @@
+"use client";
+
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useController, useForm } from "react-hook-form";
+import { z } from "zod";
+import { Check, Copy, KeyRound } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { applyFieldErrors } from "@/lib/api/form-errors";
+import { roleLabel } from "@/features/auth/roles";
+import { formatDate } from "@/lib/format";
+import { selectItems } from "@/lib/select-items";
+
+import { ENVIRONMENT_OPTIONS } from "./options";
+import { TENANT_ROLE_OPTIONS } from "../users/role-options";
+import {
+  useCreateApiKey,
+  useRevokeApiKey,
+  useTenantApiKeys,
+} from "./use-tenant-api-keys";
+import { tenantErrorMessage } from "./use-tenants";
+import type { ApiKey } from "./types";
+
+function isActive(key: ApiKey): boolean {
+  return !key.revokedAt;
+}
+
+export function ApiKeysTab({ tenantId }: { tenantId: string }) {
+  const { data: keys, isPending } = useTenantApiKeys(tenantId);
+  const revoke = useRevokeApiKey();
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end">
+        <CreateApiKeyDialog tenantId={tenantId} />
+      </div>
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Etiqueta</TableHead>
+            <TableHead>Prefijo</TableHead>
+            <TableHead>Ambiente</TableHead>
+            <TableHead>Rol</TableHead>
+            <TableHead>Vencimiento</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isPending ? (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="text-muted-foreground text-center"
+              >
+                Cargando…
+              </TableCell>
+            </TableRow>
+          ) : !keys || keys.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="text-muted-foreground text-center"
+              >
+                Sin API keys acuñadas.
+              </TableCell>
+            </TableRow>
+          ) : (
+            keys.map((key) => (
+              <TableRow key={key.id}>
+                <TableCell>{key.label}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {key.prefix}
+                </TableCell>
+                <TableCell>{key.environment}</TableCell>
+                <TableCell>{roleLabel(key.role)}</TableCell>
+                <TableCell>
+                  {key.expiresAt
+                    ? formatDate(key.expiresAt)
+                    : "Sin vencimiento"}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={isActive(key) ? "outline" : "destructive"}>
+                    {isActive(key) ? "Activa" : "Revocada"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  {isActive(key) && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      disabled={revoke.isPending}
+                      onClick={() => revoke.mutate({ tenantId, keyId: key.id })}
+                    >
+                      Revocar
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+const schema = z.object({
+  label: z.string(),
+  environment: z.string(),
+  role: z.string().min(1, "El rol es obligatorio."),
+});
+
+type Values = z.infer<typeof schema>;
+
+function CreateApiKeyDialog({ tenantId }: { tenantId: string }) {
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const create = useCreateApiKey();
+
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: { label: "", environment: "", role: "admin_tenant" },
+  });
+  const environment = useController({
+    control: form.control,
+    name: "environment",
+  });
+  const role = useController({ control: form.control, name: "role" });
+
+  const submit = form.handleSubmit(async (values) => {
+    try {
+      const created = await create.mutateAsync({
+        tenantId,
+        label: values.label.trim() || null,
+        environment: values.environment || null,
+        role: values.role,
+      });
+      setToken(created.token);
+    } catch (error) {
+      if (!applyFieldErrors(error, form.setError)) {
+        form.setError("role", { message: tenantErrorMessage(error) });
+      }
+    }
+  });
+
+  const close = () => {
+    setOpen(false);
+    form.reset();
+    setToken(null);
+    setCopied(false);
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => (next ? setOpen(true) : close())}
+    >
+      <DialogTrigger render={<Button size="xs" />}>
+        <KeyRound /> Nueva API key
+      </DialogTrigger>
+
+      <DialogContent>
+        {token ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>API key acuñada</DialogTitle>
+              <DialogDescription>
+                Esta es la <b>única</b> vez que se puede ver el token. Cópialo y
+                guárdalo en un lugar seguro.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex items-center gap-2">
+              <Input readOnly value={token} className="font-mono text-xs" />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                onClick={() => {
+                  void navigator.clipboard.writeText(token);
+                  setCopied(true);
+                }}
+              >
+                {copied ? <Check /> : <Copy />}
+              </Button>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" onClick={close}>
+                Listo
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Nueva API key</DialogTitle>
+              <DialogDescription>
+                Requiere certificado activo y un rango de e-NCF para el ambiente
+                elegido — si falta alguno, la petición lo dice.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+              <Field>
+                <FieldLabel htmlFor="apikey-label">
+                  Etiqueta (opcional)
+                </FieldLabel>
+                <Input id="apikey-label" {...form.register("label")} />
+                <FieldError errors={[form.formState.errors.label]} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="apikey-environment">
+                  Ambiente (vacío = el del perfil de emisor)
+                </FieldLabel>
+                <Select
+                  items={selectItems(ENVIRONMENT_OPTIONS)}
+                  value={environment.field.value}
+                  onValueChange={(next) =>
+                    environment.field.onChange(String(next))
+                  }
+                >
+                  <SelectTrigger id="apikey-environment" className="w-full">
+                    <SelectValue placeholder="Ambiente por defecto del perfil" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ENVIRONMENT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError errors={[form.formState.errors.environment]} />
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="apikey-role">Rol</FieldLabel>
+                <Select
+                  items={selectItems(TENANT_ROLE_OPTIONS)}
+                  value={role.field.value}
+                  onValueChange={(next) => role.field.onChange(String(next))}
+                >
+                  <SelectTrigger id="apikey-role" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TENANT_ROLE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError errors={[form.formState.errors.role]} />
+              </Field>
+
+              <DialogFooter>
+                <DialogClose
+                  render={<Button type="button" variant="outline" />}
+                >
+                  Cancelar
+                </DialogClose>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  Acuñar
+                </Button>
+              </DialogFooter>
+            </form>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

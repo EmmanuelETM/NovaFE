@@ -9,7 +9,14 @@ namespace NovaFE.Service.Common;
 /// API key lleva el tenant y su ambiente; el header <c>X-Tenant-Id</c> de
 /// Development lleva solo el tenant.
 /// </summary>
-internal sealed class CurrentTenant : ICurrentTenant
+/// <summary>
+/// Pública (no <c>internal</c>) porque un controller con constructor primario
+/// no puede tener un parámetro menos accesible que el propio constructor
+/// (CS0051) — <c>CertificatesController</c>/<c>SequencesController</c> la
+/// inyectan para fijar el tenant de una petición de operador. El control de
+/// acceso real sigue siendo <see cref="Set"/>, que es <c>internal</c>.
+/// </summary>
+public sealed class CurrentTenant : ICurrentTenant
 {
     public Guid? TenantId { get; private set; }
 

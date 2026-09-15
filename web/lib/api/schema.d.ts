@@ -132,6 +132,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/{tenantid}/certificates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CertificateDto"][];
+                        "application/json": components["schemas"]["CertificateDto"][];
+                        "text/json": components["schemas"]["CertificateDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantid: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/x-www-form-urlencoded": {
+                        File?: components["schemas"]["IFormFile"];
+                        Password?: string;
+                        Environment?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{tenantid}/certificates/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantid: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dgii/connection": {
         parameters: {
             query?: never;
@@ -1305,6 +1407,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/{tenantid}/sequences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["NcfSequenceDto"][];
+                        "application/json": components["schemas"]["NcfSequenceDto"][];
+                        "text/json": components["schemas"]["NcfSequenceDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantid: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegisterSequenceRangeCommand"];
+                    "text/json": components["schemas"]["RegisterSequenceRangeCommand"];
+                    "application/*+json": components["schemas"]["RegisterSequenceRangeCommand"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings": {
         parameters: {
             query?: never;
@@ -1631,7 +1797,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["EmitterProfileDto"];
+                        "application/json": components["schemas"]["EmitterProfileDto"];
+                        "text/json": components["schemas"]["EmitterProfileDto"];
+                    };
                 };
             };
         };
@@ -1657,7 +1827,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["EmitterProfileDto"];
+                        "application/json": components["schemas"]["EmitterProfileDto"];
+                        "text/json": components["schemas"]["EmitterProfileDto"];
+                    };
                 };
             };
         };
@@ -1691,7 +1865,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["ApiKeyDto"][];
+                        "application/json": components["schemas"]["ApiKeyDto"][];
+                        "text/json": components["schemas"]["ApiKeyDto"][];
+                    };
                 };
             };
         };
@@ -1713,12 +1891,16 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description OK */
-                200: {
+                /** @description Created */
+                201: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["ApiKeyCreatedDto"];
+                        "application/json": components["schemas"]["ApiKeyCreatedDto"];
+                        "text/json": components["schemas"]["ApiKeyCreatedDto"];
+                    };
                 };
             };
         };
@@ -2371,6 +2553,46 @@ export interface components {
             /** Format: int32 */
             type: number | string;
         };
+        ApiKeyCreatedDto: {
+            key: components["schemas"]["ApiKeyDto"];
+            token: string;
+        };
+        ApiKeyDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenantId: string;
+            prefix: string;
+            label: string;
+            environment: string;
+            role: string;
+            /** Format: date-time */
+            expiresAt: null | string;
+            /** Format: date-time */
+            revokedAt: null | string;
+            /** Format: date-time */
+            lastUsedAt: null | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CertificateDto: {
+            /** Format: uuid */
+            id: string;
+            environment: string;
+            holderIdentifier: string;
+            subject: string;
+            issuer: string;
+            thumbprint: string;
+            /** Format: date-time */
+            validFrom: string;
+            /** Format: date-time */
+            validTo: string;
+            status: string;
+            /** Format: date-time */
+            revokedAt: null | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
         ChangeRoleBody: {
             role: string;
         };
@@ -2808,6 +3030,23 @@ export interface components {
             carrierName?: null | string;
             voyageNumber?: null | string;
         };
+        EmitterProfileDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenantId: string;
+            address: string;
+            municipality: null | string;
+            province: null | string;
+            phones: string[];
+            email: null | string;
+            economicActivity: null | string;
+            defaultEnvironment: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: null | string;
+        };
         /** Format: binary */
         IFormFile: string;
         /**
@@ -2869,6 +3108,31 @@ export interface components {
             pagination?: null | components["schemas"]["EcfPagePayload"][];
             idempotencyKey?: null | string;
             declaredTotals?: null | components["schemas"]["EcfDeclaredTotalsPayload"];
+        };
+        NcfSequenceDto: {
+            /** Format: uuid */
+            id: string;
+            environment: string;
+            /** Format: int32 */
+            type: number | string;
+            series: string;
+            /** Format: int64 */
+            rangeFrom: number | string;
+            /** Format: int64 */
+            rangeTo: number | string;
+            /** Format: int64 */
+            next: number | string;
+            /** Format: int64 */
+            capacity: number | string;
+            /** Format: int64 */
+            remaining: number | string;
+            isLowStock: boolean;
+            /** Format: date */
+            expiresOn: null | string;
+            active: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            typeName?: null | string;
         };
         OpsStatusDto: {
             /** Format: date-time */

@@ -1,5 +1,6 @@
 import {
   Activity,
+  Building2,
   LayoutDashboard,
   Settings2,
   SlidersHorizontal,
@@ -87,6 +88,15 @@ export const NAVIGATION: readonly NavSection[] = [
     // contribuyente (esa es `/configuracion`).
     label: "Plataforma",
     items: [
+      {
+        href: "/plataforma/tenants",
+        label: "Contribuyentes",
+        description:
+          "Alta y gestión de contribuyentes: perfil, certificados, secuencias y API keys",
+        icon: Building2,
+        minRole: ROLE.admin_sistema,
+        ready: true,
+      },
       {
         href: "/plataforma/usuarios",
         label: "Usuarios",
