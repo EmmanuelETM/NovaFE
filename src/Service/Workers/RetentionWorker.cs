@@ -11,8 +11,11 @@ namespace NovaFE.Service.Workers;
 internal sealed class RetentionWorker(
     IRetentionPump pump,
     IOptionsMonitor<RetentionOptions> options,
+    IWorkerHeartbeat heartbeat,
     ILogger<RetentionWorker> logger) : BackgroundService
 {
+    private const string HeartbeatName = "retention";
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation(
@@ -35,6 +38,8 @@ internal sealed class RetentionWorker(
             {
                 logger.LogError(ex, "El barrido de retención falló");
             }
+
+            heartbeat.Beat(HeartbeatName, options.CurrentValue.Interval * 3);
 
             // Se relee en cada iteración: un cambio en caliente aplica al próximo ciclo.
             await SafeDelayAsync(options.CurrentValue.Interval, stoppingToken);

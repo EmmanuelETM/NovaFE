@@ -12,8 +12,10 @@ namespace NovaFE.Service.Workers;
 internal sealed class EcfSubmissionWorker(
     IEcfSubmissionPump pump,
     IOptionsMonitor<EcfSubmissionOptions> options,
+    IWorkerHeartbeat heartbeat,
     ILogger<EcfSubmissionWorker> logger) : BackgroundService
 {
+    private const string HeartbeatName = "ecf-submission";
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var baseInterval = options.CurrentValue.PollInterval;
@@ -47,6 +49,8 @@ internal sealed class EcfSubmissionWorker(
             {
                 logger.LogError(ex, "El tick del worker de envío falló");
             }
+
+            heartbeat.Beat(HeartbeatName, maxInterval * 3);
 
             // Con trabajo, ritmo base; con la cola vacía, se duplica la espera
             // hasta el techo — así una instancia ociosa deja de martillar la base.

@@ -268,6 +268,35 @@ public static class SettingDefinitions
         max: TimeSpan.FromHours(1),
         description: "Dos comprobantes con la misma huella emitidos dentro de esta ventana se consideran el mismo.");
 
+    /// <summary>
+    /// A partir de qué duración de request se sube el log de
+    /// <c>UseSerilogRequestLogging</c> (<c>Program.cs</c>) de Information a
+    /// Warning. Ver <c>docs/observability.md</c>.
+    /// </summary>
+    public static readonly IntegerSetting SlowRequestThresholdMs = new(
+        key: "observability.slow_request_threshold_ms",
+        group: "Observabilidad",
+        label: "Umbral de request lento",
+        @default: 1000,
+        min: 1,
+        max: 60_000,
+        unit: "ms",
+        description: "Duración de request a partir de la cual el log sube de Information a Warning.");
+
+    /// <summary>
+    /// A partir de qué duración de comando SQL <c>SlowQueryLoggingInterceptor</c>
+    /// loguea en Warning. Ver <c>docs/observability.md</c>.
+    /// </summary>
+    public static readonly IntegerSetting SlowQueryThresholdMs = new(
+        key: "observability.slow_query_threshold_ms",
+        group: "Observabilidad",
+        label: "Umbral de consulta lenta",
+        @default: 500,
+        min: 1,
+        max: 60_000,
+        unit: "ms",
+        description: "Duración de un comando SQL a partir de la cual se loguea en Warning.");
+
     private static readonly SettingDefinition[] AllDefinitions = BuildRegistry();
 
     /// <summary>Todas las definiciones declaradas, ordenadas por grupo y etiqueta.</summary>

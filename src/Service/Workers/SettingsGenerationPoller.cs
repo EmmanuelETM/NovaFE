@@ -13,8 +13,10 @@ namespace NovaFE.Service.Workers;
 internal sealed class SettingsGenerationPoller(
     ISettingsRefreshPump pump,
     IOptionsMonitor<SettingsOptions> options,
+    IWorkerHeartbeat heartbeat,
     ILogger<SettingsGenerationPoller> logger) : BackgroundService
 {
+    private const string HeartbeatName = "settings-poller";
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation(
@@ -48,6 +50,8 @@ internal sealed class SettingsGenerationPoller(
         {
             logger.LogError(ex, "El poll de settings falló; se mantiene el snapshot vigente");
         }
+
+        heartbeat.Beat(HeartbeatName, options.CurrentValue.PollInterval * 3);
     }
 
     private static async Task SafeDelayAsync(TimeSpan delay, CancellationToken ct)

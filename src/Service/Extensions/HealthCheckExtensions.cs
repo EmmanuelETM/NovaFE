@@ -1,4 +1,5 @@
 using NovaFE.Infrastructure.Persistence;
+using NovaFE.Service.Workers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -33,7 +34,10 @@ internal static class HealthCheckExtensions
                 // Sin este timeout, un PostgreSQL inalcanzable tarda ~15s en fallar
                 // (el connect timeout del driver) y el probe de readiness expira antes
                 // de recibir respuesta, que es peor que recibir un 503 rápido.
-                timeout: TimeSpan.FromSeconds(5));
+                timeout: TimeSpan.FromSeconds(5))
+            // Sin tag "ready" a propósito: ver el comentario de la clase. Solo
+            // debe aparecer en /health, no afectar el balanceador ni el reinicio.
+            .AddCheck<WorkerLivenessHealthCheck>("workers", failureStatus: HealthStatus.Unhealthy);
 
         return services;
     }

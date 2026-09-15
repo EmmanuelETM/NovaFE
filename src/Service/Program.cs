@@ -8,6 +8,7 @@ using NovaFE.Application.Notifications;
 using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks.Delivery;
 using NovaFE.Domain.Common.Json;
+using NovaFE.Domain.Settings;
 using NovaFE.Infrastructure;
 using NovaFE.Infrastructure.Persistence;
 using NovaFE.Service.Common;
@@ -166,6 +167,9 @@ try
     // ==========================================
     //     4. Observabilidad & Health Checks
     // ==========================================
+
+    // Latido de los workers de arriba; lo consume WorkerLivenessHealthCheck.
+    builder.Services.AddSingleton<IWorkerHeartbeat, WorkerHeartbeat>();
 
     builder.Services.AddObservability(builder.Configuration);
     builder.Services.AddHealthChecksSetup(builder.Configuration);
@@ -330,9 +334,14 @@ try
                 path.StartsWithSegments("/_blazor", StringComparison.OrdinalIgnoreCase))
                 return LogEventLevel.Verbose;
 
-            return ex != null || httpContext.Response.StatusCode >= 500
-                ? LogEventLevel.Error
-                : LogEventLevel.Information;
+            if (ex != null || httpContext.Response.StatusCode >= 500)
+                return LogEventLevel.Error;
+
+            var threshold = httpContext.RequestServices
+                .GetRequiredService<ISettingsReader>()
+                .GetValue(SettingDefinitions.SlowRequestThresholdMs);
+
+            return elapsed >= threshold ? LogEventLevel.Warning : LogEventLevel.Information;
         };
     });
 

@@ -18,6 +18,7 @@ internal static class EfCorePersistenceExtensions
         services.AddScoped<AuditableEntityInterceptor>();
         services.AddScoped<TenantStampingInterceptor>();
         services.AddScoped<TenantConnectionInterceptor>();
+        services.AddScoped<SlowQueryLoggingInterceptor>();
 
         services.AddDbContext<AppDbContext>((sp, options) =>
         {
@@ -47,7 +48,8 @@ internal static class EfCorePersistenceExtensions
                 sp.GetRequiredService<TenantConnectionInterceptor>(),
                 sp.GetRequiredService<SoftDeleteInterceptor>(),
                 sp.GetRequiredService<TenantStampingInterceptor>(),
-                sp.GetRequiredService<AuditableEntityInterceptor>());
+                sp.GetRequiredService<AuditableEntityInterceptor>(),
+                sp.GetRequiredService<SlowQueryLoggingInterceptor>());
         });
 
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();

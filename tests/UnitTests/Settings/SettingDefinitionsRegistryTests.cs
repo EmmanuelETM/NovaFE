@@ -98,6 +98,8 @@ public class SettingDefinitionsRegistryTests
     [InlineData("webhooks.max_attempts")]
     [InlineData("webhooks.auto_disable_after_failures")]
     [InlineData("webhooks.batch_size")]
+    [InlineData("observability.slow_request_threshold_ms")]
+    [InlineData("observability.slow_query_threshold_ms")]
     public void The_new_integer_settings_are_platform_scoped(string key)
     {
         var def = SettingDefinitions.FindByKey(key).ShouldBeOfType<IntegerSetting>();
@@ -143,6 +145,20 @@ public class SettingDefinitionsRegistryTests
         def.Validate("abc").IsError.ShouldBeTrue();
         def.Validate("30,-7").IsError.ShouldBeTrue();
         def.Validate("").IsError.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("observability.slow_request_threshold_ms", "1000")]
+    [InlineData("observability.slow_query_threshold_ms", "500")]
+    public void The_slow_threshold_settings_default_and_reject_out_of_range_values(string key, string expectedDefault)
+    {
+        var def = SettingDefinitions.FindByKey(key).ShouldBeOfType<IntegerSetting>();
+
+        def.SerializedDefault.ShouldBe(expectedDefault);
+        def.Validate("0").IsError.ShouldBeTrue();
+        def.Validate("-1").IsError.ShouldBeTrue();
+        def.Validate("60001").IsError.ShouldBeTrue();
+        def.Validate("1").IsError.ShouldBeFalse();
     }
 
     [Fact]

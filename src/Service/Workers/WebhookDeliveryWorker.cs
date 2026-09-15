@@ -13,8 +13,10 @@ namespace NovaFE.Service.Workers;
 internal sealed class WebhookDeliveryWorker(
     IWebhookDeliveryPump pump,
     IOptionsMonitor<WebhooksOptions> options,
+    IWorkerHeartbeat heartbeat,
     ILogger<WebhookDeliveryWorker> logger) : BackgroundService
 {
+    private const string HeartbeatName = "webhook-delivery";
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var baseInterval = options.CurrentValue.PollInterval;
@@ -47,6 +49,8 @@ internal sealed class WebhookDeliveryWorker(
             {
                 logger.LogError(ex, "El tick del worker de entrega de webhooks falló");
             }
+
+            heartbeat.Beat(HeartbeatName, maxInterval * 3);
 
             delay = processed > 0
                 ? baseInterval

@@ -12,8 +12,11 @@ namespace NovaFE.Service.Workers;
 internal sealed class ExpiryMonitorWorker(
     IExpiryMonitorPump pump,
     IOptionsMonitor<ExpiryMonitorOptions> options,
+    IWorkerHeartbeat heartbeat,
     ILogger<ExpiryMonitorWorker> logger) : BackgroundService
 {
+    private const string HeartbeatName = "expiry-monitor";
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation(
@@ -36,6 +39,8 @@ internal sealed class ExpiryMonitorWorker(
             {
                 logger.LogError(ex, "El barrido del monitor de vencimientos falló");
             }
+
+            heartbeat.Beat(HeartbeatName, options.CurrentValue.Interval * 3);
 
             // Se relee en cada iteración: un cambio en caliente aplica al próximo ciclo.
             await SafeDelayAsync(options.CurrentValue.Interval, stoppingToken);
