@@ -1,4 +1,5 @@
 ﻿using NovaFE.Application.Common;
+using NovaFE.Application.Contingency;
 using NovaFE.Application.Ecf;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Submission;
@@ -35,6 +36,10 @@ public static class ApplicationService
         // Monitor de vencimientos (RF-01.6): barre certificados y secuencias por
         // tenant. El worker/pump viven en Service.
         services.AddScoped<ExpiryScan>();
+
+        // Contingencia M11 Tipo 1: detecta y aplica la transición de
+        // platform.contingency_mode. El worker/pump viven en Service.
+        services.AddScoped<ContingencyMonitor>();
 
         // Auto-register all use cases that implement IUseCase<,>
         var useCaseTypes = assembly.GetTypes()

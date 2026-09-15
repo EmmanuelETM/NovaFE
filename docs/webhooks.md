@@ -1,9 +1,10 @@
 # Webhooks (RF-12.7)
 
 > **Estado: implementado.** Los 6 eventos del ciclo de vida del e-CF + los 6 de
-> vencimiento de certificados y secuencias (RF-01.6, `docs/expiry-monitor.md`),
-> con suscripciones + outbox de entrega + firma HMAC + log de entregas. Los de
-> M5/M8/M11 quedan para su módulo (§Fuera de alcance).
+> vencimiento de certificados y secuencias (RF-01.6, `docs/expiry-monitor.md`)
+> + los 2 de contingencia M11 Tipo 1 (`docs/contingency.md`), con
+> suscripciones + outbox de entrega + firma HMAC + log de entregas. Los de
+> M5/M8/M11 Tipo 2-3 quedan para su módulo (§Fuera de alcance).
 
 Notificaciones asíncronas al ERP del cliente para no depender del polling de
 `GET /ecf/{id}`. Cada tenant configura uno o más endpoints, elige a qué eventos se
@@ -71,13 +72,27 @@ en monto. Ver `docs/ecf-duplicate-detection.md`.
 Los emite `ExpiryMonitorWorker` en un barrido periódico. El `data.object` es el
 `CertificateDto` / `NcfSequenceDto` tal cual su `GET`.
 
+### Contingencia (M11 Tipo 1 — ver [`contingency.md`](contingency.md))
+
+| Evento | Se dispara cuando |
+|---|---|
+| `contingency.activated` | `platform.contingency_mode` se prende (solo o a mano) |
+| `contingency.deactivated` | Se apaga |
+
+No hay un recurso único de por medio — es un cambio de estado de
+**plataforma**, no de un tenant ni de un e-CF puntual. El `data.object` es
+`{ status: "active"\|"inactive", changedAt, oldestPendingMinutes }`. Los emite
+`ContingencyMonitorPump` en un barrido periódico, con *fan-out* a **todos**
+los tenants activos suscritos (no solo uno) — mismo patrón de loop por
+tenant que `ExpiryMonitorWorker`.
+
 ### Después (llegan con su módulo)
 
 | Evento | Módulo |
 |---|---|
 | `inbound_ecf.received` · `acknowledgement.received` · `commercial_approval.received` | M5 |
 | `ecf.voided` | M8 |
-| `contingency.activated` · `contingency.deactivated` | M11 |
+| Contingencia Tipo 2 (declaración manual) / Tipo 3 (caída de la DGII) | M11 (resto) |
 
 ## El sobre (envelope)
 
@@ -211,7 +226,7 @@ grupo "Webhooks"; ver docs/configuration.md).
 
 ## Fuera de alcance (v1)
 
-- Los eventos de M5 / M8 / M11 (llegan con su módulo).
+- Los eventos de M5 / M8 / M11 Tipo 2-3 (llegan con su módulo).
 - Rotación de secret con período de gracia (v1: el viejo muere al instante).
 - Reintento manual de una entrega `dead` desde la API.
 - Filtros de payload / transformaciones por endpoint.

@@ -129,9 +129,11 @@ fusionan: una caída del dominio `fc.dgii.gov.do` no abre el circuito de
 
 `HttpErrorMapper` ya traduce `BrokenCircuitException` (circuito abierto) a
 `Errors.Http.CircuitOpen` — ver `src/Infrastructure/Http/HttpErrorMapper.cs`.
-Esto **no** es contingencia (M11, `IndicadorEnvioDiferido`): solo evita
-martillar un servicio caído; qué hace la app "en contingencia" sigue fuera de
-alcance (ver más abajo).
+Esto por sí solo **no** es contingencia: solo evita martillar un servicio
+caído. La contingencia M11 Tipo 1 (`docs/contingency.md`) no se engancha a
+este circuit breaker (es estado de Polly en memoria, por instancia, no
+compartido entre réplicas) — usa una señal aparte, Postgres-backed, sobre la
+antigüedad del outbox de abajo.
 
 ## Ladders (RF-04.3 / RF-04.7)
 
@@ -139,7 +141,11 @@ alcance (ver más abajo).
   agotarse → `review` + `LogWarning`.
 - **Backoff de envío** ante fallos de transporte: 2 min → 10 min → 30 min → 2 h.
   Al agotarse → `failed` + `LogError`. El gateway sin `TrackId` (XSD, firmante no
-  autorizado…) no se reintenta: `failed` directo.
+  autorizado…) no se reintenta: `failed` directo. **Excepción**: si
+  `platform.contingency_mode` está activo al agotarse el ladder, no se da por
+  perdido — se repite el último escalón indefinidamente en vez de pasar a
+  `failed`, para no perder la ventana de 72h de una contingencia M11 Tipo 1
+  larga. Ver `docs/contingency.md`.
 
 Los dos ladders son settings **runtime** (`submission.poll_ladder` /
 `submission.backoff`, grupo "Envío a la DGII" en `/api/v1/platform-settings`) —
@@ -177,11 +183,12 @@ no en esta sección bootstrap.
 ## Fuera de alcance (módulos propios)
 
 Envío al
-**receptor electrónico** B2B (M5), contingencia / `IndicadorEnvioDiferido` (M11),
-polling de `consultaestatusservicio` (M10), anulación ANECF y estado `voided`
-(M8), liberación de secuencias quemadas por un rechazo (un rechazo simplemente
-quema el número — `docs/sequences.md`), carga manual del XML del tipo 32 en el
-portal DGII (acción del operador).
+**receptor electrónico** B2B (M5), contingencia M11 Tipo 2/3 (Tipo 1 ya
+implementado, ver `docs/contingency.md`), polling de `consultaestatusservicio`
+(M10), anulación ANECF y estado `voided` (M8), liberación de secuencias
+quemadas por un rechazo (un rechazo simplemente quema el número —
+`docs/sequences.md`), carga manual del XML del tipo 32 en el portal DGII
+(acción del operador).
 
 ## Pendiente de verificar contra TesteCF real
 

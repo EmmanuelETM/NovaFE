@@ -41,6 +41,8 @@ public sealed class GetOpsStatusUseCase(
         var webhookOutbox = await readRepository.GetWebhookOutboxStatusAsync(ct);
         var sequencesAtRisk = await readRepository.GetSequencesAtRiskAsync(lowStockFraction, ct);
 
-        return new OpsStatusDto(now, workers, ecfOutbox, webhookOutbox, sequencesAtRisk);
+        var contingencyActive = settingsReader.GetValue(SettingDefinitions.ContingencyMode);
+
+        return new OpsStatusDto(now, workers, ecfOutbox, webhookOutbox, sequencesAtRisk, contingencyActive);
     }
 }

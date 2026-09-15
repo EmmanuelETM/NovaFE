@@ -40,6 +40,7 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
         EcfTotalsSnapshot totals,
         decimal montoTotal,
         bool expectedConditionalAcceptance,
+        bool signedDuringContingency,
         DateTimeOffset signedAt,
         string signatureValue,
         string securityCode,
@@ -62,6 +63,7 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
         Totals = totals;
         MontoTotal = montoTotal;
         ExpectedConditionalAcceptance = expectedConditionalAcceptance;
+        SignedDuringContingency = signedDuringContingency;
         SignedAt = signedAt;
         SignatureValue = signatureValue;
         SecurityCode = securityCode;
@@ -111,6 +113,13 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
     /// la DGII probablemente devolverá "aceptado condicional". Nunca bloquea la emisión.
     /// </summary>
     public bool ExpectedConditionalAcceptance { get; private set; }
+
+    /// <summary>
+    /// La plataforma estaba en contingencia (M11 Tipo 1, <c>platform.contingency_mode</c>)
+    /// al momento de firmar. No cambia el XML — solo determina si la Representación
+    /// Impresa lleva la leyenda de contingencia (RF-09.5).
+    /// </summary>
+    public bool SignedDuringContingency { get; private set; }
 
     public DateTimeOffset SignedAt { get; private set; }
 
@@ -184,11 +193,16 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
     /// Los montos declarados por el cliente (por línea o en el encabezado) quedaron
     /// fuera de la tolerancia; la DGII probablemente los acepte de forma condicional.
     /// </param>
+    /// <param name="signedDuringContingency">
+    /// <c>platform.contingency_mode</c> estaba activo al firmar (M11 Tipo 1). No
+    /// afecta el XML — solo <see cref="SignedDuringContingency"/>.
+    /// </param>
     public static IssuedEcf FromSigned(
         EcfDocument document,
         SignedEcf signed,
         DgiiEnvironment environment,
-        bool expectConditionalAcceptance = false)
+        bool expectConditionalAcceptance = false,
+        bool signedDuringContingency = false)
     {
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(signed);
@@ -210,6 +224,7 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
             EcfTotalsSnapshot.From(document.Totals),
             document.Totals.MontoTotal,
             expectConditionalAcceptance || document.Calculation.Tolerance.ExpectConditionalAcceptance,
+            signedDuringContingency,
             signed.SignedAt,
             signed.SignatureValue,
             signed.SecurityCode,

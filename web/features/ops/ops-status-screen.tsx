@@ -59,6 +59,20 @@ export function OpsStatusScreen() {
 
   return (
     <div className="flex flex-col gap-6">
+      {data.contingencyActive && (
+        <Alert variant="destructive">
+          <ShieldAlert />
+          <AlertTitle>Contingencia activa (M11 Tipo 1)</AlertTitle>
+          <AlertDescription>
+            El envío a la DGII lleva estancado más de lo normal.
+            platform.contingency_mode se prendió solo — los comprobantes siguen
+            firmándose y reintentando, y la Representación Impresa de los nuevos
+            ya lleva la leyenda de contingencia. Se apaga solo cuando el envío
+            se pone al día.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-start gap-3">
         <div className="pt-1.5">
           <StatusDot severity={hero.severity} />

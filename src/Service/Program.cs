@@ -2,6 +2,7 @@ using System.Globalization;
 using Asp.Versioning;
 using NovaFE.Application;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Contingency;
 using NovaFE.Application.Ecf.Submission;
 using NovaFE.Application.Maintenance;
 using NovaFE.Application.Notifications;
@@ -141,6 +142,16 @@ try
 
     if (builder.Configuration.GetValue("ExpiryMonitor:Enabled", defaultValue: true))
         builder.Services.AddHostedService<ExpiryMonitorWorker>();
+
+    // Monitor de contingencia (M11 Tipo 1): antigüedad del outbox de envío a la
+    // DGII → platform.contingency_mode.
+    builder.Services.AddOptions<ContingencyMonitorOptions>()
+        .Bind(builder.Configuration.GetSection(ContingencyMonitorOptions.SectionName))
+        .ValidateDataAnnotations();
+    builder.Services.AddSingleton<IContingencyMonitorPump, ContingencyMonitorPump>();
+
+    if (builder.Configuration.GetValue("ContingencyMonitor:Enabled", defaultValue: true))
+        builder.Services.AddHostedService<ContingencyMonitorWorker>();
 
     // Purga por retención (idempotency_keys + audit_log): tablas de sistema sin
     // ningún otro mecanismo de limpieza. Los tiempos de retención son settings

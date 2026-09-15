@@ -2,9 +2,9 @@ namespace NovaFE.Domain.Webhooks;
 
 /// <summary>
 /// Catálogo de tipos de evento de webhook. Formato <c>categoria.evento</c>. Cubre
-/// el ciclo de vida del e-CF y los avisos de vencimiento de certificados y
-/// secuencias (RF-01.6); los de M5 / M8 / M11 llegan con su módulo (ver
-/// <c>docs/webhooks.md</c>).
+/// el ciclo de vida del e-CF, los avisos de vencimiento de certificados y
+/// secuencias (RF-01.6) y la contingencia M11 Tipo 1 (RF-... Decreto 587-24);
+/// los de M5 / M8 / M11 Tipo 2-3 llegan con su módulo (ver <c>docs/webhooks.md</c>).
 /// </summary>
 public static class WebhookEventType
 {
@@ -31,6 +31,16 @@ public static class WebhookEventType
     public const string SequenceExpired = "sequence.expired";
 
     /// <summary>
+    /// Contingencia M11 Tipo 1 (falta de conectividad): <c>platform.contingency_mode</c>
+    /// se prendió, sola o a mano — no es un evento por tenant, se entrega a todo
+    /// suscriptor activo.
+    /// </summary>
+    public const string ContingencyActivated = "contingency.activated";
+
+    /// <summary>Igual que <see cref="ContingencyActivated"/> pero al apagarse.</summary>
+    public const string ContingencyDeactivated = "contingency.deactivated";
+
+    /// <summary>
     /// Evento sintético de prueba (<c>POST /webhooks/{id}/ping</c>). Se entrega al
     /// endpoint indicado sin importar sus suscripciones — no es un tipo suscribible.
     /// </summary>
@@ -52,9 +62,11 @@ public static class WebhookEventType
         SequenceExhausted,
         SequenceExpiring,
         SequenceExpired,
+        ContingencyActivated,
+        ContingencyDeactivated,
     ];
 
-    private static readonly IReadOnlyList<string> Categories = ["ecf", "certificate", "sequence"];
+    private static readonly IReadOnlyList<string> Categories = ["ecf", "certificate", "sequence", "contingency"];
 
     /// <summary>
     /// ¿<paramref name="value"/> es una entrada válida en la lista <c>events</c> de

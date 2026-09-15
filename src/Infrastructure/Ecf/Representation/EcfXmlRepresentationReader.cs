@@ -15,10 +15,19 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
 {
     private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
+    /// <summary>
+    /// Leyenda verbatim del Instructivo de Contingencia (M11 Tipo 1, RF-09.5) —
+    /// no parafrasear. Ver <c>docs/contingency.md</c>.
+    /// </summary>
+    internal const string ContingencyLegend =
+        "e-CF emitido en modalidad de Contingencia, el cual podrá ser consultado para su validez fiscal, " +
+        "a partir de las setenta y dos (72) horas.";
+
     public RepresentationModel Read(
         string signedEcfXml,
         RepresentationVerification verification,
-        RepresentationDgiiStatus? dgii)
+        RepresentationDgiiStatus? dgii,
+        bool signedDuringContingency = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(signedEcfXml);
         ArgumentNullException.ThrowIfNull(verification);
@@ -41,7 +50,8 @@ internal sealed class EcfXmlRepresentationReader : IEcfRepresentationReader
             Totals: ReadTotals(totales),
             Reference: ReadReference(root.Element("InformacionReferencia")),
             Verification: verification,
-            Dgii: dgii);
+            Dgii: dgii,
+            ContingencyNotice: signedDuringContingency ? ContingencyLegend : null);
     }
 
     private static RepresentationDocumentInfo ReadDocument(XElement idDoc, XElement emisor, XElement header, XElement root)

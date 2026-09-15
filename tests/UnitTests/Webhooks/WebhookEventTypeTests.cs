@@ -12,6 +12,8 @@ public class WebhookEventTypeTests
     [InlineData("certificate.*", true)]
     [InlineData("sequence.low", true)]
     [InlineData("sequence.*", true)]
+    [InlineData("contingency.activated", true)]
+    [InlineData("contingency.*", true)]
     [InlineData("*", true)]
     [InlineData("ecf.exploded", false)]
     [InlineData("cert.*", false)]
@@ -36,11 +38,14 @@ public class WebhookEventTypeTests
     [InlineData("certificate.*", "certificate.expiring", true)]
     [InlineData("sequence.*", "sequence.exhausted", true)]
     [InlineData("certificate.*", "sequence.low", false)]
+    [InlineData("contingency.*", "contingency.activated", true)]
+    [InlineData("contingency.*", "contingency.deactivated", true)]
+    [InlineData("sequence.*", "contingency.activated", false)]
     public void Covers_the_new_categories(string subscription, string eventType, bool expected)
         => WebhookEventType.Covers(subscription, eventType).ShouldBe(expected);
 
     [Fact]
-    public void Subscribable_covers_the_e_cf_lifecycle_plus_certificate_and_sequence()
+    public void Subscribable_covers_the_e_cf_lifecycle_plus_certificate_sequence_and_contingency()
     {
         WebhookEventType.Subscribable.ShouldBe(
         [
@@ -48,6 +53,7 @@ public class WebhookEventTypeTests
             "ecf.rejected", "ecf.review", "ecf.failed", "ecf.duplicate_suspected",
             "certificate.expiring", "certificate.expired",
             "sequence.low", "sequence.exhausted", "sequence.expiring", "sequence.expired",
+            "contingency.activated", "contingency.deactivated",
         ], ignoreOrder: true);
     }
 }

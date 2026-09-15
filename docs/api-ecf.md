@@ -211,6 +211,7 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   "submitsRfce": false,
   "internalNumber": "FAC-2026-00042",
   "toleranceWarning": null,
+  "signedDuringContingency": false,
   "dgii": {
     "trackId": "TRACK-ABC-123",
     "status": "Aceptado",
@@ -256,6 +257,12 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   `processedAt` (resultado definitivo registrado por NovaFE).
 - Fechas de documento (`issueDate`, `sequenceExpiresOn`) en `dd-MM-yyyy`; timestamps
   del sistema en ISO 8601 `-04:00`.
+- **`signedDuringContingency`** (M11 Tipo 1, `docs/contingency.md`): `true` si
+  `platform.contingency_mode` estaba activo al firmar — no cambia nada del XML,
+  solo determina si la Representación Impresa lleva la leyenda de contingencia
+  (RF-09.5). No confundir con `deferredDelivery`/`IndicadorEnvioDiferido` (§4),
+  que es otra cosa: autorización previa y permanente para offline (camiones,
+  handhelds), controlada por el cliente en el payload.
 
 ---
 
@@ -351,7 +358,9 @@ ya está firmado y guardado. Cada transición dispara un webhook (`docs/webhooks
 ## 10. Fuera de alcance (Módulo 5 / 9 / 11 / 14)
 
 - **M5** — envío al receptor electrónico B2B + ACECF / `commercialApproval`.
-- **M11** — contingencia (`IndicadorEnvioDiferido`, Decreto 587-24).
+- **M11 Tipo 2/3** — contingencia por imposibilidad técnica y por caída de la
+  DGII (Decreto 587-24). El Tipo 1 (falta de conectividad) ya está
+  implementado — ver `docs/contingency.md` y `signedDuringContingency` (§6).
 - **RF-02.10** — validar NC ≤ `MontoTotal` del e-CF modificado (necesita el original persistido).
 - **M9 (resto)** — `GET /ecf/{id}/ri` (PDF), bitmap del QR.
 - **M14** — API keys.

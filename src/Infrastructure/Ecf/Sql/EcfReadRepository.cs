@@ -33,6 +33,7 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
              THEN 'Los montos declarados no cuadran dentro de la tolerancia; la DGII podría aceptar el comprobante de forma condicional.'
              ELSE NULL
         END                    AS "ToleranceWarning",
+        signed_during_contingency AS "SignedDuringContingency",
         track_id               AS "TrackId",
         submitted_at           AS "SubmittedAt",
         dgii_processed_at      AS "DgiiProcessedAt",

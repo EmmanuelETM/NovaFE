@@ -21,7 +21,8 @@ ordenable y comparable con las fechas de la DGII (que traen offset).
 | **API (entrada)** | Acepta cualquier offset o `Z`. | idem (`Read` = `reader.GetDateTimeOffset()`) |
 | **Serialización a la DGII** | `<FechaHoraFirma>` etc. en `dd-MM-yyyy HH:mm:ss`, hora dominicana, `≤ ahora` | `DominicanTimeZone.ToDateTimeString(instant)` |
 | **Representación Impresa** | Fechas legalmente en hora dominicana | `DominicanTimeZone.ToDate(String)` |
-| **Aritmética de calendario** | Vencimiento de secuencias e-NCF (31-dic del año siguiente), regla de 30 días de las NC, relojes de contingencia (72 h / 15 d / 30 d) | `timeProvider.GetDominicanToday()` — hacerla en fecha local, no en UTC (si no, te desvías un día cerca de medianoche) |
+| **Aritmética de calendario** | Vencimiento de secuencias e-NCF (31-dic del año siguiente), regla de 30 días de las NC, plazos de contingencia M11 Tipo 2/3 (15 d / 30 d — sin construir, ver `docs/contingency.md`) | `timeProvider.GetDominicanToday()` — hacerla en fecha local, no en UTC (si no, te desvías un día cerca de medianoche) |
+| **Aritmética de instante** | Contingencia M11 Tipo 1: la ventana de 72h es desde que se restablece la conexión, no una fecha de calendario — `timeProvider.GetUtcNow() + TimeSpan.FromHours(72)`, no `GetDominicanToday()`. No hay un reloj explícito construido; el reintento sin dar por perdido mientras dure la contingencia la cumple en la práctica (`docs/contingency.md`) | `timeProvider.GetUtcNow()` |
 
 ## API
 

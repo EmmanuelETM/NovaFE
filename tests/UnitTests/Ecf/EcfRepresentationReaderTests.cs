@@ -16,8 +16,8 @@ public class EcfRepresentationReaderTests
     private static readonly EcfXmlRepresentationReader Reader = new();
     private static readonly RepresentationVerification Timbre = new("aB3xZ9", "https://ecf.dgii.gov.do/testecf/consultatimbre?x=1");
 
-    private static RepresentationModel Read(EcfDocument document) =>
-        Reader.Read(Serializer.Serialize(document, EcfTestData.SignedAt), Timbre, dgii: null);
+    private static RepresentationModel Read(EcfDocument document, bool signedDuringContingency = false) =>
+        Reader.Read(Serializer.Serialize(document, EcfTestData.SignedAt), Timbre, dgii: null, signedDuringContingency);
 
     [Fact]
     public void Reads_the_credit_note_header_parties_and_line()
@@ -119,5 +119,22 @@ public class EcfRepresentationReaderTests
         model.Totals.MontoGravadoI2.ShouldBe(500m);
         model.Totals.MontoExento.ShouldBe(300m);
         model.Lines.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void Carries_no_contingency_legend_by_default()
+    {
+        var model = Read(EcfTestData.CreditoFiscal());
+
+        model.ContingencyNotice.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Carries_the_verbatim_contingency_legend_when_signed_during_contingency()
+    {
+        var model = Read(EcfTestData.CreditoFiscal(), signedDuringContingency: true);
+
+        model.ContingencyNotice.ShouldBe(EcfXmlRepresentationReader.ContingencyLegend);
+        model.ContingencyNotice.ShouldNotBeNull().ShouldContain("setenta y dos (72) horas");
     }
 }

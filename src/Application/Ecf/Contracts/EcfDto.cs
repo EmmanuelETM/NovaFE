@@ -24,6 +24,7 @@ public sealed record EcfDto(
     bool SubmitsRfce,
     string? InternalNumber,
     string? ToleranceWarning,
+    bool SignedDuringContingency,
     // --- Módulo 4: intercambio con la DGII ---
     // Estos entran planos (Dapper / el ensamblador) pero salen agrupados en `dgii`.
     [property: JsonIgnore] string? TrackId = null,

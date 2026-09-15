@@ -2698,6 +2698,7 @@ export interface components {
             submitsRfce: boolean;
             internalNumber: null | string;
             toleranceWarning: null | string;
+            signedDuringContingency: boolean;
             dgii?: components["schemas"]["EcfDgiiExchange"];
             links?: components["schemas"]["EcfLinks"];
         };
@@ -3141,6 +3142,7 @@ export interface components {
             ecfSubmissionOutbox: components["schemas"]["OutboxStatusDto"];
             webhookOutbox: components["schemas"]["OutboxStatusDto"];
             sequencesAtRisk: components["schemas"]["SequenceAtRiskDto"][];
+            contingencyActive: boolean;
         };
         OutboxStatusDto: {
             /** Format: int32 */

@@ -24,6 +24,7 @@ internal static class EcfDtoAssembler
         ToleranceWarning: ecf.ExpectedConditionalAcceptance
             ? "Los montos declarados no cuadran dentro de la tolerancia; la DGII podría aceptar el comprobante de forma condicional."
             : null,
+        SignedDuringContingency: ecf.SignedDuringContingency,
         TrackId: ecf.TrackId,
         SubmittedAt: ecf.SubmittedAt,
         DgiiProcessedAt: ecf.DgiiProcessedAt,

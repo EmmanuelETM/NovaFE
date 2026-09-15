@@ -7,10 +7,12 @@ using NovaFE.Application.Dgii.Contracts;
 using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.Submission;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Dgii;
 using NovaFE.Domain.Ecf;
+using NovaFE.Domain.Settings;
 
 namespace NovaFE.UnitTests.Ecf;
 
@@ -24,6 +26,7 @@ public class EcfSubmissionProcessorTests
     private readonly IDgiiSubmissionClient _client = Substitute.For<IDgiiSubmissionClient>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IWebhookOutbox _webhookOutbox = Substitute.For<IWebhookOutbox>();
+    private readonly ISettingsReader _settingsReader = Substitute.For<ISettingsReader>();
     private readonly FakeTimeProvider _clock = new(Now);
     private readonly EcfSubmissionSettings _settings = new();
 
@@ -38,7 +41,7 @@ public class EcfSubmissionProcessorTests
     }
 
     private EcfSubmissionProcessor Sut() => new(
-        _ecfRepo, _queue, _tokens, _client, _settings, _uow, _webhookOutbox, _clock,
+        _ecfRepo, _queue, _tokens, _client, _settings, _uow, _webhookOutbox, _settingsReader, _clock,
         NullLogger<EcfSubmissionProcessor>.Instance);
 
     private IssuedEcf Signed(bool rfce = false)
@@ -122,6 +125,25 @@ public class EcfSubmissionProcessorTests
         ecf.Status.ShouldBe(EcfStatus.Failed);
         await _queue.Received(1).MarkDeadAsync(item.Id, Arg.Any<string>(), Arg.Any<CancellationToken>());
         await AssertWebhookEnqueued("ecf.failed");
+    }
+
+    [Fact]
+    public async Task Submit_transport_failure_keeps_retrying_past_the_ladder_while_in_contingency()
+    {
+        _settingsReader.GetValue(SettingDefinitions.ContingencyMode).Returns(true);
+
+        var ecf = Signed();
+        _client.SubmitEcfAsync(Arg.Any<DgiiEnvironment>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Errors.Http.CircuitOpen);
+
+        var item = Item(ecf, EcfSubmissionKind.Submit, attempts: _settings.SubmitBackoff.Count);
+        await Sut().ProcessAsync(item);
+
+        ecf.Status.ShouldBe(EcfStatus.Signed);
+        await _queue.Received(1).RescheduleAsync(item.Id, EcfSubmissionKind.Submit,
+            Now + _settings.SubmitBackoff[^1], _settings.SubmitBackoff.Count, Arg.Any<string?>(), Arg.Any<string?>(),
+            Arg.Any<CancellationToken>());
+        await _queue.DidNotReceive().MarkDeadAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

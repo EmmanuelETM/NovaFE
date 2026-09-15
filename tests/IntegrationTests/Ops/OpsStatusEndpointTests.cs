@@ -16,7 +16,8 @@ public sealed class OpsStatusEndpointTests(DatabaseFixture database) : Integrati
         List<WorkerView> Workers,
         OutboxView EcfSubmissionOutbox,
         OutboxView WebhookOutbox,
-        List<SequenceAtRiskView> SequencesAtRisk);
+        List<SequenceAtRiskView> SequencesAtRisk,
+        bool ContingencyActive);
 
     [RequiresDockerFact]
     public async Task Reports_empty_outboxes_and_no_sequences_on_a_fresh_database()
@@ -27,6 +28,7 @@ public sealed class OpsStatusEndpointTests(DatabaseFixture database) : Integrati
         status.EcfSubmissionOutbox.ShouldBe(new OutboxView(0, 0, 0, null));
         status.WebhookOutbox.ShouldBe(new OutboxView(0, 0, 0, null));
         status.SequencesAtRisk.ShouldBeEmpty();
+        status.ContingencyActive.ShouldBeFalse();
     }
 
     [RequiresDockerFact]

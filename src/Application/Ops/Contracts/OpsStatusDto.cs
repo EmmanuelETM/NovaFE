@@ -9,4 +9,5 @@ public sealed record OpsStatusDto(
     IReadOnlyList<WorkerStatusDto> Workers,
     OutboxStatusDto EcfSubmissionOutbox,
     OutboxStatusDto WebhookOutbox,
-    IReadOnlyList<SequenceAtRiskDto> SequencesAtRisk);
+    IReadOnlyList<SequenceAtRiskDto> SequencesAtRisk,
+    bool ContingencyActive);

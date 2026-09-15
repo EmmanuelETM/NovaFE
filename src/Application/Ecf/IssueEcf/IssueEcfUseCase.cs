@@ -147,7 +147,12 @@ public sealed class IssueEcfUseCase(
         var expectConditional = EcfDtoAssembler.DeclaredHeaderTotalsOutOfTolerance(
             document.Value.Totals, request.DeclaredTotals);
 
-        var issued = IssuedEcf.FromSigned(document.Value, signed.Value, environment, expectConditional);
+        // M11 Tipo 1: no cambia el XML — solo estampa el comprobante para que la
+        // RI pueda llevar la leyenda de contingencia (docs/contingency.md).
+        var signedDuringContingency = settingsReader.GetValue(SettingDefinitions.ContingencyMode);
+
+        var issued = IssuedEcf.FromSigned(
+            document.Value, signed.Value, environment, expectConditional, signedDuringContingency);
 
         // Outbox transaccional: el comprobante, su fila de envío y (si aplica) el
         // aviso de duplicado sospechado se guardan juntos.

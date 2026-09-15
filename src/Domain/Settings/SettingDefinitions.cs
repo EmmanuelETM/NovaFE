@@ -38,15 +38,22 @@ public static class SettingDefinitions
         description: "Detalle del 503 de mantenimiento mostrado a los clientes. Vacío usa el mensaje genérico.");
 
     /// <summary>
-    /// Modo contingencia (Decreto 587-24, M11): emitir con envío diferido cuando la
-    /// DGII está caída. Declarado ya para que M11 lo consuma; hoy sin efecto.
+    /// Modo contingencia (Decreto 587-24): mientras está activo, un
+    /// envío que agota el backoff de transporte no cae en <c>failed</c> — sigue
+    /// reintentando — y los e-CF que se firman quedan marcados para la leyenda
+    /// de la RI. Normalmente lo prende solo <c>ContingencyMonitorWorker</c> al
+    /// detectar el outbox de envío estancado; también se puede forzar a mano.
+    /// Ver <c>docs/contingency.md</c>.
     /// </summary>
     public static readonly BooleanSetting ContingencyMode = new(
         key: "platform.contingency_mode",
         group: "Plataforma",
         label: "Modo contingencia",
         @default: false,
-        description: "Reservado para M11 (contingencia DGII). Sin efecto todavía.",
+        description: "Mientras está activo, un envío a la DGII que no logra salir " +
+            "sigue reintentando en vez de fallar, y los e-CF nuevos llevan la leyenda de " +
+            "contingencia en la Representación Impresa. Normalmente se prende y apaga solo; " +
+            "forzarlo a mano lo anula hasta el próximo cambio automático.",
         killSwitch: true,
         sensitive: true);
 

@@ -11,10 +11,14 @@ public interface IEcfRepresentationReader
     /// Proyecta <paramref name="signedEcfXml"/> (el <c>&lt;ECF&gt;</c> completo, no
     /// el RFCE) al modelo de la RI. El código de seguridad y la URL del QR no
     /// están en el XML — entran por <paramref name="verification"/>; el estado
-    /// DGII por <paramref name="dgii"/>.
+    /// DGII por <paramref name="dgii"/>. <paramref name="signedDuringContingency"/>
+    /// tampoco está en el XML (M11 Tipo 1 no lo toca, ver
+    /// <c>docs/contingency.md</c>) — viene de <c>issued_ecf.signed_during_contingency</c>
+    /// y, si es <c>true</c>, arma la leyenda verbatim en <see cref="RepresentationModel.ContingencyNotice"/>.
     /// </summary>
     RepresentationModel Read(
         string signedEcfXml,
         RepresentationVerification verification,
-        RepresentationDgiiStatus? dgii);
+        RepresentationDgiiStatus? dgii,
+        bool signedDuringContingency = false);
 }

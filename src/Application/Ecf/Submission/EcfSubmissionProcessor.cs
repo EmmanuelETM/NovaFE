@@ -4,11 +4,13 @@ using NovaFE.Application.Dgii.Contracts;
 using NovaFE.Application.Dgii.Interfaces;
 using NovaFE.Application.Ecf.Interfaces;
 using NovaFE.Application.Ecf.IssueEcf;
+using NovaFE.Application.Settings.Interfaces;
 using NovaFE.Application.Webhooks;
 using NovaFE.Application.Webhooks.Interfaces;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Dgii;
 using NovaFE.Domain.Ecf;
+using NovaFE.Domain.Settings;
 using NovaFE.Domain.Webhooks;
 
 namespace NovaFE.Application.Ecf.Submission;
@@ -28,6 +30,7 @@ public sealed class EcfSubmissionProcessor(
     EcfSubmissionSettings settings,
     IUnitOfWork unitOfWork,
     IWebhookOutbox webhookOutbox,
+    ISettingsReader settingsReader,
     TimeProvider timeProvider,
     ILogger<EcfSubmissionProcessor> logger)
 {
@@ -241,6 +244,21 @@ public sealed class EcfSubmissionProcessor(
 
         if (item.Attempts >= settings.SubmitBackoff.Count)
         {
+            // M11 Tipo 1: mientras la plataforma esté en contingencia, no se da
+            // por perdido un envío por agotar el ladder — eso dejaría el
+            // comprobante en `failed` esperando un retry manual, y podría hacer
+            // perder la ventana de 72h de una caída larga (docs/contingency.md).
+            // Se repite el último escalón sin seguir avanzando `Attempts` más
+            // allá del tamaño del ladder, para volver a caer en esta misma rama
+            // la próxima vez en vez de indexar fuera de rango.
+            if (settingsReader.GetValue(SettingDefinitions.ContingencyMode))
+            {
+                var retryAt = timeProvider.GetUtcNow() + settings.SubmitBackoff[^1];
+                await queue.RescheduleAsync(
+                    item.Id, EcfSubmissionKind.Submit, retryAt, settings.SubmitBackoff.Count, item.TrackId, reason, ct);
+                return;
+            }
+
             await GiveUpSubmitAsync(item, ecf, reason, ct);
             return;
         }

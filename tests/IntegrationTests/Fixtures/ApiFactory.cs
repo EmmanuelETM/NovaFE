@@ -72,6 +72,9 @@ public sealed class ApiFactory(
                 // Monitor de vencimientos: sin worker; los tests disparan el pump.
                 ["ExpiryMonitor:Enabled"] = "false",
 
+                // Monitor de contingencia (M11 Tipo 1): sin worker; los tests disparan el pump.
+                ["ContingencyMonitor:Enabled"] = "false",
+
                 // Habilita el esquema InternalKey (humanos del dashboard). Inerte
                 // salvo que la petición traiga X-Internal-Key.
                 ["Security:InternalApiKey"] = InternalApiKey,

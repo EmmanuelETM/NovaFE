@@ -38,6 +38,19 @@ public class IssuedEcfTests
         ecf.RfceXml.ShouldBeNull();
         ecf.BuyerRnc.ShouldBe(document.Header.Buyer.Rnc?.Value);
         ecf.BuyerName.ShouldBe(document.Header.Buyer.Name);
+        ecf.SignedDuringContingency.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void FromSigned_stamps_signed_during_contingency_without_touching_the_xml()
+    {
+        var document = EcfTestData.CreditoFiscal();
+        var signed = Signed();
+
+        var ecf = IssuedEcf.FromSigned(document, signed, DgiiEnvironment.Test, signedDuringContingency: true);
+
+        ecf.SignedDuringContingency.ShouldBeTrue();
+        ecf.EcfXml.ShouldBe(signed.EcfXml);
     }
 
     [Fact]

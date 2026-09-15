@@ -54,7 +54,7 @@ public sealed class GetEcfRepresentationUseCase(
         var dgii = new RepresentationDgiiStatus(
             dto.Status, dto.Dgii?.StatusCode, dto.Dgii?.Status, dto.Dgii?.TrackId);
 
-        var model = reader.Read(xml, verification, dgii);
+        var model = reader.Read(xml, verification, dgii, dto.SignedDuringContingency);
         var pdf = renderer.Render(model, layout);
 
         var suffix = layout == RepresentationLayout.Pos ? "-pos" : string.Empty;

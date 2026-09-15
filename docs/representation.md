@@ -87,13 +87,15 @@ dotnet test tests/UnitTests/NovaFE.UnitTests.csproj --filter "FullyQualifiedName
 - **Docker**: la imagen base (`src/Service/Dockerfile`) instala `libfontconfig1`,
   que el Skia de QuestPDF necesita en Linux.
 
+**Leyenda de contingencia** (RF-09.5, M11 Tipo 1): `RepresentationModel.ContingencyNotice`
+se arma en `EcfXmlRepresentationReader.Read` a partir de
+`issued_ecf.signed_during_contingency` — ver `docs/contingency.md`. Los dos
+layouts ya sabían imprimirla si no era null.
+
 ## Fuera de alcance (por ahora)
 
 - **Correo al comprador** con `<CorreoComprador>` (RF-09.7) — necesita infra de
   correo; su propio slice.
-- **Leyenda de contingencia** verbatim (RF-09.5) — es Módulo 11; el
-  `RepresentationModel` ya lleva un `ContingencyNotice?` opcional que el renderer
-  imprime si está.
 - Catálogos de **Tabla III** (municipios/provincias — hoy no se muestran, son
   códigos) y de **unidades de medida**; accent color / logo por tenant (tema
   neutro fijo); conformidad PDF/A.
