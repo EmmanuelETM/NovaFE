@@ -26,6 +26,9 @@ Códigos de la DGII: `0` no encontrado (puede seguir en proceso), `1` aceptado,
 `2` rechazado (nulidad), `3` en proceso, `4` aceptado condicional (tiene validez).
 `secuenciaUtilizada = false` → el e-NCF se puede reutilizar; `true`/null → quemado.
 
+Las demás consultas de la DGII (trackIds, directorio, estatus de servicio —
+Módulo 10) están en `docs/dgii-queries.md`.
+
 ## Piezas
 
 | Interfaz (Application) | Impl (Infrastructure) | Rol |

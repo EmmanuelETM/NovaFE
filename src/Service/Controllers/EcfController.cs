@@ -1,6 +1,8 @@
 using Asp.Versioning;
+using NovaFE.Application.Dgii.Contracts;
 using NovaFE.Application.Ecf.Contracts;
 using NovaFE.Application.Ecf.GetEcf;
+using NovaFE.Application.Ecf.GetEcfTrackIds;
 using NovaFE.Application.Ecf.IssueEcf;
 using NovaFE.Application.Ecf.ListEcf;
 using NovaFE.Application.Ecf.Representation;
@@ -26,7 +28,8 @@ public sealed class EcfController(
     GetEcfXmlUseCase getXml,
     GetEcfRepresentationUseCase getRepresentation,
     ListEcfUseCase list,
-    RetryEcfSubmissionUseCase retry) : ApiController
+    RetryEcfSubmissionUseCase retry,
+    GetEcfTrackIdsUseCase getTrackIds) : ApiController
 {
     /// <summary>
     /// Emite un e-CF. Header opcional <c>Idempotency-Key</c> para reintento seguro.
@@ -114,4 +117,16 @@ public sealed class EcfController(
     public async Task<IActionResult> Retry(Guid id, CancellationToken ct)
         => (await retry.Execute(new RetryEcfSubmissionCommand(id), ct))
             .Match(dto => Accepted(Url.Action(nameof(GetById), new { id, version = "1" }), dto), Problem);
+
+    /// <summary>
+    /// Los trackIds que la DGII tiene registrados para este comprobante (Módulo
+    /// 10) — puede haber más de uno si se remitió varias veces. No disponible en
+    /// ambiente CerteCF.
+    /// </summary>
+    [HttpGet("{id:guid}/trackids")]
+    [Authorize(Policy = SecurityPolicies.EcfRead)]
+    [ProducesResponseType(typeof(IReadOnlyList<DgiiTrackIdEntry>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTrackIds(Guid id, CancellationToken ct)
+        => (await getTrackIds.Execute(new GetEcfTrackIdsQuery(id), ct)).Match(Ok, Problem);
 }

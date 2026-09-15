@@ -14,6 +14,7 @@
     <File Path="docs/contingency.md" />
     <File Path="docs/deployment.md" />
     <File Path="docs/dgii-auth.md" />
+    <File Path="docs/dgii-queries.md" />
     <File Path="docs/dgii-submission.md" />
     <File Path="docs/ecf-duplicate-detection.md" />
     <File Path="docs/ecf-xml.md" />

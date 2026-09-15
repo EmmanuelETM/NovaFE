@@ -171,6 +171,20 @@ public static class InfrastructureService
         AddDgiiSubmissionHttpClient(services, DgiiSubmissionClient.FcClientName, options => options.FcBaseUrl, dgiiResilience);
         services.AddScoped<IDgiiSubmissionClient, DgiiSubmissionClient>();
 
+        // Consultas (Módulo 10): trackIds y directorio reusan el dominio de e-CF
+        // (mismo cliente dgii-ecf, mismo Bearer token). El estatus de servicio vive
+        // en un dominio y auth propios (docs/dgii-queries.md).
+        services.AddScoped<IDgiiQueryClient, DgiiQueryClient>();
+
+        services.AddResilientHttpClient<IDgiiStatusClient, DgiiStatusClient>(
+            sp =>
+            {
+                var options = sp.GetRequiredService<IOptions<DgiiOptions>>().Value;
+                return new Uri(options.StatusBaseUrl.TrimEnd('/') + "/");
+            },
+            sp => TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<DgiiOptions>>().Value.StatusTimeoutSeconds),
+            dgiiResilience);
+
         // ==========================================
         //             Repositorios
         // ==========================================

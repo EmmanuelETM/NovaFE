@@ -27,6 +27,23 @@ public sealed class DgiiOptions
     [Url]
     public string FcBaseUrl { get; set; } = "https://fc.dgii.gov.do";
 
+    /// <summary>
+    /// Base del dominio de <b>estatus de servicio</b> (Módulo 10) — dominio y auth
+    /// propios (API key, no Bearer), sin segmento de ambiente. Ver
+    /// <c>docs/dgii-queries.md</c>.
+    /// </summary>
+    [Required(AllowEmptyStrings = false)]
+    [Url]
+    public string StatusBaseUrl { get; set; } = "https://statusecf.dgii.gov.do";
+
+    /// <summary>
+    /// API key del servicio de estatus (<c>Authorization: ApiKey {key}</c>). La
+    /// entrega la DGII al iniciar la integración técnica — vacío deshabilita el
+    /// cliente (<c>DgiiQueryErrors.StatusApiKeyNotConfigured</c>) en vez de
+    /// intentar la llamada. Nunca en el repo — variable de entorno o user-secrets.
+    /// </summary>
+    public string StatusApiKey { get; set; } = "";
+
     /// <summary>Minutos antes del vencimiento para renovar el token (RF-01.3).</summary>
     [Range(1, 30)]
     public int TokenRenewalBufferMinutes { get; set; } = 5;
@@ -38,6 +55,10 @@ public sealed class DgiiOptions
     /// <summary>Timeout total de los clientes HTTP de envío y consulta a la DGII.</summary>
     [Range(5, 180)]
     public int SubmissionTimeoutSeconds { get; set; } = 60;
+
+    /// <summary>Timeout total del cliente HTTP de estatus de servicio.</summary>
+    [Range(5, 180)]
+    public int StatusTimeoutSeconds { get; set; } = 30;
 
     public TimeSpan TokenRenewalBuffer => TimeSpan.FromMinutes(TokenRenewalBufferMinutes);
 }

@@ -7,11 +7,11 @@ propósito** y está documentado en el `docs/*.md` de cada módulo.
 Referencia de módulos: `Plan Técnico Integral v2.0` (`C:\workplace\FE_DGII\`).
 Estado de los módulos ya construidos: la sección de arquitectura de `CLAUDE.md`.
 
-**Construido:** M1 (parcial), M2, M3, M4, M6 (núcleo), M7 (v1), M9, M11
-(parcial — Tipo 1, ver abajo), M12, M13, M14, M15 (parcial — panel de
-operador: settings, consola de operación en vivo, onboarding de
-contribuyentes; falta auth humano completo y las pantallas self-service del
-contribuyente). **Sin empezar:** M5, M8 (parcial), M10 (parcial).
+**Construido:** M1 (parcial), M2, M3, M4, M6 (núcleo), M7 (v1), M9, M10
+(parcial — ver abajo), M11 (parcial — Tipo 1, ver abajo), M12, M13, M14, M15
+(parcial — panel de operador: settings, consola de operación en vivo,
+onboarding de contribuyentes; falta auth humano completo y las pantallas
+self-service del contribuyente). **Sin empezar:** M5, M8 (parcial).
 
 ---
 
@@ -42,7 +42,8 @@ Bloquean el primer cliente o la certificación con la DGII.
 | Ítem | Detalle | Doc |
 |---|---|---|
 | **M8 — Anulación de rango (ANECF) + estado `voided`** | Las notas de crédito (tipo 34) ya funcionan como e-CF vía M12; falta la anulación de un rango de secuencias y el estado `voided`. | Plan Técnico §9; `docs/api-ecf.md`, `docs/sequences.md` |
-| **M10 — `consultaestatusservicio` + consultas restantes** | `consultaresultado` ya se usa en M4. Falta el "¿está viva la DGII?" (lo necesita M11), consulta de directorio, TrackIds masivo. | Plan Técnico §11; `docs/dgii-submission.md` |
+| ~~M10 — trackIds + directorio~~ | **Hecho.** `GET /api/v1/ecf/{id}/trackids` (endpoint del tenant); directorio construido como capacidad interna (sin endpoint — sin consumidor real hasta M5). No disponibles en CerteCF, por diseño de la DGII. | `docs/dgii-queries.md` |
+| **M10 — estatus de servicio, sin verificar** | `IDgiiStatusClient` ya llama a los 3 endpoints reales (`statusecf.dgii.gov.do`, confirmados contra su OpenAPI público) y sale como diagnóstico de operador (`GET /api/v1/ops/dgii-status`) — pero la DGII no documenta el schema de la respuesta, así que el parseo es tolerante y nada depende de él todavía. Falta una `Dgii:StatusApiKey` real para confirmarlo. | `docs/dgii-queries.md` |
 | ~~Webhooks (HMAC-SHA256, RF-12.7)~~ | **Hecho.** 6 eventos de ciclo de vida del e-CF + suscripciones por tenant + outbox de entrega + firma HMAC + log de entregas. | `docs/webhooks.md` |
 | **M12 — matriz de obligatoriedad 0/1/2/3 por tipo** | Completar los validadores por tipo (`IssueEcfCommandValidator`); hoy la matriz autoritativa vive solo en `EcfDocument.ValidateStructure`. | `docs/api-ecf.md`, `docs/ecf-xml.md` |
 | **Rate limiting por plan (RF-12.3)** | El limiter global ya particiona por tenant; los topes por plan son otro slice. | `docs/api-auth.md` §"Fuera de alcance" |
