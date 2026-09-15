@@ -25,6 +25,19 @@ public static class SettingDefinitions
         sensitive: true);
 
     /// <summary>
+    /// Texto del <c>503</c> que devuelve <c>MaintenanceModeMiddleware</c> mientras
+    /// <see cref="MaintenanceMode"/> está activo. Vacío usa el mensaje genérico por
+    /// defecto — así un operador puede avisar una ventana programada sin desplegar.
+    /// </summary>
+    public static readonly StringSetting MaintenanceMessage = new(
+        key: "platform.maintenance_message",
+        group: "Plataforma",
+        label: "Mensaje de mantenimiento",
+        @default: "",
+        maxLength: 500,
+        description: "Detalle del 503 de mantenimiento mostrado a los clientes. Vacío usa el mensaje genérico.");
+
+    /// <summary>
     /// Modo contingencia (Decreto 587-24, M11): emitir con envío diferido cuando la
     /// DGII está caída. Declarado ya para que M11 lo consuma; hoy sin efecto.
     /// </summary>

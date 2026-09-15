@@ -14,6 +14,8 @@ internal sealed class MaintenanceModeMiddleware(RequestDelegate next)
 {
     private const int RetryAfterSeconds = 120;
 
+    private const string DefaultMessage = "La plataforma está en mantenimiento. Intenta de nuevo en unos minutos.";
+
     private static readonly string[] AlwaysAllowed =
     [
         "/health",
@@ -33,6 +35,8 @@ internal sealed class MaintenanceModeMiddleware(RequestDelegate next)
         context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
         context.Response.Headers.RetryAfter = RetryAfterSeconds.ToString(CultureInfo.InvariantCulture);
 
+        var message = settings.GetValue(SettingDefinitions.MaintenanceMessage);
+
         await problemDetails.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = context,
@@ -40,7 +44,7 @@ internal sealed class MaintenanceModeMiddleware(RequestDelegate next)
             {
                 Status = StatusCodes.Status503ServiceUnavailable,
                 Title = "Servicio en mantenimiento",
-                Detail = "La plataforma está en mantenimiento. Intenta de nuevo en unos minutos.",
+                Detail = string.IsNullOrWhiteSpace(message) ? DefaultMessage : message,
             },
         });
     }
