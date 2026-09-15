@@ -3,13 +3,19 @@
 import { ShieldAlert } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/problem";
 
 import { heroFor, QUEUES, workerFraction } from "./hero";
-import "./ops-console.css";
 import { QueueCard } from "./queue-card";
-import { SequenceRiskList } from "./sequence-risk-list";
+import { SequencesCard } from "./sequences-card";
 import { StatusDot } from "./status-dot";
 import { useNow } from "./use-now";
 import { useOpsStatus } from "./use-ops-status";
@@ -52,97 +58,84 @@ export function OpsStatusScreen() {
   );
 
   return (
-    <div className="ops-console">
-      <section className="hero flex items-start gap-3">
-        <div className="pt-2">
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start gap-3">
+        <div className="pt-1.5">
           <StatusDot severity={hero.severity} />
         </div>
-        <div>
-          <h1 className="hero__headline">{hero.headline}</h1>
-          <p className="hero__support">{hero.support}</p>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-xl font-semibold tracking-tight text-balance">
+            {hero.headline}
+          </h1>
+          <p className="text-muted-foreground text-sm">{hero.support}</p>
         </div>
-      </section>
+      </div>
 
-      <div className="rule" />
-
-      <section className="section">
-        <div className="section__label-row">
-          <h2 className="section__label">Workers</h2>
-          <span className="section__hint">
-            ordenado por presupuesto consumido
-          </span>
-        </div>
-        <div className="worker-list">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">Workers</CardTitle>
+          <CardAction>
+            <span className="text-muted-foreground text-xs">
+              ordenado por presupuesto consumido
+            </span>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="divide-border divide-y py-0">
           {sortedWorkers.map((worker) => (
             <WorkerRow key={worker.name} worker={worker} now={now} />
           ))}
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
-      <div className="rule" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        {QUEUES.map((queue) => (
+          <QueueCard
+            key={queue.key}
+            title={queue.title}
+            data={data[queue.field]}
+            now={now}
+            emptyReason={queue.emptyReason}
+          />
+        ))}
+      </div>
 
-      <section className="section">
-        <h2 className="section__label">Colas</h2>
-        <div className="queue-grid">
-          {QUEUES.map((queue) => (
-            <QueueCard
-              key={queue.key}
-              title={queue.title}
-              data={data[queue.field]}
-              now={now}
-              emptyReason={queue.emptyReason}
-            />
-          ))}
-        </div>
-      </section>
-
-      <div className="rule" />
-
-      <section className="section">
-        <div className="section__label-row">
-          <h2 className="section__label">Secuencias por agotarse</h2>
-          {data.sequencesAtRisk.length > 0 && (
-            <span className="section__hint">
-              ordenado por menor stock restante
-            </span>
-          )}
-        </div>
-        <SequenceRiskList tenants={data.sequencesAtRisk} />
-      </section>
+      <SequencesCard tenants={data.sequencesAtRisk} />
     </div>
   );
 }
 
 function LoadingState() {
   return (
-    <div className="ops-console">
+    <div className="flex flex-col gap-6">
       <div className="flex items-start gap-3">
-        <Skeleton className="mt-2 h-2 w-2 rounded-full" />
+        <Skeleton className="mt-1.5 h-2.5 w-2.5 rounded-full" />
         <div className="flex flex-col gap-2">
-          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-6 w-56" />
           <Skeleton className="h-4 w-96" />
         </div>
       </div>
 
-      <div className="rule" />
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-4 w-16" />
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 py-0 pb-5">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="flex justify-between gap-6 py-1">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-4 w-24" />
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index} className="flex items-center justify-between py-2">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-4 w-48" />
-          </div>
-        ))}
-      </div>
-
-      <div className="rule" />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         {Array.from({ length: 2 }).map((_, index) => (
-          <Skeleton key={index} className="h-28 rounded-lg" />
+          <Skeleton key={index} className="h-28 rounded-2xl" />
         ))}
       </div>
+
+      <Skeleton className="h-28 rounded-2xl" />
     </div>
   );
 }
