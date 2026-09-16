@@ -50,11 +50,13 @@ línea; encabezado: ±1 por campo) y devuelve `toleranceWarning` si no cuadran �
 ## 2. Endpoints
 
 ```
-POST   /api/v1/ecf                 emitir
-GET    /api/v1/ecf/{id}            estado y detalle
-GET    /api/v1/ecf/{id}/xml        XML firmado (?rfce=true → el <RFCE>)
-GET    /api/v1/ecf?...             listado / búsqueda paginado (filtro ?status=)
-POST   /api/v1/ecf/{id}/retry      reencolar el envío (solo failed / review) → 202
+POST   /api/v1/ecf                emitir
+POST   /api/v1/ecf/validate       validar sin emitir (Módulo 2 + 6, sin firmar ni persistir)
+GET    /api/v1/ecf/{id}           estado y detalle
+GET    /api/v1/ecf/{id}/xml       XML firmado (?rfce=true → el <RFCE>)
+GET    /api/v1/ecf/{id}/trackids  trackIds registrados en la DGII (Módulo 10)
+GET    /api/v1/ecf?...            listado / búsqueda paginado (filtro ?status=)
+POST   /api/v1/ecf/{id}/retry     reencolar el envío (solo failed / review) → 202
 ```
 
 | | |
@@ -63,6 +65,44 @@ POST   /api/v1/ecf/{id}/retry      reencolar el envío (solo failed / review) �
 | **`Idempotency-Key`** (header, opcional) | Reintento seguro del `POST`. Misma clave + mismo cuerpo → **`200`** con la respuesta original. Misma clave + cuerpo distinto → **`409`**. Petición en curso → **`409`**. Tabla `idempotency_keys` en PostgreSQL. |
 | **`internalNumber`** (body → `<NumeroFacturaInterna>`) | Dedup de negocio: un comprobante por `(tenant, internalNumber)` (índice único parcial). Repetido → **`200`** con el existente. |
 | **Detección de duplicados por huella** | Capa aparte, no depende de lo que mande el cliente. Settings `ecf.duplicate_detection_mode` (`off` default / `observar` / `bloquear`) y `..._window`. En `bloquear`, un comprobante con el mismo comprador (RNC/cédula — **obligatorio**, si no hay no se evalúa nada), tipo, monto, fecha y ambiente que uno reciente → **`409 Ecf.DuplicateSuspected`**. Ver `docs/ecf-duplicate-detection.md`. |
+
+### `POST /ecf/validate` — probar un payload sin comprometerse a nada
+
+Mismo cuerpo que `POST /ecf` (§4), misma política (`EcfIssue`). Corre la
+**misma** validación de forma y la **misma** matriz estructural/fiscal por
+tipo (Módulo 2 + 6, `EcfDocument.Create`) que la emisión real — pero se
+detiene ahí: **no asigna una secuencia real, no firma, no persiste, no
+encola nada a la DGII.** No hace falta ni certificado ni secuencia
+registrada para el tenant; solo el `EmitterProfile` (para armar el bloque
+`Emisor`).
+
+Un payload que no cumple devuelve el mismo error que devolvería la emisión
+real (`400 ValidationProblemDetails` u otro código de negocio) — **no** hay
+un campo `valid: true|false` en el cuerpo; el código de estado ya lo dice.
+Uno que sí cumple devuelve `200` con una vista previa:
+
+```json
+{
+  "type": 31,
+  "typeName": "Factura de Crédito Fiscal Electrónica",
+  "sampleEncf": "E310000000000",
+  "issueDate": "10-01-2026",
+  "sequenceExpiresOnEstimate": "31-12-2027",
+  "montoGravadoTotal": 2000.00,
+  "montoExento": 0,
+  "totalItbis": 360.00,
+  "montoImpuestoAdicional": 0,
+  "montoTotal": 2360.00,
+  "expectConditionalAcceptance": false
+}
+```
+
+`sampleEncf` **nunca** es un e-NCF real — es un placeholder
+(`E{tipo}0000000000`) armado solo para poder construir el documento; no se
+tocó la tabla de secuencias. `sequenceExpiresOnEstimate` es la misma regla
+que usa una secuencia real (31-dic del año siguiente), pero estimada a
+partir de `issueDate` — no viene de un rango autorizado. Ambos son
+`null`/ausentes en los tipos sin `FechaVencimientoSecuencia` (32, 34).
 
 ---
 

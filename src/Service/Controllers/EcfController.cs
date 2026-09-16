@@ -7,6 +7,7 @@ using NovaFE.Application.Ecf.IssueEcf;
 using NovaFE.Application.Ecf.ListEcf;
 using NovaFE.Application.Ecf.Representation;
 using NovaFE.Application.Ecf.RetrySubmission;
+using NovaFE.Application.Ecf.ValidateEcf;
 using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
@@ -29,7 +30,8 @@ public sealed class EcfController(
     GetEcfRepresentationUseCase getRepresentation,
     ListEcfUseCase list,
     RetryEcfSubmissionUseCase retry,
-    GetEcfTrackIdsUseCase getTrackIds) : ApiController
+    GetEcfTrackIdsUseCase getTrackIds,
+    ValidateEcfUseCase validate) : ApiController
 {
     /// <summary>
     /// Emite un e-CF. Header opcional <c>Idempotency-Key</c> para reintento seguro.
@@ -55,6 +57,22 @@ public sealed class EcfController(
                 : Ok(issued.Ecf),
             Problem);
     }
+
+    /// <summary>
+    /// Valida un payload sin emitirlo: corre la misma matriz de validación
+    /// estructural y fiscal por tipo (Módulo 2 + 6) que <c>POST /ecf</c>, pero no
+    /// asigna una secuencia real, no firma y no persiste nada. Un payload que no
+    /// cumple devuelve el mismo error que devolvería la emisión real (<c>400</c>
+    /// u otro código de negocio) — no hay un cuerpo <c>{ valid: false }</c>; el
+    /// código de estado ya lo dice. <c>200</c> trae una vista previa de los
+    /// totales calculados y un e-NCF de muestra (nunca uno real).
+    /// </summary>
+    [HttpPost("validate")]
+    [Authorize(Policy = SecurityPolicies.EcfIssue)]
+    [ProducesResponseType(typeof(ValidateEcfResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Validate([FromBody] IssueEcfCommand command, CancellationToken ct)
+        => (await validate.Execute(command, ct)).Match(Ok, Problem);
 
     /// <summary>El comprobante emitido y su estado.</summary>
     [HttpGet("{id:guid}")]
