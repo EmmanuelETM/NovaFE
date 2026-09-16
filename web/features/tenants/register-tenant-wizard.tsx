@@ -21,6 +21,7 @@ import { applyFieldErrors } from "@/lib/api/form-errors";
 import { selectItems } from "@/lib/select-items";
 
 import { ENVIRONMENT_OPTIONS, PLAN_OPTIONS } from "./options";
+import { ProvinciaMunicipioFields } from "./provincia-municipio-fields";
 import {
   tenantErrorMessage,
   useRegisterTenant,
@@ -220,24 +221,11 @@ export function RegisterTenantWizard() {
             <FieldError errors={[profileForm.formState.errors.address]} />
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor="municipality">
-              Municipio (código Tabla III, opcional)
-            </FieldLabel>
-            <Input
-              id="municipality"
-              {...profileForm.register("municipality")}
-            />
-            <FieldError errors={[profileForm.formState.errors.municipality]} />
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="province">
-              Provincia (código Tabla III, opcional)
-            </FieldLabel>
-            <Input id="province" {...profileForm.register("province")} />
-            <FieldError errors={[profileForm.formState.errors.province]} />
-          </Field>
+          <ProvinciaMunicipioFields
+            control={profileForm.control}
+            provinceName="province"
+            municipalityName="municipality"
+          />
 
           <Field>
             <FieldLabel htmlFor="phones">

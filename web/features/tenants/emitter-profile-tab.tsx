@@ -21,6 +21,7 @@ import { ApiError } from "@/lib/api/problem";
 import { selectItems } from "@/lib/select-items";
 
 import { ENVIRONMENT_OPTIONS } from "./options";
+import { ProvinciaMunicipioFields } from "./provincia-municipio-fields";
 import {
   tenantErrorMessage,
   useEmitterProfile,
@@ -127,21 +128,11 @@ export function EmitterProfileTab({ tenantId }: { tenantId: string }) {
             <FieldError errors={[form.formState.errors.address]} />
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor="municipality">
-              Municipio (código Tabla III, opcional)
-            </FieldLabel>
-            <Input id="municipality" {...form.register("municipality")} />
-            <FieldError errors={[form.formState.errors.municipality]} />
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="province">
-              Provincia (código Tabla III, opcional)
-            </FieldLabel>
-            <Input id="province" {...form.register("province")} />
-            <FieldError errors={[form.formState.errors.province]} />
-          </Field>
+          <ProvinciaMunicipioFields
+            control={form.control}
+            provinceName="province"
+            municipalityName="municipality"
+          />
 
           <Field>
             <FieldLabel htmlFor="phones">
