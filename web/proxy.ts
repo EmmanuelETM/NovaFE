@@ -31,13 +31,14 @@ export function proxy(request: NextRequest) {
 export const config = {
   /*
    * Todo menos:
-   * - `login` / `auth-error` — las pantallas de acceso;
+   * - `login` / `signup` / `forgot-password` / `reset-password` / `auth-error` —
+   *   las pantallas de acceso;
    * - `api/auth/*` — los endpoints de Better Auth;
    * - `api/backend/*` — el proxy a la API (hace su propia auth; devolver HTML acá
    *   rompería los `fetch` del cliente);
    * - los assets de Next.
    */
   matcher: [
-    "/((?!login|auth-error|api/auth|api/backend|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|signup|forgot-password|reset-password|auth-error|api/auth|api/backend|_next/static|_next/image|favicon.ico).*)",
   ],
 };
