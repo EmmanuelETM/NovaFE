@@ -69,7 +69,7 @@ export function TenantDetailScreen({ tenantId }: { tenantId: string }) {
             variant="outline"
             render={
               <Link
-                href={`/plataforma/usuarios?vista=contribuyente&tenant=${tenantId}`}
+                href={`/nemus/usuarios?vista=contribuyente&tenant=${tenantId}`}
               />
             }
           >

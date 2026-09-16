@@ -16,7 +16,7 @@ export default async function TenantDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-      <PageHeader href={`/plataforma/tenants/${id}`} />
+      <PageHeader href={`/nemus/tenants/${id}`} />
       <TenantDetailScreen tenantId={id} />
     </div>
   );

@@ -34,6 +34,16 @@ export interface NavItem {
    */
   minRole: RoleLevel;
   /**
+   * Techo opcional de rango. Sin él, cualquier rango `>= minRole` lo ve — lo normal
+   * dentro de un mismo ámbito (un `admin_tenant` ve todo lo que ve un `emisor`). Pero
+   * `admin_tenant` y `admin_sistema` no son el mismo ámbito con más o menos permiso:
+   * uno administra *su* contribuyente, el otro administra la plataforma para *todos*
+   * los contribuyentes. Un ítem que solo tiene sentido para "tu propio contribuyente"
+   * (p. ej. `/configuracion`) pone `maxRole: ROLE.admin_tenant` para que no le
+   * aparezca también a un Nemus Admin, que no tiene un contribuyente propio ahí.
+   */
+  maxRole?: RoleLevel;
+  /**
    * Si la pantalla ya existe. Lo que está en `false` se pinta deshabilitado y no enlaza:
    * el módulo está previsto pero su interfaz no se ha construido, y mostrarlo comunica la
    * forma de la aplicación sin ofrecer un camino a ningún lado.
@@ -69,6 +79,7 @@ export const NAVIGATION: readonly NavSection[] = [
         description: "Quién entra al sistema y con qué rol",
         icon: Users,
         minRole: ROLE.admin_tenant,
+        maxRole: ROLE.admin_tenant,
         // Ejemplo de módulo previsto sin pantalla: se pinta inerte con la etiqueta
         // «pronto». Cámbialo a `true` cuando exista `app/(app)/usuarios/page.tsx`.
         ready: false,
@@ -79,17 +90,18 @@ export const NAVIGATION: readonly NavSection[] = [
         description: "Los ajustes de tu facturación",
         icon: Settings2,
         minRole: ROLE.admin_tenant,
+        maxRole: ROLE.admin_tenant,
         ready: true,
       },
     ],
   },
   {
-    // Solo operador del SaaS: la config transversal de la plataforma, no la de un
-    // contribuyente (esa es `/configuracion`).
-    label: "Plataforma",
+    // Solo Nemus Admin: la config transversal de la plataforma para todos los
+    // contribuyentes, no la de uno solo (esa es `/configuracion`, arriba).
+    label: "Nemus Admin",
     items: [
       {
-        href: "/plataforma/operacion",
+        href: "/nemus/operacion",
         label: "Operación",
         description:
           "Latido de los workers, los outbox y las secuencias, en vivo",
@@ -98,7 +110,7 @@ export const NAVIGATION: readonly NavSection[] = [
         ready: true,
       },
       {
-        href: "/plataforma/tenants",
+        href: "/nemus/tenants",
         label: "Contribuyentes",
         description:
           "Alta y gestión de contribuyentes: perfil, certificados, secuencias y API keys",
@@ -107,7 +119,7 @@ export const NAVIGATION: readonly NavSection[] = [
         ready: true,
       },
       {
-        href: "/plataforma/usuarios",
+        href: "/nemus/usuarios",
         label: "Usuarios",
         description: "Quién entra a la plataforma y con qué rol",
         icon: UsersRound,
@@ -115,7 +127,7 @@ export const NAVIGATION: readonly NavSection[] = [
         ready: true,
       },
       {
-        href: "/plataforma/configuracion",
+        href: "/nemus/configuracion",
         label: "Configuración",
         description: "Los ajustes operativos de la plataforma",
         icon: SlidersHorizontal,

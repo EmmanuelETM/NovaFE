@@ -12,10 +12,10 @@ export const metadata: Metadata = {
  * ajustes vive en el backend (`SettingDefinitions`); esta pantalla solo lista y
  * edita los overrides.
  */
-export default function PlataformaConfiguracionPage() {
+export default function NemusConfiguracionPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-      <PageHeader href="/plataforma/configuracion" />
+      <PageHeader href="/nemus/configuracion" />
       <SettingsScreen />
     </div>
   );

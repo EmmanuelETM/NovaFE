@@ -24,15 +24,20 @@ export type RoleName = keyof typeof ROLE;
 export type RoleLevel = (typeof ROLE)[keyof typeof ROLE];
 
 /**
- * Etiquetas visibles. `admin_sistema` va calificado: «Operador» a secas, junto a
- * «Administrador» (`admin_tenant`), se lee como un ranking cuando en realidad son
- * ámbitos distintos — uno administra la plataforma, el otro un contribuyente.
+ * Etiquetas visibles. `admin_sistema` va calificado con el nombre de la empresa
+ * («Nemus Admin»), no con una palabra del mismo campo semántico que «Administrador»
+ * (`admin_tenant`) — si las dos dijeran alguna variante de "admin"/"operador" se
+ * leería como un ranking, cuando en realidad son ámbitos distintos: uno administra
+ * *su* contribuyente, el otro administra la plataforma para todos. `lib/navigation.ts`
+ * refuerza esto mismo con `maxRole`: un `admin_sistema` ni siquiera ve las pantallas
+ * de "tu contribuyente" (`/usuarios`, `/configuracion`) en el sidebar, porque no tiene
+ * un contribuyente propio que administrar ahí.
  */
 export const ROLE_LABELS: Record<RoleName, string> = {
   consultor: "Consultor",
   emisor: "Emisor",
   admin_tenant: "Administrador",
-  admin_sistema: "Operador de la plataforma",
+  admin_sistema: "Nemus Admin",
 };
 
 /** El nombre de rol de la API → su rango. Desconocido o ausente = 0 (no ve nada). */

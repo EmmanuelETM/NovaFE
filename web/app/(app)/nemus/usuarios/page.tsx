@@ -11,10 +11,10 @@ export const metadata: Metadata = {
  * Gestión de accesos humanos (solo operador): operadores del SaaS y, eligiendo un
  * contribuyente, sus empleados. Alta por correo, cambio de rol, revocar y reactivar.
  */
-export default function PlataformaUsuariosPage() {
+export default function NemusUsuariosPage() {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      <PageHeader href="/plataforma/usuarios" />
+      <PageHeader href="/nemus/usuarios" />
       <UsersScreen />
     </div>
   );

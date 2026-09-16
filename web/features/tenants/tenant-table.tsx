@@ -67,13 +67,10 @@ export function TenantTable() {
       onStateChange={setState}
       searchPlaceholder="RNC o razón social…"
       emptyState={{ title: "No hay contribuyentes dados de alta." }}
-      onRowClick={(tenant) => router.push(`/plataforma/tenants/${tenant.id}`)}
+      onRowClick={(tenant) => router.push(`/nemus/tenants/${tenant.id}`)}
       getRowId={(tenant) => tenant.id}
       toolbarActions={
-        <Button
-          size="xs"
-          onClick={() => router.push("/plataforma/tenants/nuevo")}
-        >
+        <Button size="xs" onClick={() => router.push("/nemus/tenants/nuevo")}>
           Nuevo contribuyente
         </Button>
       }

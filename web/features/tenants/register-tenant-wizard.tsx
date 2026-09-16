@@ -122,7 +122,7 @@ export function RegisterTenantWizard() {
         economicActivity: values.economicActivity.trim() || null,
         defaultEnvironment: values.defaultEnvironment,
       });
-      router.push(`/plataforma/tenants/${tenantId}`);
+      router.push(`/nemus/tenants/${tenantId}`);
     } catch (error) {
       if (!applyFieldErrors(error, profileForm.setError)) {
         profileForm.setError("address", {
@@ -295,7 +295,7 @@ export function RegisterTenantWizard() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push(`/plataforma/tenants/${tenantId}`)}
+              onClick={() => router.push(`/nemus/tenants/${tenantId}`)}
             >
               Completar después
             </Button>

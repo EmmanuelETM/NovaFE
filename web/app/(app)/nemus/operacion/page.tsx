@@ -14,10 +14,10 @@ export const metadata: Metadata = {
  * tenants tienen una secuencia e-NCF por agotarse. Ver docs/observability.md
  * en el backend.
  */
-export default function PlataformaOperacionPage() {
+export default function NemusOperacionPage() {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      <PageHeader href="/plataforma/operacion" actions={<OpsLiveIndicator />} />
+      <PageHeader href="/nemus/operacion" actions={<OpsLiveIndicator />} />
       <OpsStatusScreen />
     </div>
   );

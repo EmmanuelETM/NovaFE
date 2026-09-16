@@ -36,7 +36,11 @@ export function NavMain({ role }: NavMainProps) {
   return (
     <>
       {NAVIGATION.map((section) => {
-        const visibles = section.items.filter((item) => role >= item.minRole);
+        const visibles = section.items.filter(
+          (item) =>
+            role >= item.minRole &&
+            (item.maxRole === undefined || role <= item.maxRole),
+        );
 
         // Un grupo cuyo único contenido estaba fuera del alcance del rol no debe dejar el
         // título flotando sobre nada.

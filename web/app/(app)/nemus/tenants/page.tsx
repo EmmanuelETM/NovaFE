@@ -10,12 +10,12 @@ export const metadata: Metadata = {
 /**
  * Alta y gestión de contribuyentes (solo operador): el listado enlaza al
  * detalle de cada uno, donde viven las pestañas de perfil, certificados,
- * secuencias y API keys. El alta guiada vive en `/plataforma/tenants/nuevo`.
+ * secuencias y API keys. El alta guiada vive en `/nemus/tenants/nuevo`.
  */
-export default function PlataformaTenantsPage() {
+export default function NemusTenantsPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
-      <PageHeader href="/plataforma/tenants" />
+      <PageHeader href="/nemus/tenants" />
       <TenantTable />
     </div>
   );
