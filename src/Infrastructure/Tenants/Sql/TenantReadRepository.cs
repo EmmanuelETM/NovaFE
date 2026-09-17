@@ -55,20 +55,23 @@ internal sealed class TenantReadRepository(IDbSession session) : ITenantReadRepo
     {
         const string filter =
             """
-            WHERE is_deleted = false
-              AND (@pattern IS NULL OR rnc ILIKE @pattern OR legal_name ILIKE @pattern)
+            WHERE t.is_deleted = false
+              AND (@pattern IS NULL OR t.rnc ILIKE @pattern OR t.legal_name ILIKE @pattern)
             """;
 
-        var countSql = $"SELECT count(*) FROM tenants {filter}";
+        var countSql = $"SELECT count(*) FROM tenants t {filter}";
         var pageSql =
             $"""
-            SELECT id         AS "Id",
-                   rnc        AS "Rnc",
-                   legal_name AS "LegalName",
-                   status     AS "Status"
-            FROM tenants
+            SELECT t.id         AS "Id",
+                   t.rnc        AS "Rnc",
+                   t.legal_name AS "LegalName",
+                   t.status     AS "Status",
+                   o.name       AS "OrganizationName",
+                   o.slug       AS "OrganizationSlug"
+            FROM tenants t
+            LEFT JOIN organizations o ON o.id = t.organization_id
             {filter}
-            ORDER BY created_at DESC
+            ORDER BY t.created_at DESC
             LIMIT @take OFFSET @skip
             """;
 

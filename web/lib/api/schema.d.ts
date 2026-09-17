@@ -1433,6 +1433,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ops/dead-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                    pageSize?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PagedResultOfDeadWebhookDeliveryDto"];
+                        "application/json": components["schemas"]["PagedResultOfDeadWebhookDeliveryDto"];
+                        "text/json": components["schemas"]["PagedResultOfDeadWebhookDeliveryDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations": {
         parameters: {
             query?: never;
@@ -1660,6 +1700,69 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePlanBody"];
+                    "text/json": components["schemas"]["UpdatePlanBody"];
+                    "application/*+json": components["schemas"]["UpdatePlanBody"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/organizations/{id}/members": {
@@ -3895,6 +3998,147 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/{tenantid}/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["WebhookEndpointDto"][];
+                        "application/json": components["schemas"]["WebhookEndpointDto"][];
+                        "text/json": components["schemas"]["WebhookEndpointDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{tenantid}/webhooks/{id}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                    pageSize?: number | string;
+                };
+                header?: never;
+                path: {
+                    tenantid: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PagedResultOfWebhookDeliveryDto"];
+                        "application/json": components["schemas"]["PagedResultOfWebhookDeliveryDto"];
+                        "text/json": components["schemas"]["PagedResultOfWebhookDeliveryDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenants/{tenantid}/webhooks/{id}/deliveries/{deliveryid}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantid: string;
+                    id: string;
+                    deliveryid: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3956,6 +4200,7 @@ export interface components {
             traceId: null | string;
             /** Format: int32 */
             durationMs: null | number | string;
+            impersonatedBy: null | string;
         };
         CertificateDto: {
             /** Format: uuid */
@@ -3992,6 +4237,24 @@ export interface components {
             url: null | string;
             events: null | string[];
             description: null | string;
+        };
+        DeadWebhookDeliveryDto: {
+            /** Format: uuid */
+            tenantId: string;
+            rnc: string;
+            legalName: string;
+            /** Format: uuid */
+            endpointId: string;
+            url: string;
+            /** Format: uuid */
+            deliveryId: string;
+            eventType: string;
+            /** Format: int32 */
+            attempts: number | string;
+            /** Format: int32 */
+            lastStatusCode: null | number | string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         DgiiEnvironmentStatus: {
             enMantenimiento: null | boolean;
@@ -4631,6 +4894,19 @@ export interface components {
             hasNextPage?: boolean;
             hasPreviousPage?: boolean;
         };
+        PagedResultOfDeadWebhookDeliveryDto: {
+            items: components["schemas"]["DeadWebhookDeliveryDto"][];
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            totalPages?: number | string;
+            hasNextPage?: boolean;
+            hasPreviousPage?: boolean;
+        };
         PagedResultOfEcfSummaryDto: {
             items: components["schemas"]["EcfSummaryDto"][];
             /** Format: int32 */
@@ -5031,6 +5307,8 @@ export interface components {
             rnc: string;
             legalName: string;
             status: string;
+            organizationName: null | string;
+            organizationSlug: null | string;
         };
         UpdateEmitterProfileCommand: {
             address: string;
@@ -5039,6 +5317,9 @@ export interface components {
             phones: null | string[];
             email: null | string;
             economicActivity: null | string;
+        };
+        UpdatePlanBody: {
+            plan: string;
         };
         UpdateWebhookEndpointRequest: {
             url: null | string;

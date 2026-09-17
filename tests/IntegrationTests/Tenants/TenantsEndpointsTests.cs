@@ -106,11 +106,36 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         page.Items.ShouldAllBe(t => t.LegalName.StartsWith("Contoso"));
     }
 
+    [RequiresDockerFact]
+    public async Task List_shows_the_organization_name_and_slug_when_assigned()
+    {
+        var tenantId = (await LeerAsync<IdResponse>(await Client.PostAsJsonAsync(
+            "/api/v1/tenants", new { rnc = "141999888", legalName = "Con Organizacion SRL" })))!.Id;
+        var withoutOrgId = (await LeerAsync<IdResponse>(await Client.PostAsJsonAsync(
+            "/api/v1/tenants", new { rnc = "141999889", legalName = "Sin Organizacion SRL" })))!.Id;
+
+        var orgId = (await LeerAsync<IdResponse>(await Client.PostAsJsonAsync(
+            "/api/v1/organizations", new { name = "Acme", slug = "acme-tenant-org-column", plan = "Developer" })))!.Id;
+        (await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}", null))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var page = await LeerAsync<PagedResponse<TenantSummaryResponse>>(
+            await Client.GetAsync("/api/v1/tenants?search=Organizacion"));
+
+        var withOrg = page!.Items.Single(t => t.Id == tenantId);
+        withOrg.OrganizationName.ShouldBe("Acme");
+        withOrg.OrganizationSlug.ShouldBe("acme-tenant-org-column");
+
+        var withoutOrg = page.Items.Single(t => t.Id == withoutOrgId);
+        withoutOrg.OrganizationName.ShouldBeNull();
+        withoutOrg.OrganizationSlug.ShouldBeNull();
+    }
+
     private sealed record TenantDetailResponse(
         Guid Id, string Rnc, string LegalName, string? TradeName, string Status, Guid? OrganizationId, DateTimeOffset CreatedAt);
 
     private sealed record TenantSummaryResponse(
-        Guid Id, string Rnc, string LegalName, string Status);
+        Guid Id, string Rnc, string LegalName, string Status, string? OrganizationName, string? OrganizationSlug);
 
     private sealed record PagedResponse<T>(IEnumerable<T> Items, int TotalCount, int Page, int PageSize);
 }
