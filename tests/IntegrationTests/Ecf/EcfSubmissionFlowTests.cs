@@ -197,9 +197,15 @@ public sealed class EcfSubmissionFlowTests(DatabaseFixture database) : Integrati
         StubAuth(dgii.Server);
         StubResult(dgii.Server, codigo: 1, estado: "Aceptado");
 
+        // Cada intento hace un reclamo del outbox + una llamada al WireMock +
+        // un GET completo por HTTP: más caro que el resto de los usos de
+        // EventuallyAsync, así que el presupuesto por defecto (20 × 100 ms) se
+        // queda corto bajo la carga de un runner de CI. Más margen acá.
         await EventuallyAsync(
             async () => (await LeerAsync<EcfResponse>(await Client.GetAsync($"/api/v1/ecf/{issued.Id}")))!.Status == "accepted",
-            tick: () => PumpAsync());
+            tick: () => PumpAsync(),
+            attempts: 60,
+            delayMs: 200);
     }
 
     [RequiresDockerFact]
