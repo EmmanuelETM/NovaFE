@@ -121,9 +121,7 @@ export function EcfDetailScreen({ ecfId }: { ecfId: string }) {
                 <ul className="list-disc pl-5 text-sm">
                   {ecf.dgii.messages.map((message, index) => (
                     <li key={index}>
-                      {[message.code, message.value]
-                        .filter(Boolean)
-                        .join(": ")}
+                      {[message.code, message.value].filter(Boolean).join(": ")}
                     </li>
                   ))}
                 </ul>
