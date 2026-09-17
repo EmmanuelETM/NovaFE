@@ -28,7 +28,7 @@ export function organizationErrorMessage(error: unknown): string {
 }
 
 /** Las organizaciones de la plataforma, paginado (operador, Fase 5). */
-export function useOrganizations(state: TenantsListState) {
+export function useOrganizations(state: TenantsListState, enabled = true) {
   return useQuery({
     queryKey: queryKeys.organizations.list({ ...state }),
     queryFn: () =>
@@ -37,6 +37,7 @@ export function useOrganizations(state: TenantsListState) {
         pageSize: state.pageSize,
         search: state.search.trim() || undefined,
       }),
+    enabled,
   });
 }
 

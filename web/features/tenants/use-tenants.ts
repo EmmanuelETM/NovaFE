@@ -21,7 +21,7 @@ export interface TenantsListState {
  * endpoint es `search` (no `filter`, el nombre genérico de `toApiQuery`), así
  * que la consulta se arma a mano en vez de con ese helper.
  */
-export function useTenants(state: TenantsListState) {
+export function useTenants(state: TenantsListState, enabled = true) {
   return useQuery({
     queryKey: queryKeys.tenants.list({ ...state }),
     queryFn: () =>
@@ -30,6 +30,7 @@ export function useTenants(state: TenantsListState) {
         pageSize: state.pageSize,
         search: state.search.trim() || undefined,
       }),
+    enabled,
   });
 }
 
