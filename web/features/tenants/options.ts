@@ -1,4 +1,4 @@
-/** Los 5 niveles comerciales (`TenantPlan`), en el orden que conviene mostrar. */
+/** Los 5 niveles comerciales (`TenantPlan`/`OrganizationPlan`), en el orden que conviene mostrar. */
 export const PLAN_OPTIONS = [
   { value: "Developer", label: "Developer" },
   { value: "Starter", label: "Emprendedor" },
@@ -6,6 +6,10 @@ export const PLAN_OPTIONS = [
   { value: "Corporate", label: "Corporativo" },
   { value: "Enterprise", label: "Empresarial" },
 ];
+
+export function planLabel(value: string): string {
+  return PLAN_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
 
 /** Los 3 ambientes de la DGII (`DgiiEnvironment`). */
 export const ENVIRONMENT_OPTIONS = [

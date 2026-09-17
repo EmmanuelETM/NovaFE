@@ -47,12 +47,26 @@ function matches(tenant: OrganizationTenantSummary, query: string): boolean {
 
 /**
  * El grid de tenants de una organización — la vista principal de
- * `/org/[orgSlug]`. A propósito minimalista: solo Razón Social/RNC y los dos
- * badges (estado, ambiente DGII). Certificado y último e-CF quedan para el
- * `/inicio` del tenant — son datos operativos de ese contribuyente puntual,
- * no algo que se compare de un vistazo entre tenants de la organización.
+ * `/org/[orgSlug]`, reusado tal cual en la pestaña "Tenants" del detalle de
+ * organización del operador (`/nemus/organizaciones/[id]`). A propósito
+ * minimalista: solo Razón Social/RNC y los dos badges (estado, ambiente
+ * DGII). Certificado y último e-CF quedan para el `/inicio` del tenant — son
+ * datos operativos de ese contribuyente puntual, no algo que se compare de
+ * un vistazo entre tenants de la organización.
  */
-export function TenantsGrid({ organizationId }: { organizationId: string }) {
+export function TenantsGrid({
+  organizationId,
+  linkTo = (tenantId) => `/tenant/${tenantId}`,
+}: {
+  organizationId: string;
+  /**
+   * A dónde enlaza cada tarjeta. Por defecto, el dashboard self-service del
+   * tenant (`/tenant/[tenantId]`); el operador pasa `/nemus/tenants/[id]`,
+   * que es donde vive su propia vista con pestañas de certificados/
+   * secuencias/API keys.
+   */
+  linkTo?: (tenantId: string) => string;
+}) {
   const { data, isPending, error } = useOrganizationTenants(organizationId);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
@@ -122,7 +136,7 @@ export function TenantsGrid({ organizationId }: { organizationId: string }) {
           {tenants.map((tenant) => (
             <Link
               key={tenant.id}
-              href={`/tenant/${tenant.id}`}
+              href={linkTo(tenant.id)}
               className="bg-card border-border/60 hover:bg-muted/50 flex items-center gap-3 rounded-2xl border p-4 shadow-xs transition-colors"
             >
               <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">

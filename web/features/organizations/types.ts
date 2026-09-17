@@ -3,6 +3,16 @@ import type { components } from "@/lib/api/schema";
 /** Una organización del usuario (`UserOrganizationDto`, de `/users/me`). */
 export type UserOrganization = components["schemas"]["UserOrganizationDto"];
 
+/** Una organización, vista de operador (`OrganizationDto`, `GET /organizations/{id}`). */
+export type Organization = components["schemas"]["OrganizationDto"];
+
+/** Fila del listado de operador (`OrganizationSummaryDto`). */
+export type OrganizationSummary =
+  components["schemas"]["OrganizationSummaryDto"];
+
+export type OrganizationPage =
+  components["schemas"]["PagedResultOfOrganizationSummaryDto"];
+
 /** Un miembro de la organización (`OrganizationMemberDto`). */
 export type OrganizationMember = components["schemas"]["OrganizationMemberDto"];
 

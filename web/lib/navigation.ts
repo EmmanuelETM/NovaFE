@@ -1,5 +1,6 @@
 import {
   Activity,
+  Boxes,
   Building,
   Building2,
   CreditCard,
@@ -252,6 +253,15 @@ export const NAVIGATION: readonly NavSection[] = [
         description:
           "Latido de los workers, los outbox y las secuencias, en vivo",
         icon: Activity,
+        minRole: ROLE.admin_sistema,
+        ready: true,
+      },
+      {
+        href: "/nemus/organizaciones",
+        label: "Organizaciones",
+        description:
+          "Cuentas pagadoras: plan, estado y los tenants que agrupan",
+        icon: Boxes,
         minRole: ROLE.admin_sistema,
         ready: true,
       },

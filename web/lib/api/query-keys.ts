@@ -129,9 +129,14 @@ export const queryKeys = {
   myEmitterProfile: (tenantId: string) =>
     ["my-emitter-profile", tenantId] as const,
 
-  /** `GET /organizations/{id}/...`: self-service de organizacion (Fase 3). */
+  /**
+   * `GET /organizations/{id}/...`: self-service de organizacion (Fase 3) +
+   * el listado de operador (`GET /organizations`, Fase 5) — mismo recurso,
+   * misma cache.
+   */
   organizations: {
     all: ["organizations"] as const,
+    list: (filters: Filters) => ["organizations", "list", filters] as const,
     detail: (id: string) => ["organizations", "detail", id] as const,
     members: (id: string) => ["organizations", "members", id] as const,
     tenants: (id: string) => ["organizations", "tenants", id] as const,

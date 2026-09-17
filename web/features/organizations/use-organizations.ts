@@ -6,8 +6,14 @@ import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/problem";
 import { queryKeys } from "@/lib/api/query-keys";
+import type { TenantsListState } from "@/features/tenants/use-tenants";
 
-import type { OrganizationMember, OrganizationTenantPage } from "./types";
+import type {
+  Organization,
+  OrganizationMember,
+  OrganizationPage,
+  OrganizationTenantPage,
+} from "./types";
 
 /** El mensaje ante un error de mutación. Un 400 trae el detalle en `fieldErrors`. */
 export function organizationErrorMessage(error: unknown): string {
@@ -19,6 +25,88 @@ export function organizationErrorMessage(error: unknown): string {
     return error.message;
   }
   return "No se pudo completar la acción.";
+}
+
+/** Las organizaciones de la plataforma, paginado (operador, Fase 5). */
+export function useOrganizations(state: TenantsListState) {
+  return useQuery({
+    queryKey: queryKeys.organizations.list({ ...state }),
+    queryFn: () =>
+      api.get<OrganizationPage>("/organizations", {
+        page: state.page,
+        pageSize: state.pageSize,
+        search: state.search.trim() || undefined,
+      }),
+  });
+}
+
+/** Una organización puntual (operador, Fase 5). */
+export function useOrganization(id: string) {
+  return useQuery({
+    queryKey: queryKeys.organizations.detail(id),
+    queryFn: () => api.get<Organization>(`/organizations/${id}`),
+    enabled: id !== "",
+  });
+}
+
+/** Suspende la organización — bloquea en cascada a todos sus tenants. Operador. */
+export function useSuspendOrganization(organizationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      api.post<void>(`/organizations/${organizationId}/suspend`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.detail(organizationId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all,
+      });
+      toast.success("Organización suspendida");
+    },
+    onError: (error) => toast.error(organizationErrorMessage(error)),
+  });
+}
+
+/** Reactiva una organización suspendida. Operador. */
+export function useActivateOrganization(organizationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      api.post<void>(`/organizations/${organizationId}/activate`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.detail(organizationId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all,
+      });
+      toast.success("Organización reactivada");
+    },
+    onError: (error) => toast.error(organizationErrorMessage(error)),
+  });
+}
+
+/** Corrige el plan de la organización. Sin pasarela de pago todavía — corrección manual del operador. */
+export function useUpdateOrganizationPlan(organizationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (plan: string) =>
+      api.patch<void>(`/organizations/${organizationId}/plan`, { plan }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.detail(organizationId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all,
+      });
+      toast.success("Plan actualizado");
+    },
+    onError: (error) => toast.error(organizationErrorMessage(error)),
+  });
 }
 
 /**

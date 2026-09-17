@@ -5,7 +5,7 @@ import { Boxes, Building2, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AccessScreen } from "@/features/auth/access-screen";
 import type { CurrentUser } from "@/features/auth/use-current-user";
-import { PLAN_OPTIONS } from "@/features/tenants/options";
+import { planLabel } from "@/features/tenants/options";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
 
@@ -14,10 +14,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-function planLabel(plan: string): string {
-  return PLAN_OPTIONS.find((option) => option.value === plan)?.label ?? plan;
-}
 
 /**
  * La vista global: todas las organizaciones del usuario, sin el shell de
