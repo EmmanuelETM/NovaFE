@@ -12,7 +12,12 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { NAVIGATION, findNavItem, type NavItem } from "@/lib/navigation";
+import {
+  NAVIGATION,
+  findNavItem,
+  visibleNavItems,
+  type NavItem,
+} from "@/lib/navigation";
 
 interface NavMainProps {
   /** Nivel del usuario, resuelto en el servidor. */
@@ -35,46 +40,44 @@ export function NavMain({ role }: NavMainProps) {
 
   return (
     <>
-      {NAVIGATION.map((section) => {
-        const visibles = section.items.filter(
-          (item) =>
-            role >= item.minRole &&
-            (item.maxRole === undefined || role <= item.maxRole),
-        );
+      {NAVIGATION.filter((section) => !section.hideFromSidebar).map(
+        (section) => {
+          const visibles = visibleNavItems(section.items, role);
 
-        // Un grupo cuyo único contenido estaba fuera del alcance del rol no debe dejar el
-        // título flotando sobre nada.
-        if (visibles.length === 0) return null;
+          // Un grupo cuyo único contenido estaba fuera del alcance del rol no debe dejar
+          // el título flotando sobre nada.
+          if (visibles.length === 0) return null;
 
-        return (
-          <SidebarGroup key={section.label}>
-            <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
-            <SidebarMenu>
-              {visibles.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  {item.ready ? (
-                    <SidebarMenuButton
-                      isActive={item.href === actual?.href}
-                      tooltip={item.label}
-                      render={
-                        <Link
-                          href={item.href}
-                          onClick={() => setOpenMobile(false)}
-                        />
-                      }
-                    >
-                      <item.icon aria-hidden />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  ) : (
-                    <PendingItem item={item} />
-                  )}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        );
-      })}
+          return (
+            <SidebarGroup key={section.label}>
+              <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+              <SidebarMenu>
+                {visibles.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    {item.ready ? (
+                      <SidebarMenuButton
+                        isActive={item.href === actual?.href}
+                        tooltip={item.label}
+                        render={
+                          <Link
+                            href={item.href}
+                            onClick={() => setOpenMobile(false)}
+                          />
+                        }
+                      >
+                        <item.icon aria-hidden />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    ) : (
+                      <PendingItem item={item} />
+                    )}
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          );
+        },
+      )}
     </>
   );
 }

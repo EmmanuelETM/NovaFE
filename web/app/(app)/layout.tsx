@@ -39,8 +39,8 @@ export const dynamic = "force-dynamic";
  * ver una pantalla vacía.
  *
  * Si tu aplicación no tiene perfiles ni roles, borra el `try`/`catch` y pásale a
- * `AppSidebar` un usuario fijo — o quítale la prop y con ella `NavUser`. Todo lo demás del
- * esqueleto funciona igual.
+ * `AppSidebar`/`AppTopbar` un usuario fijo — o quítales la prop y con ella `NavTenant`/
+ * `NavUser`. Todo lo demás del esqueleto funciona igual.
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   let user: CurrentUser;
@@ -78,7 +78,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           quedan quietos sin `sticky`, y el redondeado del panel recorta lo que pasa por
           debajo en vez de dejarlo asomar por la esquina. */}
       <SidebarInset className="min-w-0 overflow-hidden">
-        <AppTopbar />
+        <AppTopbar user={user} />
 
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </SidebarInset>

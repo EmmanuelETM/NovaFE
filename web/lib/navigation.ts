@@ -2,6 +2,7 @@ import {
   Activity,
   Building,
   Building2,
+  CreditCard,
   LayoutDashboard,
   ListOrdered,
   Receipt,
@@ -59,6 +60,15 @@ export interface NavItem {
 export interface NavSection {
   label: string;
   items: readonly NavItem[];
+  /**
+   * No se pinta como grupo del sidebar principal — su contenido es del
+   * contribuyente (empresa, certificados, plan…), no del día a día, así que
+   * vive en el menú desplegable de `NavTenant`, al pie del sidebar, en vez
+   * de competir por espacio con Inicio/Comprobantes. Sigue formando parte
+   * de `NAVIGATION`/`NAV_ITEMS`: `PageHeader` y la miga de pan siguen
+   * resolviendo estas rutas igual.
+   */
+  hideFromSidebar?: boolean;
 }
 
 export const NAVIGATION: readonly NavSection[] = [
@@ -86,6 +96,7 @@ export const NAVIGATION: readonly NavSection[] = [
   },
   {
     label: "Administración",
+    hideFromSidebar: true,
     items: [
       {
         href: "/empresa",
@@ -143,6 +154,18 @@ export const NAVIGATION: readonly NavSection[] = [
         maxRole: ROLE.admin_tenant,
         ready: true,
       },
+      {
+        href: "/plan",
+        label: "Plan",
+        // A propósito no dice "facturación": en un sistema de facturación
+        // electrónica esa palabra se lee como "mis e-CF", no como "lo que le
+        // pago a Nemus". "Plan" es corto y no compite con eso.
+        description: "Tu plan de NovaFE, uso y método de pago",
+        icon: CreditCard,
+        minRole: ROLE.admin_tenant,
+        maxRole: ROLE.admin_tenant,
+        ready: false,
+      },
     ],
   },
   {
@@ -192,6 +215,18 @@ export const NAVIGATION: readonly NavSection[] = [
 export const NAV_ITEMS: readonly NavItem[] = NAVIGATION.flatMap(
   (section) => section.items,
 );
+
+/** Los items de una sección que un rango de rol puede ver. Mismo filtro que usan `NavMain` y `NavTenant`. */
+export function visibleNavItems(
+  items: readonly NavItem[],
+  role: number,
+): NavItem[] {
+  return items.filter(
+    (item) =>
+      role >= item.minRole &&
+      (item.maxRole === undefined || role <= item.maxRole),
+  );
+}
 
 /** La primera pantalla construida, que es a donde va la raíz. */
 export const HOME_HREF: string =

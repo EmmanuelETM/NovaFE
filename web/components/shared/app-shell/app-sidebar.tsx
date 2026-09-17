@@ -12,7 +12,7 @@ import type { CurrentUser } from "@/features/auth/use-current-user";
 
 import { Brand } from "./brand";
 import { NavMain } from "./nav-main";
-import { NavUser } from "./nav-user";
+import { NavTenant } from "./nav-tenant";
 
 interface AppSidebarProps {
   user: CurrentUser;
@@ -42,7 +42,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
       </SidebarContent>
 
       <SidebarFooter>
-        <NavUser user={user} />
+        <NavTenant user={user} />
       </SidebarFooter>
 
       {/* El borde arrastrable: colapsar sin apuntarle al botón. */}

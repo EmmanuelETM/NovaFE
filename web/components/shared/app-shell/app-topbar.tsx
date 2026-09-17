@@ -11,21 +11,31 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import type { CurrentUser } from "@/features/auth/use-current-user";
 import { NAVIGATION, findNavItem } from "@/lib/navigation";
 
+import { NavUser } from "./nav-user";
+
+interface AppTopbarProps {
+  user: CurrentUser;
+}
+
 /**
- * La barra superior: dónde estoy y cómo colapso el sidebar.
+ * La barra superior: dónde estoy, cómo colapso el sidebar, y quién soy.
  *
- * Es una **miga de pan**, no un título. El `h1` de cada pantalla vive en la pantalla —
+ * La miga de pan **no es un título**. El `h1` de cada pantalla vive en la pantalla —
  * aquí lo que se resuelve es la orientación: con el sidebar colapsado a iconos, el grupo
  * («Catálogo») es lo único que dice en qué parte de la aplicación estás.
+ *
+ * `NavUser` va acá a la derecha y no en el sidebar: es lo personal (cuenta, apariencia,
+ * cerrar sesión), separado de lo del contribuyente (`NavTenant`, al pie del sidebar).
  *
  * No se queda fija con `sticky`: quien tiene el scroll es el panel de contenido, así que
  * esta barra está quieta por construcción. Con `sticky` se pegaría al borde de la ventana y
  * no al del panel —que con `variant="inset"` está dos píxeles más adentro—, y se vería
  * flotando sobre la esquina redondeada.
  */
-export function AppTopbar() {
+export function AppTopbar({ user }: AppTopbarProps) {
   const pathname = usePathname();
 
   const actual = findNavItem(pathname);
@@ -55,6 +65,10 @@ export function AppTopbar() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
+      <div className="ml-auto">
+        <NavUser user={user} />
+      </div>
     </header>
   );
 }
