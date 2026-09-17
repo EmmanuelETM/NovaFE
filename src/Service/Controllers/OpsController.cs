@@ -2,6 +2,9 @@ using Asp.Versioning;
 using NovaFE.Application.Ops.Contracts;
 using NovaFE.Application.Ops.GetDgiiStatus;
 using NovaFE.Application.Ops.GetOpsStatus;
+using NovaFE.Application.Webhooks.Contracts;
+using NovaFE.Application.Webhooks.ListDeadDeliveries;
+using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -17,7 +20,10 @@ namespace NovaFE.Service.Controllers;
 [ApiVersion("1")]
 [Route("api/v{version:apiVersion}/[controller]")]
 [Authorize(Policy = SecurityPolicies.Operator)]
-public sealed class OpsController(GetOpsStatusUseCase getStatus, GetDgiiStatusUseCase getDgiiStatus) : ApiController
+public sealed class OpsController(
+    GetOpsStatusUseCase getStatus,
+    GetDgiiStatusUseCase getDgiiStatus,
+    ListDeadDeliveriesUseCase listDeadDeliveries) : ApiController
 {
     /// <summary>Latido de los workers, profundidad/antigüedad de los outbox, y salud de las secuencias.</summary>
     [HttpGet("status")]
@@ -35,4 +41,10 @@ public sealed class OpsController(GetOpsStatusUseCase getStatus, GetDgiiStatusUs
     [ProducesResponseType(typeof(DgiiStatusDiagnosticDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> DgiiStatus(CancellationToken ct)
         => (await getDgiiStatus.Execute(ct)).Match(Ok, Problem);
+
+    /// <summary>Entregas de webhook <c>dead</c> de toda la plataforma, paginado (más reciente primero).</summary>
+    [HttpGet("dead-deliveries")]
+    [ProducesResponseType(typeof(PagedResult<DeadWebhookDeliveryDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> DeadDeliveries([FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        => (await listDeadDeliveries.Execute(new ListDeadDeliveriesQuery { Page = page, PageSize = pageSize }, ct)).Match(Ok, Problem);
 }
