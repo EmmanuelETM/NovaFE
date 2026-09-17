@@ -333,7 +333,7 @@ function CreateWebhookDialog() {
       open={open}
       onOpenChange={(next) => (next ? setOpen(true) : close())}
     >
-      <DialogTrigger render={<Button size="sm" />}>
+      <DialogTrigger render={<Button size="sm" className="h-8 gap-1.5" />}>
         <Plus /> Nuevo webhook
       </DialogTrigger>
 

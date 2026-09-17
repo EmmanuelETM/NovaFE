@@ -56,7 +56,13 @@ export function EmitterProfileTab({ tenantId }: { tenantId: string }) {
   const { data: profile, isPending, error } = useEmitterProfile(tenantId);
   const setEmitterProfile = useSetEmitterProfile();
 
-  const notConfigured = error instanceof ApiError && error.status === 404;
+  // `EmitterProfileErrors.NotConfigured` es un `Error.Validation` en el
+  // backend (no `NotFound`), así que la API la manda como 400, no 404 — el
+  // código del error, no el status HTTP, es lo que la distingue de
+  // cualquier otra falla.
+  const notConfigured =
+    error instanceof ApiError &&
+    "EmitterProfile.NotConfigured" in error.fieldErrors;
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),

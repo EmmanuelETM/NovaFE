@@ -193,7 +193,7 @@ function CreateApiKeyDialog({ tenantId }: { tenantId: string }) {
       open={open}
       onOpenChange={(next) => (next ? setOpen(true) : close())}
     >
-      <DialogTrigger render={<Button size="xs" />}>
+      <DialogTrigger render={<Button size="sm" className="h-8 gap-1.5" />}>
         <KeyRound /> Nueva API key
       </DialogTrigger>
 

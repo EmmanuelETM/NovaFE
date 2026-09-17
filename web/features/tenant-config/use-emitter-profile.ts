@@ -18,21 +18,26 @@ export function useEmitterProfile() {
   });
 }
 
-export interface SetEmitterProfileInput {
+/**
+ * Sin `defaultEnvironment` a propósito: pasar de un ambiente a otro exige
+ * certificado y rango de secuencia ya autorizados ahí, algo que solo
+ * confirma el operador — self-service no lo puede tocar (ver el comentario
+ * de `UpdateEmitterProfileCommand` en el backend).
+ */
+export interface UpdateEmitterProfileInput {
   address: string;
   municipality?: string | null;
   province?: string | null;
   phones?: string[] | null;
   email?: string | null;
   economicActivity?: string | null;
-  defaultEnvironment: string;
 }
 
 export function useSetEmitterProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: SetEmitterProfileInput) =>
+    mutationFn: (body: UpdateEmitterProfileInput) =>
       api.put<EmitterProfile>("/emitter-profile", body),
     onSuccess: () => {
       void queryClient.invalidateQueries({

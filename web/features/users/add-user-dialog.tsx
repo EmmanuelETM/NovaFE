@@ -83,7 +83,7 @@ export function AddUserDialog({
         if (!next) form.reset();
       }}
     >
-      <DialogTrigger render={<Button size="xs" />}>
+      <DialogTrigger render={<Button size="sm" className="h-8 gap-1.5" />}>
         <UserPlus /> {label}
       </DialogTrigger>
 

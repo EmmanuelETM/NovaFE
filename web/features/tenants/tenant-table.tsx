@@ -70,7 +70,11 @@ export function TenantTable() {
       onRowClick={(tenant) => router.push(`/nemus/tenants/${tenant.id}`)}
       getRowId={(tenant) => tenant.id}
       toolbarActions={
-        <Button size="xs" onClick={() => router.push("/nemus/tenants/nuevo")}>
+        <Button
+          size="sm"
+          className="h-8 gap-1.5"
+          onClick={() => router.push("/nemus/tenants/nuevo")}
+        >
           Nuevo contribuyente
         </Button>
       }

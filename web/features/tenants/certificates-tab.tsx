@@ -189,7 +189,7 @@ function UploadCertificateDialog({ tenantId }: { tenantId: string }) {
         }
       }}
     >
-      <DialogTrigger render={<Button size="xs" />}>
+      <DialogTrigger render={<Button size="sm" className="h-8 gap-1.5" />}>
         <Upload /> Cargar certificado
       </DialogTrigger>
 
