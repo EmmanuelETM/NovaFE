@@ -13,6 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/problem";
 
+import { DeadDeliveriesCard } from "./dead-deliveries-card";
 import { heroFor, QUEUES, workerFraction } from "./hero";
 import { QueueCard } from "./queue-card";
 import { SequencesCard } from "./sequences-card";
@@ -114,6 +115,8 @@ export function OpsStatusScreen() {
       </div>
 
       <SequencesCard tenants={data.sequencesAtRisk} />
+
+      <DeadDeliveriesCard />
     </div>
   );
 }
