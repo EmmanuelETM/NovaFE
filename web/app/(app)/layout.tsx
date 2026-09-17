@@ -5,12 +5,17 @@ import {
   AppSidebarProvider,
   AppTopbar,
   CommandPalette,
+  ImpersonationBanner,
 } from "@/components/shared/app-shell";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { AccessScreen } from "@/features/auth/access-screen";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
+import {
+  IMPERSONATION_COOKIE,
+  parseImpersonationCookie,
+} from "@/lib/impersonation";
 import type { Scope } from "@/lib/navigation";
 
 /**
@@ -68,6 +73,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   const store = await cookies();
   const scope: Scope = { kind: "operator" };
+  const impersonation = parseImpersonationCookie(
+    store.get(IMPERSONATION_COOKIE)?.value,
+  );
 
   return (
     /* El alto fijo y la excepción del punto de venta viven en `AppSidebarProvider`: las
@@ -81,6 +89,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           quedan quietos sin `sticky`, y el redondeado del panel recorta lo que pasa por
           debajo en vez de dejarlo asomar por la esquina. */}
       <SidebarInset className="min-w-0 overflow-hidden">
+        {impersonation && <ImpersonationBanner email={impersonation.email} />}
         <AppTopbar user={user} scope={scope} />
         <CommandPalette user={user} scope={scope} />
 

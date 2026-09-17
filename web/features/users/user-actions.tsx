@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { Eye, MoreHorizontal } from "lucide-react";
 
 import {
   AlertDialog,
@@ -85,6 +85,19 @@ export function UserActions({
               disabled={busy}
             >
               Cambiar rol
+            </DropdownMenuItem>
+          )}
+          {tenantId !== null && active && (
+            <DropdownMenuItem
+              render={
+                <a
+                  href={`/api/impersonate?userId=${user.id}&email=${encodeURIComponent(user.email)}&tenantId=${tenantId}`}
+                  target="_blank"
+                  rel="noopener"
+                />
+              }
+            >
+              <Eye /> Ver como
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={() => setConfirm(true)} disabled={busy}>

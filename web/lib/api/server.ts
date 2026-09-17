@@ -1,7 +1,13 @@
 import "server-only";
 
+import { cookies } from "next/headers";
+
 import { getSession } from "@/lib/auth/session";
 import { env } from "@/lib/env";
+import {
+  IMPERSONATION_COOKIE,
+  parseImpersonationCookie,
+} from "@/lib/impersonation";
 
 import { ApiError, readProblem } from "./problem";
 
@@ -47,6 +53,12 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
  * owner/admin de la organizacion dueña). Sin `tenantId`, el backend cae a un
  * default razonable; no es un error, un usuario recien invitado a una
  * organizacion sin tenants todavia necesita poder loguearse igual.
+ *
+ * Fase 5: si hay una cookie de impersonación activa (ver `lib/impersonation.ts`),
+ * suma `X-Impersonate-User-Id` — solo tiene efecto si quien está detrás de
+ * la sesión de Better Auth es realmente `admin_sistema`, algo que la API
+ * revalida siempre; acá no se comprueba el rol porque ya lo comprobó
+ * `app/api/impersonate/route.ts` al setear la cookie.
  */
 export async function identityHeaders(
   tenantId?: string,
@@ -61,6 +73,12 @@ export async function identityHeaders(
     };
 
     if (tenantId) headers["X-Acting-Tenant-Id"] = tenantId;
+
+    const store = await cookies();
+    const impersonation = parseImpersonationCookie(
+      store.get(IMPERSONATION_COOKIE)?.value,
+    );
+    if (impersonation) headers["X-Impersonate-User-Id"] = impersonation.userId;
 
     return headers;
   }

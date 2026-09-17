@@ -5,12 +5,17 @@ import {
   AppSidebarProvider,
   AppTopbar,
   CommandPalette,
+  ImpersonationBanner,
 } from "@/components/shared/app-shell";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { AccessScreen } from "@/features/auth/access-screen";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
+import {
+  IMPERSONATION_COOKIE,
+  parseImpersonationCookie,
+} from "@/lib/impersonation";
 import type { Scope } from "@/lib/navigation";
 
 /**
@@ -71,6 +76,9 @@ export default async function TenantLayout({
 
   const store = await cookies();
   const scope: Scope = { kind: "tenant", tenantId };
+  const impersonation = parseImpersonationCookie(
+    store.get(IMPERSONATION_COOKIE)?.value,
+  );
 
   return (
     <AppSidebarProvider
@@ -79,6 +87,7 @@ export default async function TenantLayout({
       <AppSidebar user={user} scope={scope} />
 
       <SidebarInset className="min-w-0 overflow-hidden">
+        {impersonation && <ImpersonationBanner email={impersonation.email} />}
         <AppTopbar user={user} scope={scope} />
         <CommandPalette user={user} scope={scope} />
 
