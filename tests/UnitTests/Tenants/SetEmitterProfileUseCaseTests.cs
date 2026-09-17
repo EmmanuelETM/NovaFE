@@ -1,5 +1,6 @@
 using ErrorOr;
 using NSubstitute;
+using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Application.Tenants.SetEmitterProfile;
@@ -13,20 +14,23 @@ public class SetEmitterProfileUseCaseTests : UseCaseTestBase
 {
     private static readonly Guid TenantId = Guid.CreateVersion7();
 
+    private readonly ICurrentTenant _currentTenant = Substitute.For<ICurrentTenant>();
     private readonly ITenantReadRepository _tenants = Substitute.For<ITenantReadRepository>();
     private readonly IEmitterProfileRepository _profiles = Substitute.For<IEmitterProfileRepository>();
 
     public SetEmitterProfileUseCaseTests()
     {
+        _currentTenant.TenantId.Returns(TenantId);
+        _currentTenant.HasValue.Returns(true);
         _tenants.GetByIdAsync(TenantId, Arg.Any<CancellationToken>())
             .Returns(new TenantDto(TenantId, "132786262", "Acme SRL", null, "Business", "Active", Clock.GetUtcNow()));
     }
 
     private SetEmitterProfileUseCase Sut() =>
-        new(LoggerFactory, new SetEmitterProfileCommandValidator(), _tenants, _profiles);
+        new(LoggerFactory, new SetEmitterProfileCommandValidator(), _currentTenant, _tenants, _profiles);
 
     private static SetEmitterProfileCommand Command() => new(
-        TenantId, "Av. 27 de Febrero 100", "010100", "01",
+        "Av. 27 de Febrero 100", "010100", "01",
         ["809-555-0100"], "facturacion@acme.do", "Comercio", "Test");
 
     [Fact]

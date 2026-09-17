@@ -1,5 +1,6 @@
 import {
   Activity,
+  Building,
   Building2,
   LayoutDashboard,
   ListOrdered,
@@ -86,6 +87,15 @@ export const NAVIGATION: readonly NavSection[] = [
   {
     label: "Administración",
     items: [
+      {
+        href: "/empresa",
+        label: "Empresa",
+        description: "Los datos fiscales de tu contribuyente",
+        icon: Building,
+        minRole: ROLE.admin_tenant,
+        maxRole: ROLE.admin_tenant,
+        ready: true,
+      },
       {
         href: "/usuarios",
         label: "Usuarios",

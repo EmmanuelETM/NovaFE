@@ -1,6 +1,7 @@
 using ErrorOr;
 using FluentValidation;
 using NovaFE.Application.Common;
+using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Domain.Common;
@@ -10,12 +11,15 @@ using Microsoft.Extensions.Logging;
 namespace NovaFE.Application.Tenants.SetEmitterProfile;
 
 /// <summary>
-/// Upsert del perfil fiscal del emisor. Recurso de operador: no exige un tenant en
-/// la petición, pero el contribuyente indicado debe existir.
+/// Upsert del perfil fiscal del emisor del tenant actual
+/// (<c>ICurrentTenant</c>). El operador lo fija con <c>CurrentTenant.Set</c>
+/// antes de llamar (<c>TenantsController</c>); self-service ya lo trae
+/// resuelto de la sesión/API key.
 /// </summary>
 public sealed class SetEmitterProfileUseCase(
     ILoggerFactory loggerFactory,
     IValidator<SetEmitterProfileCommand> validator,
+    ICurrentTenant currentTenant,
     ITenantReadRepository tenants,
     IEmitterProfileRepository profiles)
     : CommandUseCase<SetEmitterProfileCommand, EmitterProfileDto>(loggerFactory, validator)
@@ -24,18 +28,23 @@ public sealed class SetEmitterProfileUseCase(
         SetEmitterProfileCommand request,
         CancellationToken ct)
     {
-        if (await tenants.GetByIdAsync(request.TenantId, ct) is null)
-            return TenantErrors.NotFound(request.TenantId);
+        if (!currentTenant.HasValue)
+            return Errors.Auth.TenantNotResolved;
+
+        var tenantId = currentTenant.TenantId!.Value;
+
+        if (await tenants.GetByIdAsync(tenantId, ct) is null)
+            return TenantErrors.NotFound(tenantId);
 
         var environment = DgiiEnvironment.GetAll()
             .First(e => string.Equals(e.Name, request.DefaultEnvironment.Trim(), StringComparison.OrdinalIgnoreCase));
 
-        var existing = await profiles.GetByTenantAsync(request.TenantId, ct);
+        var existing = await profiles.GetByTenantAsync(tenantId, ct);
 
         if (existing is null)
         {
             var created = EmitterProfile.Create(
-                request.TenantId,
+                tenantId,
                 request.Address,
                 request.Municipality,
                 request.Province,

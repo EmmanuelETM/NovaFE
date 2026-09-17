@@ -45,7 +45,8 @@ public sealed class TenantsController(
     RevokeUserUseCase revokeUser,
     ChangeUserRoleUseCase changeUserRole,
     ReinstateUserUseCase reinstateUser,
-    ListAuditLogUseCase listAuditLog) : ApiController
+    ListAuditLogUseCase listAuditLog,
+    CurrentTenant currentTenant) : ApiController
 {
     [HttpPost]
     public async Task<IActionResult> Register(
@@ -68,22 +69,34 @@ public sealed class TenantsController(
         CancellationToken ct)
         => (await list.Execute(query, ct)).Match(Ok, Problem);
 
-    /// <summary>El perfil fiscal del emisor (dirección, ubicación, teléfonos, ambiente).</summary>
+    /// <summary>
+    /// El perfil fiscal del emisor (dirección, ubicación, teléfonos, ambiente),
+    /// como operador. <c>currentTenant.Set</c> es <c>internal</c>, llamable
+    /// porque este controller vive en el mismo ensamblado que
+    /// <see cref="CurrentTenant"/>; con eso fijado, el caso de uso —compartido
+    /// con <c>EmitterProfileController</c> self-service— no se entera de quién
+    /// lo llamó. Ver el comentario de <c>CertificatesController.UploadForTenant</c>
+    /// para la nota sobre RLS.
+    /// </summary>
     [HttpGet("{id:guid}/emitter-profile")]
     [ProducesResponseType(typeof(EmitterProfileDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetEmitterProfile(Guid id, CancellationToken ct)
-        => (await getEmitterProfile.Execute(new GetEmitterProfileQuery(id), ct)).Match(Ok, Problem);
+    {
+        currentTenant.Set(id);
+        return (await getEmitterProfile.Execute(ct)).Match(Ok, Problem);
+    }
 
-    /// <summary>Crea o reemplaza el perfil fiscal del emisor (upsert).</summary>
+    /// <summary>Crea o reemplaza el perfil fiscal del emisor (upsert), como operador.</summary>
     [HttpPut("{id:guid}/emitter-profile")]
     [ProducesResponseType(typeof(EmitterProfileDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> SetEmitterProfile(
         Guid id,
         [FromBody] SetEmitterProfileBody body,
         CancellationToken ct)
-        => (await setEmitterProfile.Execute(
+    {
+        currentTenant.Set(id);
+        return (await setEmitterProfile.Execute(
                 new SetEmitterProfileCommand(
-                    id,
                     body.Address,
                     body.Municipality,
                     body.Province,
@@ -93,6 +106,7 @@ public sealed class TenantsController(
                     body.DefaultEnvironment),
                 ct))
             .Match(Ok, Problem);
+    }
 
     /// <summary>
     /// Acuña una API key para el contribuyente. El <c>token</c> de la respuesta es

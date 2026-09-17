@@ -91,4 +91,7 @@ export const queryKeys = {
     all: ["webhooks"] as const,
     list: () => ["webhooks", "list"] as const,
   },
+
+  /** `GET /emitter-profile`: perfil fiscal del emisor del contribuyente actual (self-service). */
+  myEmitterProfile: ["my-emitter-profile"] as const,
 } as const;

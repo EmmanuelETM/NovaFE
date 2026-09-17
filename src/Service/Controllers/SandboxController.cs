@@ -58,7 +58,6 @@ public sealed class SandboxController(
         HttpContext.RequestServices.GetRequiredService<CurrentTenant>().Set(tenant.Value);
 
         var profile = await setEmitterProfile.Execute(new SetEmitterProfileCommand(
-            tenant.Value,
             Address: "Av. Winston Churchill 1099, Piantini",
             Municipality: "010100",
             Province: "010000",

@@ -16,9 +16,6 @@ public sealed class SetEmitterProfileCommandValidator : AbstractValidator<SetEmi
 
     public SetEmitterProfileCommandValidator()
     {
-        RuleFor(x => x.TenantId)
-            .NotEmpty().WithMessage("El contribuyente es obligatorio.");
-
         RuleFor(x => x.Address)
             .NotEmpty().WithMessage("La dirección del emisor es obligatoria.")
             .MaximumLength(100).WithMessage("La dirección no puede exceder 100 caracteres.");
