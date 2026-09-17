@@ -207,6 +207,40 @@ public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : Inte
         afterIssuance!.Items.ShouldHaveSingleItem().LastEcfIssuedAt.ShouldNotBeNull();
     }
 
+    [RequiresDockerFact]
+    public async Task Operator_can_change_the_plan_but_a_plain_member_cannot()
+    {
+        const string adminKeyHeader = "X-Admin-Key";
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-plan", ownerEmail: "owner@acme-plan.do");
+
+        // Con la clave de operador configurada, un miembro autenticado como humano
+        // (sin rol admin_sistema) no pasa la política Operator.
+        Reconfigure(new Dictionary<string, string?> { ["Security:AdminApiKey"] = "s3cr3t-operator" });
+        ActAsHuman("auth-owner", "owner@acme-plan.do");
+        var denied = await Client.PatchAsJsonAsync($"/api/v1/organizations/{orgId}/plan", new { plan = "Enterprise" });
+        denied.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+
+        foreach (var h in new[] { "X-Internal-Key", "X-Acting-User", "X-Acting-Email" })
+            Client.DefaultRequestHeaders.Remove(h);
+        Client.DefaultRequestHeaders.Add(adminKeyHeader, "s3cr3t-operator");
+
+        var changed = await Client.PatchAsJsonAsync($"/api/v1/organizations/{orgId}/plan", new { plan = "Enterprise" });
+        changed.StatusCode.ShouldBe(HttpStatusCode.NoContent, await changed.Content.ReadAsStringAsync());
+
+        var detail = await LeerAsync<OrganizationDetailResponse>(await Client.GetAsync($"/api/v1/organizations/{orgId}"));
+        detail!.Plan.ShouldBe("Enterprise");
+    }
+
+    [RequiresDockerFact]
+    public async Task Changing_the_plan_to_an_unknown_value_is_rejected_with_400()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-plan-invalid");
+
+        var response = await Client.PatchAsJsonAsync($"/api/v1/organizations/{orgId}/plan", new { plan = "NoExiste" });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
     private sealed record OrganizationDetailResponse(Guid Id, string Name, string Slug, string Plan, string Status);
 
     private sealed record OrganizationMemberResponse(Guid PlatformUserId, string Email, string Role);

@@ -13,6 +13,7 @@ using NovaFE.Application.Organizations.ListOrganizationTenants;
 using NovaFE.Application.Organizations.RegisterOrganization;
 using NovaFE.Application.Organizations.RemoveOrganizationMember;
 using NovaFE.Application.Organizations.SuspendOrganization;
+using NovaFE.Application.Organizations.UpdateOrganizationPlan;
 using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
@@ -44,7 +45,8 @@ public sealed class OrganizationsController(
     ChangeOrganizationMemberRoleUseCase changeMemberRole,
     RemoveOrganizationMemberUseCase removeMember,
     AssignTenantToOrganizationUseCase assignTenant,
-    ListOrganizationTenantsUseCase listTenants) : ApiController
+    ListOrganizationTenantsUseCase listTenants,
+    UpdateOrganizationPlanUseCase updatePlan) : ApiController
 {
     [HttpPost]
     [Authorize(Policy = SecurityPolicies.Operator)]
@@ -87,6 +89,19 @@ public sealed class OrganizationsController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
         => (await activate.Execute(new ActivateOrganizationCommand(id), ct)).Match(_ => NoContent(), Problem);
+
+    /// <summary>Corrige el plan de la organización. No hay pasarela de pago todavía — es una corrección manual del operador.</summary>
+    [HttpPatch("{id:guid}/plan")]
+    [Authorize(Policy = SecurityPolicies.Operator)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdatePlan(
+        Guid id,
+        [FromBody] UpdatePlanBody body,
+        CancellationToken ct)
+        => (await updatePlan.Execute(new UpdateOrganizationPlanCommand(id, body.Plan), ct))
+            .Match(_ => NoContent(), Problem);
 
     /// <summary>
     /// Agrega un miembro a la organización, por correo. Self-service para
@@ -182,4 +197,7 @@ public sealed class OrganizationsController(
 
     /// <summary>Cuerpo del <c>PATCH .../members/{userId}</c>.</summary>
     public sealed record ChangeMemberRoleBody(string Role);
+
+    /// <summary>Cuerpo del <c>PATCH .../plan</c>.</summary>
+    public sealed record UpdatePlanBody(string Plan);
 }

@@ -70,6 +70,14 @@ public sealed class Organization : Entity<Guid>, IAuditableEntity, ISoftDeletabl
 
     public void Rename(string name) => Name = name.Trim();
 
+    /// <summary>
+    /// Corrección manual del plan por el operador — no hay pasarela de pago
+    /// todavía, así que no hay invariante que romper (a diferencia de
+    /// <see cref="Suspend"/>/<see cref="Activate"/>, que sí tienen estado
+    /// previo que validar).
+    /// </summary>
+    public void ChangePlan(OrganizationPlan plan) => Plan = plan;
+
     /// <summary>Reactiva una organización suspendida. Idempotencia estricta.</summary>
     public ErrorOr<Success> Activate()
     {

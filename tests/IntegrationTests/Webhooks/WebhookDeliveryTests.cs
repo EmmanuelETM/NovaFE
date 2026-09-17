@@ -256,4 +256,55 @@ public sealed class WebhookDeliveryTests(DatabaseFixture database) : Integration
         (await Client.PostAsync($"/api/v1/webhooks/{created.Endpoint.Id}/deliveries/{pendingId}/retry", content: null))
             .StatusCode.ShouldBe(System.Net.HttpStatusCode.NotFound);
     }
+
+    [RequiresDockerFact]
+    public async Task An_operator_can_list_a_tenants_endpoints_and_retry_a_dead_delivery()
+    {
+        using var receiver = new WireMockFixture();
+        receiver.Server.Given(Request.Create().WithPath("/hook").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        var tenant = await RegisterAndActAsTenantAsync("141666777");
+        var created = await CreateEndpointAsync($"{receiver.BaseUrl}/hook", "ecf.accepted");
+
+        await EnqueueAsync(tenant, WebhookEventType.EcfAccepted, new { id = "op-view" });
+        var deliveryId = await ForceDeadAsync(created.Endpoint.Id);
+
+        var list = await LeerAsync<List<WebhookEndpointDto>>(
+            await Client.GetAsync($"/api/v1/tenants/{tenant}/webhooks"));
+        list!.ShouldHaveSingleItem().Id.ShouldBe(created.Endpoint.Id);
+
+        var log = await LeerAsync<PagedResult<WebhookDeliveryDto>>(
+            await Client.GetAsync($"/api/v1/tenants/{tenant}/webhooks/{created.Endpoint.Id}/deliveries"));
+        log!.Items.ShouldHaveSingleItem().Status.ShouldBe("dead");
+
+        (await Client.PostAsync(
+                $"/api/v1/tenants/{tenant}/webhooks/{created.Endpoint.Id}/deliveries/{deliveryId}/retry", content: null))
+            .StatusCode.ShouldBe(System.Net.HttpStatusCode.NoContent);
+        (await DeliveryStatusAsync(created.Endpoint.Id)).ShouldBe("pending");
+
+        await EventuallyAsync(
+            async () => await DeliveryStatusAsync(created.Endpoint.Id) == "delivered",
+            tick: PumpAsync);
+    }
+
+    [RequiresDockerFact]
+    public async Task A_human_without_the_operator_role_cannot_reach_the_operator_webhook_routes()
+    {
+        var tenant = await RegisterTenantAsync("141888999");
+
+        var orgResponse = await Client.PostAsJsonAsync(
+            "/api/v1/organizations",
+            new { name = "Acme", slug = "acme-webhooks-ops", plan = "Developer", ownerEmail = "owner@acme-webhooks-ops.do" });
+        orgResponse.EnsureSuccessStatusCode();
+
+        Reconfigure(new Dictionary<string, string?> { ["Security:AdminApiKey"] = "s3cr3t-operator" });
+        Client.DefaultRequestHeaders.Add("X-Internal-Key", ApiFactory.InternalApiKey);
+        Client.DefaultRequestHeaders.Add("X-Acting-User", "auth-owner");
+        Client.DefaultRequestHeaders.Add("X-Acting-Email", "owner@acme-webhooks-ops.do");
+
+        var response = await Client.GetAsync($"/api/v1/tenants/{tenant}/webhooks");
+
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.Forbidden);
+    }
 }
