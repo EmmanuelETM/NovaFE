@@ -33,6 +33,10 @@ const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH"]);
  * - `cookie`, para que la cookie de sesion de Better Auth no llegue a la API;
  * - las cabeceras de identidad, que las pone **solo** `identityHeaders()` del lado
  *   servidor — asi un navegador no puede inyectar `x-acting-user` y suplantar a nadie.
+ *   `x-acting-tenant-id` es la de confianza (Fase 3): nunca viene del cliente, la arma
+ *   `identityHeaders()` a partir de `x-active-tenant-id` (ver abajo), que si es del
+ *   cliente pero es solo una pista, no una credencial — el backend igual exige acceso
+ *   real a ese tenant.
  */
 const SKIPPED_HEADERS = new Set([
   "host",
@@ -43,10 +47,15 @@ const SKIPPED_HEADERS = new Set([
   "x-internal-key",
   "x-acting-user",
   "x-acting-email",
+  "x-acting-tenant-id",
+  "x-active-tenant-id",
   "x-tenant-id",
   "x-api-key",
   "x-admin-key",
 ]);
+
+const GUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function forward(
   request: NextRequest,
@@ -63,7 +72,13 @@ async function forward(
     if (!SKIPPED_HEADERS.has(key.toLowerCase())) headers.set(key, value);
   });
 
-  for (const [key, value] of Object.entries(await identityHeaders())) {
+  const activeTenantHint = request.headers.get("x-active-tenant-id");
+  const tenantId =
+    activeTenantHint && GUID_PATTERN.test(activeTenantHint)
+      ? activeTenantHint
+      : undefined;
+
+  for (const [key, value] of Object.entries(await identityHeaders(tenantId))) {
     headers.set(key, value);
   }
 

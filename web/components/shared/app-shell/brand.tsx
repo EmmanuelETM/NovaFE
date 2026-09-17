@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Boxes } from "lucide-react";
 
 import { SidebarMenuButton } from "@/components/ui/sidebar";
-import { HOME_HREF } from "@/lib/navigation";
 
 /** El nombre del sistema y el de la organización. */
 const APP_NAME = "NovaFE";
@@ -19,6 +18,10 @@ const ORG_NAME = "Nemus Systems";
  * sello circular con texto en el aro, **no lo agrandes**: a ese tamaño el aro no se lee
  * pero la forma se reconoce, y agrandarlo convierte la cabecera del sidebar en una
  * portada.
+ *
+ * El enlace va siempre a `/` (Fase 3), no a un tenant fijo: esa raíz
+ * resuelve el destino según quién sos (operador, tenant activo, u
+ * organización) — ver `app/page.tsx`.
  */
 export function Brand() {
   return (
@@ -26,7 +29,7 @@ export function Brand() {
       size="lg"
       tooltip={`${APP_NAME} · ${ORG_NAME}`}
       className="gap-2.5"
-      render={<Link href={HOME_HREF} aria-label="Ir al inicio" />}
+      render={<Link href="/" aria-label="Ir al inicio" />}
     >
       <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-lg">
         <Boxes className="size-5" aria-hidden />

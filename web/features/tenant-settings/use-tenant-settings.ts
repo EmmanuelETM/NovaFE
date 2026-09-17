@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useTenantId } from "@/features/auth/use-tenant-id";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/problem";
 import { queryKeys } from "@/lib/api/query-keys";
@@ -11,24 +12,27 @@ import type { TenantSetting, TenantSettingChange } from "./types";
 
 const path = (key: string) => `/settings/${encodeURIComponent(key)}`;
 
-/** Los settings que el contribuyente puede ajustar, con su valor efectivo. */
+/** Los settings que el tenant activo puede ajustar, con su valor efectivo. */
 export function useTenantSettings() {
+  const tenantId = useTenantId();
+
   return useQuery({
-    queryKey: queryKeys.tenantSettings.list(),
-    queryFn: () => api.get<TenantSetting[]>("/settings"),
+    queryKey: queryKeys.tenantSettings.list(tenantId),
+    queryFn: () => api.get<TenantSetting[]>("/settings", undefined, tenantId),
   });
 }
 
-/** Sobrescribe el valor de un setting del contribuyente. */
+/** Sobrescribe el valor de un setting del tenant activo. */
 export function useUpdateTenantSetting() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: { key: string; value: string }) =>
-      api.put<TenantSetting>(path(input.key), { value: input.value }),
+      api.put<TenantSetting>(path(input.key), { value: input.value }, tenantId),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.tenantSettings.all,
+        queryKey: queryKeys.tenantSettings.all(tenantId),
       });
       toast.success(`«${updated.label}» actualizado`);
     },
@@ -38,14 +42,15 @@ export function useUpdateTenantSetting() {
 
 /** Quita el override: vuelve a regir el valor por defecto. */
 export function useResetTenantSetting() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: { key: string }) =>
-      api.delete<TenantSetting>(path(input.key)),
+      api.delete<TenantSetting>(path(input.key), tenantId),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.tenantSettings.all,
+        queryKey: queryKeys.tenantSettings.all(tenantId),
       });
       toast.success(`«${updated.label}» restablecido`);
     },
@@ -55,9 +60,16 @@ export function useResetTenantSetting() {
 
 /** El historial de cambios de un setting. `enabled` para no pedirlo hasta abrir el dialog. */
 export function useTenantSettingHistory(key: string, enabled: boolean) {
+  const tenantId = useTenantId();
+
   return useQuery({
-    queryKey: queryKeys.tenantSettings.history(key),
-    queryFn: () => api.get<TenantSettingChange[]>(`${path(key)}/history`),
+    queryKey: queryKeys.tenantSettings.history(tenantId, key),
+    queryFn: () =>
+      api.get<TenantSettingChange[]>(
+        `${path(key)}/history`,
+        undefined,
+        tenantId,
+      ),
     enabled,
   });
 }

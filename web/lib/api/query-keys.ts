@@ -18,8 +18,13 @@
 type Filters = Record<string, unknown>;
 
 export const queryKeys = {
-  /** `GET /users/me`: quien soy y que puedo. */
-  me: ["me"] as const,
+  /**
+   * `GET /users/me`: quien soy y que puedo. `tenantId` (Fase 3) viene de
+   * `useParams()` bajo `/tenant/[tenantId]/...` — el mismo usuario tiene un
+   * rol distinto por tenant, asi que sin esto la cache mezclaria el rol de
+   * un tenant con las pantallas de otro al cambiar de switcher.
+   */
+  me: (tenantId?: string) => ["me", tenantId ?? null] as const,
 
   // Plantilla de un modulo. Copiala tal cual para cada recurso nuevo.
   users: {
@@ -37,9 +42,10 @@ export const queryKeys = {
 
   /** `GET /settings`: la config self-serve del contribuyente. */
   tenantSettings: {
-    all: ["tenant-settings"] as const,
-    list: () => ["tenant-settings", "list"] as const,
-    history: (key: string) => ["tenant-settings", "history", key] as const,
+    all: (tenantId: string) => ["tenant-settings", tenantId] as const,
+    list: (tenantId: string) => ["tenant-settings", tenantId, "list"] as const,
+    history: (tenantId: string, key: string) =>
+      ["tenant-settings", tenantId, "history", key] as const,
   },
 
   /** Usuarios del dashboard (operador): operadores del SaaS y empleados por contribuyente. */
@@ -67,31 +73,46 @@ export const queryKeys = {
     status: () => ["ops", "status"] as const,
   },
 
-  /** `GET /ecf`: comprobantes emitidos del contribuyente (self-service). */
+  /**
+   * `GET /ecf`: comprobantes emitidos del contribuyente (self-service).
+   * `tenantId` es obligatorio en todas — sin el, cambiar de tenant con el
+   * switcher mostraria (por un instante) la cache del tenant anterior.
+   */
   ecf: {
-    all: ["ecf"] as const,
-    list: (filters: Filters) => ["ecf", "list", filters] as const,
-    detail: (id: string) => ["ecf", "detail", id] as const,
+    all: (tenantId: string) => ["ecf", tenantId] as const,
+    list: (tenantId: string, filters: Filters) =>
+      ["ecf", tenantId, "list", filters] as const,
+    detail: (tenantId: string, id: string) =>
+      ["ecf", tenantId, "detail", id] as const,
   },
 
   /** `GET /certificates`: certificados del contribuyente actual (self-service). */
   myCertificates: {
-    all: ["my-certificates"] as const,
-    list: () => ["my-certificates", "list"] as const,
+    all: (tenantId: string) => ["my-certificates", tenantId] as const,
+    list: (tenantId: string) => ["my-certificates", tenantId, "list"] as const,
   },
 
   /** `GET /sequences`: secuencias de e-NCF del contribuyente actual (self-service). */
   mySequences: {
-    all: ["my-sequences"] as const,
-    list: () => ["my-sequences", "list"] as const,
+    all: (tenantId: string) => ["my-sequences", tenantId] as const,
+    list: (tenantId: string) => ["my-sequences", tenantId, "list"] as const,
   },
 
   /** `GET /webhooks`: endpoints de webhook del contribuyente actual (self-service). */
   webhooks: {
-    all: ["webhooks"] as const,
-    list: () => ["webhooks", "list"] as const,
+    all: (tenantId: string) => ["webhooks", tenantId] as const,
+    list: (tenantId: string) => ["webhooks", tenantId, "list"] as const,
   },
 
   /** `GET /emitter-profile`: perfil fiscal del emisor del contribuyente actual (self-service). */
-  myEmitterProfile: ["my-emitter-profile"] as const,
+  myEmitterProfile: (tenantId: string) =>
+    ["my-emitter-profile", tenantId] as const,
+
+  /** `GET /organizations/{id}/...`: self-service de organizacion (Fase 3). */
+  organizations: {
+    all: ["organizations"] as const,
+    detail: (id: string) => ["organizations", "detail", id] as const,
+    members: (id: string) => ["organizations", "members", id] as const,
+    tenants: (id: string) => ["organizations", "tenants", id] as const,
+  },
 } as const;

@@ -33,7 +33,6 @@ export function TenantDetailScreen({ tenantId }: { tenantId: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <h2 className="text-xl font-semibold">{tenant.legalName}</h2>
         <Badge variant="secondary">{tenant.rnc}</Badge>
-        <Badge variant="outline">{tenant.plan}</Badge>
         <Badge variant={tenant.status === "Active" ? "outline" : "secondary"}>
           {tenant.status}
         </Badge>

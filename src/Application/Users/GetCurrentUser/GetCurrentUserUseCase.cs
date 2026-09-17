@@ -68,6 +68,9 @@ public sealed class GetCurrentUserUseCase(
         return [.. memberships.Select(m => new UserOrganizationDto(
             m.OrganizationId,
             m.OrganizationName,
+            m.OrganizationSlug,
+            m.OrganizationPlan,
+            m.OrganizationStatus,
             m.OrganizationRole,
             [.. m.Tenants.Select(t => new UserOrganizationTenantDto(t.TenantId, t.TenantName, t.Role))]))];
     }

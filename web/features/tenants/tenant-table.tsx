@@ -19,7 +19,6 @@ const ch = createAppColumnHelper<TenantSummary>();
 const columns = ch.columns([
   ch.accessor("rnc", { header: "RNC", meta: { label: "RNC" } }),
   ch.accessor("legalName", { header: "Razón social" }),
-  ch.accessor("plan", { header: "Plan" }),
   ch.display({
     id: "estado",
     header: "Estado",

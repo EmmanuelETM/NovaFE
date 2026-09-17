@@ -38,7 +38,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain role={roleRank(user.role)} />
+        <NavMain
+          role={roleRank(user.role)}
+          tenantId={user.tenantId ?? undefined}
+        />
       </SidebarContent>
 
       <SidebarFooter>

@@ -3,11 +3,13 @@
 Backlog vivo del refactor `User -> Organization -> Tenant` (el prompt original lo
 llamaba `User -> Organization -> Project`; `Tenant` **es** el "Project", por
 eso la tabla de membresía se llama `tenant_members`, no `project_members`).
-Estado al 2026-09-17: **Fase 1 y Fase 2 completas** (compilan, migraciones
-probadas contra Postgres real en Testcontainers, 677 unitarias + 202 de
-integración en verde). Ver "Estado de la base de datos" más abajo — **la
-rama `dev` de Neon ya tiene el esquema de Fase 1 aplicado** (sin querer,
-detalle abajo); Fase 2 se sumó ahí como migración nueva hacia adelante.
+Estado al 2026-09-17: **Fases 1, 2 y 3 completas** (backend compila, 677
+unitarias + 202 de integración en verde; frontend con `typecheck`/`lint`
+limpios). Ver "Estado de la base de datos" más abajo — **la rama `dev` de
+Neon ya tiene el esquema de Fase 1 aplicado** (sin querer, detalle abajo);
+Fase 2 se sumó ahí como migración nueva hacia adelante. Fase 3 no agregó
+columnas nuevas (solo expone `slug`/`plan`/`status` de `organizations`, que
+ya existían, en `/users/me`).
 
 ## Decisiones de Fase 0 (confirmadas)
 

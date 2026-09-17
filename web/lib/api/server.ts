@@ -28,6 +28,12 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   /** Parametros de consulta. Los vacios se omiten. */
   query?: Record<string, string | number | boolean | undefined | null>;
+  /**
+   * El tenant activo (Fase 3: viene de `params.tenantId` de la ruta
+   * `/tenant/[tenantId]/...`, nunca de una cookie). Agrega `X-Acting-Tenant-Id`.
+   * Omitilo para las llamadas que no son de un tenant puntual (org, operador).
+   */
+  tenantId?: string;
 }
 
 /**
@@ -35,16 +41,28 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
  *
  * Es `async` porque lee la sesion de Better Auth. **Cambiar esta funcion es lo unico que
  * hace falta** si cambia el proveedor de identidad.
+ *
+ * `tenantId` (Fase 3) manda `X-Acting-Tenant-Id` — el backend resuelve el rol
+ * efectivo del humano en ese tenant puntual (directo, o heredado si es
+ * owner/admin de la organizacion dueña). Sin `tenantId`, el backend cae a un
+ * default razonable; no es un error, un usuario recien invitado a una
+ * organizacion sin tenants todavia necesita poder loguearse igual.
  */
-export async function identityHeaders(): Promise<Record<string, string>> {
+export async function identityHeaders(
+  tenantId?: string,
+): Promise<Record<string, string>> {
   const session = await getSession();
 
   if (session?.user && env.INTERNAL_API_KEY) {
-    return {
+    const headers: Record<string, string> = {
       "X-Internal-Key": env.INTERNAL_API_KEY,
       "X-Acting-User": session.user.id,
       "X-Acting-Email": session.user.email,
     };
+
+    if (tenantId) headers["X-Acting-Tenant-Id"] = tenantId;
+
+    return headers;
   }
 
   if (env.APP_DEV_TENANT_ID) return { "X-Tenant-Id": env.APP_DEV_TENANT_ID };
@@ -79,13 +97,13 @@ export async function apiFetch<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { body, query, headers, ...rest } = options;
+  const { body, query, headers, tenantId, ...rest } = options;
 
   const response = await fetch(buildUrl(path, query), {
     ...rest,
     headers: {
       "Content-Type": "application/json",
-      ...(await identityHeaders()),
+      ...(await identityHeaders(tenantId)),
       ...headers,
     },
     body: body === undefined ? undefined : JSON.stringify(body),

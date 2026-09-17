@@ -31,27 +31,30 @@ const SIDEBAR_COOKIE = "sidebar_state";
 export const dynamic = "force-dynamic";
 
 /**
- * El esqueleto de `/nemus/**` (Fase 3): recursos de **operador**, sin tenant.
- * Las pantallas de un tenant tienen su propio shell en
- * `app/tenant/[tenantId]/layout.tsx`, que además valida acceso al tenant de
- * la URL — acá no hace falta, `GET /users/me` sin `tenantId` ya resuelve el
- * perfil del operador (`role: admin_sistema`, sin tenant).
+ * El esqueleto de las pantallas de un tenant (Fase 3).
  *
- * El perfil se resuelve **en el servidor**, y de ahí sale la navegación. Hacerlo aquí y no
- * con un hook tiene dos consecuencias buenas: el sidebar sale correcto en el primer
- * pintado, sin enlaces que aparecen y desaparecen, y quien no tiene acceso lo sabe antes de
- * ver una pantalla vacía.
+ * `params.tenantId` viene de la URL — es la **única** fuente del tenant
+ * activo (nunca una cookie: dos pestañas en dos tenants no se pisan). Se lo
+ * pasa a `apiFetch` como `tenantId`, que arma `X-Acting-Tenant-Id`; el
+ * backend valida el acceso real (directo por `tenant_members`, o heredado si
+ * sos owner/admin de la organización dueña) y devuelve el rol efectivo ahí —
+ * si no tenés acceso a este tenant puntual, `GET /users/me` falla con 401 y
+ * se muestra la misma pantalla de acceso denegado.
+ *
+ * Ver `app/(app)/layout.tsx` (el shell de `/nemus/**`, sin tenant) para la
+ * versión sin esta pieza.
  */
-export default async function AppLayout({ children }: LayoutProps<"/">) {
+export default async function TenantLayout({
+  children,
+  params,
+}: LayoutProps<"/tenant/[tenantId]">) {
+  const { tenantId } = await params;
+
   let user: CurrentUser;
 
   try {
-    user = await apiFetch<CurrentUser>("/users/me");
+    user = await apiFetch<CurrentUser>("/users/me", { tenantId });
   } catch (error) {
-    // Sin sesión (o sin `APP_DEV_TENANT_ID` en dev) la API responde 401 y acá se
-    // muestra la pantalla de acceso. El `proxy.ts` redirige a `/login` antes
-    // de llegar acá en el caso normal; esto cubre la sesión que expira entre el
-    // middleware y el render, o un usuario autenticado sin `platform_users`.
     const esDeLaApi = error instanceof ApiError;
 
     return (
@@ -67,16 +70,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const store = await cookies();
 
   return (
-    /* El alto fijo y la excepción del punto de venta viven en `AppSidebarProvider`: las
-       dos necesitan la ruta, y un layout de servidor no la sabe. */
     <AppSidebarProvider
       defaultOpen={store.get(SIDEBAR_COOKIE)?.value !== "false"}
     >
       <AppSidebar user={user} />
 
-      {/* El scroll vive aquí y no en el documento: así la barra superior y el sidebar se
-          quedan quietos sin `sticky`, y el redondeado del panel recorta lo que pasa por
-          debajo en vez de dejarlo asomar por la esquina. */}
       <SidebarInset className="min-w-0 overflow-hidden">
         <AppTopbar user={user} />
 

@@ -29,18 +29,38 @@ function withQuery(path: string, query?: Query): string {
   return `${BASE}${clean}${qs ? `?${qs}` : ""}`;
 }
 
+/**
+ * `X-Active-Tenant-Id` es una **pista**, no una credencial: el proxy
+ * (`app/api/backend/[...path]/route.ts`) la lee y se la pasa a
+ * `identityHeaders()` del lado servidor, que recien ahi arma el
+ * `X-Acting-Tenant-Id` de verdad. Un cliente no puede colarse a otro tenant
+ * mandando cualquier id — el backend igual exige acceso real.
+ */
+function withTenant(
+  headers: HeadersInit | undefined,
+  tenantId?: string,
+): HeadersInit {
+  return tenantId
+    ? { ...headers, "X-Active-Tenant-Id": tenantId }
+    : (headers ?? {});
+}
+
 async function request<T>(
   path: string,
   init: RequestInit,
   query?: Query,
+  tenantId?: string,
 ): Promise<T> {
   const isForm = init.body instanceof FormData;
 
   const response = await fetch(withQuery(path, query), {
     ...init,
-    headers: isForm
-      ? init.headers
-      : { "Content-Type": "application/json", ...init.headers },
+    headers: withTenant(
+      isForm
+        ? init.headers
+        : { "Content-Type": "application/json", ...init.headers },
+      tenantId,
+    ),
   });
 
   if (!response.ok)
@@ -52,14 +72,24 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string, query?: Query) =>
-    request<T>(path, { method: "GET" }, query),
+  get: <T>(path: string, query?: Query, tenantId?: string) =>
+    request<T>(path, { method: "GET" }, query, tenantId),
 
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
+  post: <T>(path: string, body?: unknown, tenantId?: string) =>
+    request<T>(
+      path,
+      { method: "POST", body: JSON.stringify(body ?? {}) },
+      undefined,
+      tenantId,
+    ),
 
-  put: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
+  put: <T>(path: string, body?: unknown, tenantId?: string) =>
+    request<T>(
+      path,
+      { method: "PUT", body: JSON.stringify(body ?? {}) },
+      undefined,
+      tenantId,
+    ),
 
   /**
    * Igual que `post`, pero para `multipart/form-data` (subir un archivo). No
@@ -67,13 +97,19 @@ export const api = {
    * cuerpo es un `FormData` y no hay esa cabecera puesta (ver `isForm` en
    * `request`).
    */
-  postForm: <T>(path: string, form: FormData) =>
-    request<T>(path, { method: "POST", body: form }),
+  postForm: <T>(path: string, form: FormData, tenantId?: string) =>
+    request<T>(path, { method: "POST", body: form }, undefined, tenantId),
 
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),
+  patch: <T>(path: string, body?: unknown, tenantId?: string) =>
+    request<T>(
+      path,
+      { method: "PATCH", body: JSON.stringify(body ?? {}) },
+      undefined,
+      tenantId,
+    ),
 
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  delete: <T>(path: string, tenantId?: string) =>
+    request<T>(path, { method: "DELETE" }, undefined, tenantId),
 
   /**
    * Baja un archivo que genera la API (un reporte en CSV o en PDF).
@@ -87,8 +123,15 @@ export const api = {
    * pestana con un ProblemDetails en crudo; y una pestana emergente la bloquea el
    * navegador cuando la descarga tarda.
    */
-  download: async (path: string, query?: Query): Promise<void> => {
-    const response = await fetch(withQuery(path, query), { method: "GET" });
+  download: async (
+    path: string,
+    query?: Query,
+    tenantId?: string,
+  ): Promise<void> => {
+    const response = await fetch(withQuery(path, query), {
+      method: "GET",
+      headers: withTenant(undefined, tenantId),
+    });
 
     if (!response.ok)
       throw new ApiError(response.status, await readProblem(response));

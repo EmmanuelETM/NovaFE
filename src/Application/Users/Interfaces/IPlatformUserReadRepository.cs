@@ -63,6 +63,9 @@ public sealed record TenantAccessLookup(Guid TenantId, string Role);
 public sealed record OrganizationMembershipLookup(
     Guid OrganizationId,
     string OrganizationName,
+    string OrganizationSlug,
+    string OrganizationPlan,
+    string OrganizationStatus,
     string OrganizationRole,
     IReadOnlyList<OrganizationTenantLookup> Tenants);
 

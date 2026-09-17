@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useTenantId } from "@/features/auth/use-tenant-id";
 import { api } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/query-keys";
 
@@ -14,11 +15,13 @@ import type {
   WebhookSecret,
 } from "./types";
 
-/** Los endpoints de webhook del contribuyente actual. */
+/** Los endpoints de webhook del tenant activo. */
 export function useWebhooks() {
+  const tenantId = useTenantId();
+
   return useQuery({
-    queryKey: queryKeys.webhooks.list(),
-    queryFn: () => api.get<WebhookEndpoint[]>("/webhooks"),
+    queryKey: queryKeys.webhooks.list(tenantId),
+    queryFn: () => api.get<WebhookEndpoint[]>("/webhooks", undefined, tenantId),
   });
 }
 
@@ -29,13 +32,16 @@ export interface CreateWebhookInput {
 }
 
 export function useCreateWebhook() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (body: CreateWebhookInput) =>
-      api.post<WebhookEndpointCreated>("/webhooks", body),
+      api.post<WebhookEndpointCreated>("/webhooks", body, tenantId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.webhooks.all });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.webhooks.all(tenantId),
+      });
       toast.success("Webhook registrado");
     },
     onError: (error) => toast.error(tenantConfigErrorMessage(error)),
@@ -51,26 +57,36 @@ export interface UpdateWebhookInput {
 }
 
 export function useUpdateWebhook() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ id, ...body }: UpdateWebhookInput) =>
-      api.patch<WebhookEndpoint>(`/webhooks/${id}`, body),
+      api.patch<WebhookEndpoint>(`/webhooks/${id}`, body, tenantId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.webhooks.all });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.webhooks.all(tenantId),
+      });
     },
     onError: (error) => toast.error(tenantConfigErrorMessage(error)),
   });
 }
 
 export function useRotateWebhookSecret() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (id: string) =>
-      api.post<WebhookSecret>(`/webhooks/${id}/rotate-secret`),
+      api.post<WebhookSecret>(
+        `/webhooks/${id}/rotate-secret`,
+        undefined,
+        tenantId,
+      ),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.webhooks.all });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.webhooks.all(tenantId),
+      });
     },
     onError: (error) => toast.error(tenantConfigErrorMessage(error)),
   });
@@ -78,9 +94,11 @@ export function useRotateWebhookSecret() {
 
 /** No invalida nada: el resultado se avisa por toast, no cambia el estado del endpoint. */
 export function usePingWebhook() {
+  const tenantId = useTenantId();
+
   return useMutation({
     mutationFn: (id: string) =>
-      api.post<WebhookPingResult>(`/webhooks/${id}/ping`),
+      api.post<WebhookPingResult>(`/webhooks/${id}/ping`, undefined, tenantId),
     onSuccess: (result) => {
       if (result.delivered) {
         toast.success(`Entregado (${result.statusCode ?? "sin código"})`);
@@ -95,12 +113,15 @@ export function usePingWebhook() {
 }
 
 export function useDeleteWebhook() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => api.delete<void>(`/webhooks/${id}`),
+    mutationFn: (id: string) => api.delete<void>(`/webhooks/${id}`, tenantId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.webhooks.all });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.webhooks.all(tenantId),
+      });
       toast.success("Webhook eliminado");
     },
     onError: (error) => toast.error(tenantConfigErrorMessage(error)),

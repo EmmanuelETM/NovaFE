@@ -3,17 +3,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useTenantId } from "@/features/auth/use-tenant-id";
 import { api } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/query-keys";
 
 import { tenantConfigErrorMessage } from "./use-certificates";
 import type { NcfSequence } from "./types";
 
-/** Los rangos de e-NCF del contribuyente actual (self-service, sin `tenantId`). */
+/** Los rangos de e-NCF del tenant activo (self-service). */
 export function useSequences() {
+  const tenantId = useTenantId();
+
   return useQuery({
-    queryKey: queryKeys.mySequences.list(),
-    queryFn: () => api.get<NcfSequence[]>("/sequences"),
+    queryKey: queryKeys.mySequences.list(tenantId),
+    queryFn: () => api.get<NcfSequence[]>("/sequences", undefined, tenantId),
   });
 }
 
@@ -27,14 +30,15 @@ export interface RegisterSequenceInput {
 }
 
 export function useRegisterSequence() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (body: RegisterSequenceInput) =>
-      api.post<{ id: string }>("/sequences", body),
+      api.post<{ id: string }>("/sequences", body, tenantId),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.mySequences.all,
+        queryKey: queryKeys.mySequences.all(tenantId),
       });
       toast.success("Rango de e-NCF registrado");
     },
@@ -48,13 +52,15 @@ export function useRegisterSequence() {
  * serie/tipo/ambiente a la vez).
  */
 export function useDeactivateSequence() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => api.post<void>(`/sequences/${id}/deactivate`),
+    mutationFn: (id: string) =>
+      api.post<void>(`/sequences/${id}/deactivate`, undefined, tenantId),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.mySequences.all,
+        queryKey: queryKeys.mySequences.all(tenantId),
       });
       toast.success("Rango desactivado");
     },

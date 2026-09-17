@@ -20,7 +20,7 @@ import {
 import { applyFieldErrors } from "@/lib/api/form-errors";
 import { selectItems } from "@/lib/select-items";
 
-import { ENVIRONMENT_OPTIONS, PLAN_OPTIONS } from "./options";
+import { ENVIRONMENT_OPTIONS } from "./options";
 import { ProvinciaMunicipioFields } from "./provincia-municipio-fields";
 import {
   tenantErrorMessage,
@@ -38,7 +38,6 @@ const tenantSchema = z.object({
     ),
   legalName: z.string().min(1, "La razón social es obligatoria."),
   tradeName: z.string(),
-  plan: z.string().min(1, "El plan es obligatorio."),
 });
 
 type TenantValues = z.infer<typeof tenantSchema>;
@@ -69,9 +68,8 @@ export function RegisterTenantWizard() {
 
   const tenantForm = useForm<TenantValues>({
     resolver: zodResolver(tenantSchema),
-    defaultValues: { rnc: "", legalName: "", tradeName: "", plan: "Business" },
+    defaultValues: { rnc: "", legalName: "", tradeName: "" },
   });
-  const plan = useController({ control: tenantForm.control, name: "plan" });
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -96,7 +94,6 @@ export function RegisterTenantWizard() {
         rnc: values.rnc.trim(),
         legalName: values.legalName.trim(),
         tradeName: values.tradeName.trim() || undefined,
-        plan: values.plan,
       });
       setTenantId(created.id);
     } catch (error) {
@@ -167,27 +164,6 @@ export function RegisterTenantWizard() {
               </FieldLabel>
               <Input id="tradeName" {...tenantForm.register("tradeName")} />
               <FieldError errors={[tenantForm.formState.errors.tradeName]} />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="plan">Plan</FieldLabel>
-              <Select
-                items={selectItems(PLAN_OPTIONS)}
-                value={plan.field.value}
-                onValueChange={(next) => plan.field.onChange(String(next))}
-              >
-                <SelectTrigger id="plan" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PLAN_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FieldError errors={[tenantForm.formState.errors.plan]} />
             </Field>
 
             <div className="flex justify-end">

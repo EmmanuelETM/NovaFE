@@ -23,6 +23,9 @@ public sealed record UserProfileDto(
 public sealed record UserOrganizationDto(
     Guid OrganizationId,
     string OrganizationName,
+    string OrganizationSlug,
+    string Plan,
+    string Status,
     string Role,
     IReadOnlyList<UserOrganizationTenantDto> Tenants);
 

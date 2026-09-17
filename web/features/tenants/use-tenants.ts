@@ -54,7 +54,6 @@ export interface RegisterTenantInput {
   rnc: string;
   legalName: string;
   tradeName?: string;
-  plan: string;
 }
 
 export function useRegisterTenant() {

@@ -139,6 +139,9 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
             """
             SELECT o.id                              AS "OrganizationId",
                    o.name                             AS "OrganizationName",
+                   o.slug                             AS "OrganizationSlug",
+                   o.plan                             AS "OrganizationPlan",
+                   o.status                           AS "OrganizationStatus",
                    om.role                             AS "OrgRole",
                    t.id                                AS "TenantId",
                    t.legal_name                        AS "TenantName",
@@ -167,10 +170,13 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
             new CommandDefinition(sql, new { platformUserId }, session.Transaction, cancellationToken: ct));
 
         return [.. rows
-            .GroupBy(r => (r.OrganizationId, r.OrganizationName, r.OrgRole))
+            .GroupBy(r => (r.OrganizationId, r.OrganizationName, r.OrganizationSlug, r.OrganizationPlan, r.OrganizationStatus, r.OrgRole))
             .Select(g => new OrganizationMembershipLookup(
                 g.Key.OrganizationId,
                 g.Key.OrganizationName,
+                g.Key.OrganizationSlug,
+                g.Key.OrganizationPlan,
+                g.Key.OrganizationStatus,
                 g.Key.OrgRole,
                 [.. g.Where(r => r.TenantId is not null)
                     .Select(r => new OrganizationTenantLookup(r.TenantId!.Value, r.TenantName!, r.TenantRole!))]))];
@@ -179,6 +185,9 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
     private sealed record MembershipRow(
         Guid OrganizationId,
         string OrganizationName,
+        string OrganizationSlug,
+        string OrganizationPlan,
+        string OrganizationStatus,
         string OrgRole,
         Guid? TenantId,
         string? TenantName,

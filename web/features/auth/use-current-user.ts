@@ -1,5 +1,6 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api/client";
@@ -22,11 +23,18 @@ export type CurrentUser = components["schemas"]["UserProfileDto"];
  * que se cachea largo: el rol de alguien no cambia mientras usa el sistema. Si un
  * administrador se lo cambia, la API lo aplica de inmediato del lado del servidor — lo que
  * quedaría desfasado es solo qué botones se ven, hasta el siguiente refresco.
+ *
+ * El rol es **por tenant** (Fase 3): saca `tenantId` de la URL
+ * (`useParams` bajo `/tenant/[tenantId]/...`, `undefined` en cualquier otra
+ * pantalla) para que el rol reportado sea el de *ese* tenant, no el de un
+ * default que podría ser otro.
  */
 export function useCurrentUser() {
+  const { tenantId } = useParams<{ tenantId?: string }>();
+
   return useQuery({
-    queryKey: queryKeys.me,
-    queryFn: () => api.get<CurrentUser>("/users/me"),
+    queryKey: queryKeys.me(tenantId),
+    queryFn: () => api.get<CurrentUser>("/users/me", undefined, tenantId),
     staleTime: 5 * 60_000,
   });
 }

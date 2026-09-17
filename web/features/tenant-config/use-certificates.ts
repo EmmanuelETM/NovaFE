@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useTenantId } from "@/features/auth/use-tenant-id";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/problem";
 import { queryKeys } from "@/lib/api/query-keys";
@@ -21,11 +22,13 @@ export function tenantConfigErrorMessage(error: unknown): string {
   return "No se pudo completar la acción.";
 }
 
-/** Los certificados del contribuyente actual (self-service, sin `tenantId`). */
+/** Los certificados del tenant activo (self-service). */
 export function useCertificates() {
+  const tenantId = useTenantId();
+
   return useQuery({
-    queryKey: queryKeys.myCertificates.list(),
-    queryFn: () => api.get<Certificate[]>("/certificates"),
+    queryKey: queryKeys.myCertificates.list(tenantId),
+    queryFn: () => api.get<Certificate[]>("/certificates", undefined, tenantId),
   });
 }
 
@@ -36,6 +39,7 @@ export interface UploadCertificateInput {
 }
 
 export function useUploadCertificate() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -45,11 +49,11 @@ export function useUploadCertificate() {
       form.set("password", password);
       form.set("environment", environment);
 
-      return api.postForm<{ id: string }>("/certificates", form);
+      return api.postForm<{ id: string }>("/certificates", form, tenantId);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.myCertificates.all,
+        queryKey: queryKeys.myCertificates.all(tenantId),
       });
       toast.success("Certificado cargado");
     },
@@ -58,13 +62,15 @@ export function useUploadCertificate() {
 }
 
 export function useRevokeCertificate() {
+  const tenantId = useTenantId();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => api.post<void>(`/certificates/${id}/revoke`),
+    mutationFn: (id: string) =>
+      api.post<void>(`/certificates/${id}/revoke`, undefined, tenantId),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.myCertificates.all,
+        queryKey: queryKeys.myCertificates.all(tenantId),
       });
       toast.success("Certificado revocado");
     },

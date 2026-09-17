@@ -69,6 +69,14 @@ export interface NavSection {
    * resolviendo estas rutas igual.
    */
   hideFromSidebar?: boolean;
+  /**
+   * A qué ámbito pertenece (Fase 3): `"tenant"` (default) vive bajo
+   * `/tenant/[tenantId]/...`; `"operator"` es `/nemus/...`, sin tenant.
+   * `NavMain` pinta uno u otro según si hay un tenant activo — sin esto, un
+   * operador (que también satisface `minRole: consultor` de "General",
+   * sin techo) vería "Inicio"/"Comprobantes" aunque no tenga tenant.
+   */
+  scope?: "tenant" | "operator";
 }
 
 export const NAVIGATION: readonly NavSection[] = [
@@ -172,6 +180,7 @@ export const NAVIGATION: readonly NavSection[] = [
     // Solo Nemus Admin: la config transversal de la plataforma para todos los
     // contribuyentes, no la de uno solo (esa es `/configuracion`, arriba).
     label: "Nemus Admin",
+    scope: "operator",
     items: [
       {
         href: "/nemus/operacion",
@@ -216,6 +225,25 @@ export const NAV_ITEMS: readonly NavItem[] = NAVIGATION.flatMap(
   (section) => section.items,
 );
 
+/**
+ * La ruta real de un `NavItem` (Fase 3).
+ *
+ * `href` en `NAVIGATION` es relativo al tenant activo (`/`, `/comprobantes`,
+ * `/empresa`…) — salvo `/nemus/...`, que es de operador y no lleva tenant.
+ * Esta función es el único lugar que sabe anteponer `/tenant/[tenantId]`.
+ */
+export function tenantHref(tenantId: string, href: string): string {
+  if (href.startsWith("/nemus")) return href;
+
+  return href === "/" ? `/tenant/${tenantId}` : `/tenant/${tenantId}${href}`;
+}
+
+/** Quita el prefijo `/tenant/[tenantId]` de un pathname, si lo tiene. */
+function stripTenantPrefix(pathname: string): string {
+  const withoutTenant = pathname.replace(/^\/tenant\/[^/]+/, "");
+  return withoutTenant === "" ? "/" : withoutTenant;
+}
+
 /** Los items de una sección que un rango de rol puede ver. Mismo filtro que usan `NavMain` y `NavTenant`. */
 export function visibleNavItems(
   items: readonly NavItem[],
@@ -228,10 +256,6 @@ export function visibleNavItems(
   );
 }
 
-/** La primera pantalla construida, que es a donde va la raíz. */
-export const HOME_HREF: string =
-  NAV_ITEMS.find((item) => item.ready)?.href ?? "/";
-
 /**
  * El destino al que corresponde una ruta.
  *
@@ -239,11 +263,12 @@ export const HOME_HREF: string =
  * —`/usuarios/42`— siga resolviendo a su sección en vez de a la raíz.
  */
 export function findNavItem(pathname: string): NavItem | undefined {
+  const normalizado = stripTenantPrefix(pathname);
   let mejor: NavItem | undefined;
 
   for (const item of NAV_ITEMS) {
     const coincide =
-      pathname === item.href || pathname.startsWith(`${item.href}/`);
+      normalizado === item.href || normalizado.startsWith(`${item.href}/`);
 
     if (
       coincide &&

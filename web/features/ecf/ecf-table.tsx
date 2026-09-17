@@ -10,6 +10,7 @@ import {
   type PagedResult,
 } from "@/components/shared/data-table";
 import { Badge } from "@/components/ui/badge";
+import { useTenantId } from "@/features/auth/use-tenant-id";
 import { formatCalendarDate, formatMoney } from "@/lib/format";
 
 import {
@@ -104,6 +105,7 @@ function toPage(
 
 export function EcfTable() {
   const router = useRouter();
+  const tenantId = useTenantId();
   const [state, setState] = useTableSearchParams(["type", "status"]);
   const { data, isPending, isFetching, error } = useEcfList(state);
 
@@ -119,7 +121,9 @@ export function EcfTable() {
       filters={FILTERS}
       searchPlaceholder="e-NCF, RNC o razón social…"
       emptyState={{ title: "No hay comprobantes emitidos todavía." }}
-      onRowClick={(ecf) => router.push(`/comprobantes/${ecf.id}`)}
+      onRowClick={(ecf) =>
+        router.push(`/tenant/${tenantId}/comprobantes/${ecf.id}`)
+      }
       getRowId={(ecf) => ecf.id}
     />
   );
