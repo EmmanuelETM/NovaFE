@@ -65,4 +65,16 @@ public sealed class TenantMember : Entity<Guid>, IAuditableEntity
 
         return new TenantMember(Guid.CreateVersion7(), tenantId, platformUserId, role);
     }
+
+    /// <summary>Rechaza <c>admin_sistema</c>, mismo motivo que <see cref="Create"/>.</summary>
+    public ErrorOr<Success> ChangeRole(PlatformRole newRole)
+    {
+        ArgumentNullException.ThrowIfNull(newRole);
+
+        if (!newRole.IsTenantRole)
+            return PlatformUserErrors.InvalidRoleForTenant;
+
+        Role = newRole;
+        return Result.Success;
+    }
 }

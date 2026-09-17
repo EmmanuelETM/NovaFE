@@ -21,6 +21,8 @@ internal sealed class OrganizationReadRepository(IDbSession session) : IOrganiza
             SELECT id         AS "Id",
                    name       AS "Name",
                    slug       AS "Slug",
+                   plan       AS "Plan",
+                   status     AS "Status",
                    created_at AS "CreatedAt"
             FROM organizations
             WHERE id = @id AND is_deleted = false
@@ -47,9 +49,11 @@ internal sealed class OrganizationReadRepository(IDbSession session) : IOrganiza
         var countSql = $"SELECT count(*) FROM organizations {filter}";
         var pageSql =
             $"""
-            SELECT id   AS "Id",
-                   name AS "Name",
-                   slug AS "Slug"
+            SELECT id     AS "Id",
+                   name   AS "Name",
+                   slug   AS "Slug",
+                   plan   AS "Plan",
+                   status AS "Status"
             FROM organizations
             {filter}
             ORDER BY created_at DESC
@@ -112,7 +116,6 @@ internal sealed class OrganizationReadRepository(IDbSession session) : IOrganiza
             SELECT id         AS "Id",
                    rnc        AS "Rnc",
                    legal_name AS "LegalName",
-                   plan       AS "Plan",
                    status     AS "Status"
             FROM tenants
             {filter}

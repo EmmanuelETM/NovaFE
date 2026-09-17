@@ -2,6 +2,7 @@ using ErrorOr;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 using NovaFE.Application.Common;
+using NovaFE.Application.Common.Interfaces;
 using NovaFE.Application.Organizations.Contracts;
 using NovaFE.Application.Organizations.Interfaces;
 using NovaFE.Application.Users.Interfaces;
@@ -12,6 +13,7 @@ namespace NovaFE.Application.Organizations.AddOrganizationMember;
 public sealed class AddOrganizationMemberUseCase(
     ILoggerFactory loggerFactory,
     IValidator<AddOrganizationMemberCommand> validator,
+    ICurrentUser currentUser,
     IOrganizationRepository organizations,
     IOrganizationMemberRepository members,
     IPlatformUserRepository users)
@@ -23,6 +25,9 @@ public sealed class AddOrganizationMemberUseCase(
     {
         if (await organizations.GetByIdAsync(request.OrganizationId, ct) is null)
             return OrganizationErrors.NotFound(request.OrganizationId);
+
+        if (!await OrganizationAccess.CanManageMembersAsync(currentUser, members, request.OrganizationId, ct))
+            return OrganizationErrors.NotAllowed;
 
         var email = request.Email.Trim().ToLowerInvariant();
 

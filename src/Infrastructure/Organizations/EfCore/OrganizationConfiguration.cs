@@ -26,6 +26,16 @@ internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organ
             .IsUnique()
             .HasFilter("is_deleted = false");
 
+        builder.Property(o => o.Plan)
+            .HasConversion(plan => plan.Name, name => OrganizationPlan.FromName(name))
+            .HasMaxLength(20)
+            .IsRequired();
+
+        builder.Property(o => o.Status)
+            .HasConversion(status => status.Name, name => OrganizationStatus.FromName(name))
+            .HasMaxLength(20)
+            .IsRequired();
+
         builder.Property(o => o.CreatedBy).HasMaxLength(256);
         builder.Property(o => o.UpdatedBy).HasMaxLength(256);
         builder.Property(o => o.DeletedBy).HasMaxLength(256);

@@ -47,7 +47,7 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
             .Returns(call => ((Func<CancellationToken, Task>)call[0]).Invoke(call.Arg<CancellationToken>()));
 
         _tenants.GetByIdAsync(TenantId, Arg.Any<CancellationToken>())
-            .Returns(Tenant.Register(Rnc.FromStorage("132786262"), "AlMax Solutions EIRL", "AlMax", TenantPlan.GetAll().First()));
+            .Returns(Tenant.Register(Rnc.FromStorage("132786262"), "AlMax Solutions EIRL", "AlMax"));
 
         _profiles.GetByTenantAsync(TenantId, Arg.Any<CancellationToken>())
             .Returns(EmitterProfile.Create(TenantId, "Av. 27 de Febrero 100", "010100", "01",

@@ -14,7 +14,6 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
             rnc = "101672919",
             legalName = "Acme SRL",
             tradeName = "Acme",
-            plan = "Developer",
         });
 
         register.StatusCode.ShouldBe(HttpStatusCode.Created);
@@ -29,7 +28,6 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         detail!.Rnc.ShouldBe("101672919");
         detail.LegalName.ShouldBe("Acme SRL");
         detail.TradeName.ShouldBe("Acme");
-        detail.Plan.ShouldBe("Developer");
         detail.Status.ShouldBe("Active");
     }
 
@@ -40,7 +38,6 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         {
             rnc = "131234567",
             legalName = "Zona SRL",
-            plan = "Business",
         });
         var id = (await LeerAsync<IdResponse>(register))!.Id;
 
@@ -62,7 +59,7 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
     [RequiresDockerFact]
     public async Task Register_rejects_a_duplicate_rnc_with_409()
     {
-        var body = new { rnc = "130111222", legalName = "First", plan = "Business" };
+        var body = new { rnc = "130111222", legalName = "First" };
 
         (await Client.PostAsJsonAsync("/api/v1/tenants", body)).EnsureSuccessStatusCode();
 
@@ -77,7 +74,6 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         {
             rnc = "abc",
             legalName = "X",
-            plan = "Developer",
         });
 
         res.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
@@ -92,7 +88,6 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
             {
                 rnc = $"13000000{i}",
                 legalName = $"Contoso {i}",
-                plan = "Developer",
             })).EnsureSuccessStatusCode();
         }
 
@@ -100,7 +95,6 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         {
             rnc = "140000001",
             legalName = "Unrelated",
-            plan = "Developer",
         })).EnsureSuccessStatusCode();
 
         var res = await Client.GetAsync("/api/v1/tenants?page=1&pageSize=2&search=Contoso");
@@ -113,10 +107,10 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
     }
 
     private sealed record TenantDetailResponse(
-        Guid Id, string Rnc, string LegalName, string? TradeName, string Plan, string Status, DateTimeOffset CreatedAt);
+        Guid Id, string Rnc, string LegalName, string? TradeName, string Status, Guid? OrganizationId, DateTimeOffset CreatedAt);
 
     private sealed record TenantSummaryResponse(
-        Guid Id, string Rnc, string LegalName, string Plan, string Status);
+        Guid Id, string Rnc, string LegalName, string Status);
 
     private sealed record PagedResponse<T>(IEnumerable<T> Items, int TotalCount, int Page, int PageSize);
 }

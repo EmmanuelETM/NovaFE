@@ -3,10 +3,11 @@
 Backlog vivo del refactor `User -> Organization -> Tenant` (el prompt original lo
 llamaba `User -> Organization -> Project`; `Tenant` **es** el "Project", por
 eso la tabla de membresía se llama `tenant_members`, no `project_members`).
-Estado al 2026-09-17: **Fase 1 completa** (compila, migraciones probadas
-contra Postgres real en Testcontainers, 676 unitarias + 193 de integración en
-verde). **Ninguna migración se aplicó todavía a una base de datos real**
-(ni local persistente ni Neon) — ver "Aplicar la migración" al final.
+Estado al 2026-09-17: **Fase 1 y Fase 2 completas** (compilan, migraciones
+probadas contra Postgres real en Testcontainers, 677 unitarias + 202 de
+integración en verde). Ver "Estado de la base de datos" más abajo — **la
+rama `dev` de Neon ya tiene el esquema de Fase 1 aplicado** (sin querer,
+detalle abajo); Fase 2 se sumó ahí como migración nueva hacia adelante.
 
 ## Decisiones de Fase 0 (confirmadas)
 
@@ -20,179 +21,210 @@ verde). **Ninguna migración se aplicó todavía a una base de datos real**
      consulta. Un `member` de organización puede ser `admin_tenant` de uno de
      sus tenants sin ser `owner`/`admin` de la organización.
 3. **Billing vs. fiscal**: la bolsa de comprobantes (métrica de facturación de
-   NovaFE) se consolida a nivel `Organization`. Las secuencias e-NCF
-   (`NcfSequence`) y los certificados `.p12` siguen aislados por `Tenant` —
-   son un requisito regulatorio de la DGII (un rango de secuencia es válido
-   para un RNC específico), no negociable ni pooleable entre proyectos de una
-   misma organización.
+   NovaFE) se consolida a nivel `Organization` (`Organization.Plan`, Fase 2).
+   Las secuencias e-NCF (`NcfSequence`) y los certificados `.p12` siguen
+   aislados por `Tenant` — requisito regulatorio de la DGII (un rango de
+   secuencia es válido para un RNC específico), no negociable ni pooleable
+   entre tenants de una misma organización.
 
 No se usa Supabase Auth ni `auth.uid()` en ningún punto de este diseño — el
 proyecto usa Better Auth self-hosted + `X-Internal-Key`/`PlatformUser`, y RLS
 por `app.tenant_id` (variable de sesión, no una función atada a un JWT de
-Supabase). Ver el análisis completo de arquitectura en el hilo que originó
-este documento si hace falta el porqué en detalle.
+Supabase).
 
-## Fase 1 — Base de datos & dominio (.NET) — HECHO
+## Fase 1 — Base de datos & dominio — HECHO
 
-### Esquema nuevo
+### Esquema
 
-- `organizations` — agrupa tenants. Sin RLS (no es dato de un tenant).
+- `organizations` — agrupa tenants. Campos: `name`, `slug` (único),
+  `plan` (`OrganizationPlan`, movido de `Tenant` en Fase 2), `status`
+  (`OrganizationStatus`: `Active`/`Suspended`). Sin RLS (no es dato de un tenant).
 - `organization_members` — N:M `platform_users` ↔ `organizations`, con
   `role` (`OrganizationRole`). Único por `(organization_id, platform_user_id)`.
 - `tenant_members` — N:M `platform_users` ↔ `tenants`, con `role`
   (`PlatformRole`, nunca `admin_sistema`). Único por `(tenant_id, platform_user_id)`.
-  (Entidad de dominio: `TenantMember`, en `src/Domain/Tenants/` — se llamó
-  `ProjectMember`/`project_members` en un borrador inicial y se renombró para
-  no introducir "project" como término en código cuando la Fase 0 ya decidió
-  que `Tenant` es el nombre que se queda.)
+  Entidad de dominio `TenantMember` en `src/Domain/Tenants/` (se llamó
+  `ProjectMember` en un borrador y se renombró por cohesión con la decisión
+  de mantener `Tenant`, no `Project`).
 - `tenants.organization_id` — nullable (transición), FK a `organizations`.
+  `tenants.plan` se eliminó (Fase 2 — ver `Organization.Plan`).
 
-Migraciones: `20260917041500_AddOrganizations` (esquema) +
-`20260917041526_BackfillOrganizationsFromTenants` (datos, idempotente vía
-`WHERE organization_id IS NULL` + `ON CONFLICT DO NOTHING`).
+Migraciones: `AddOrganizations` (esquema Fase 1) → `BackfillOrganizationsFromTenants`
+(datos, idempotente) → `MoveTenantPlanToOrganization` (Fase 2: agrega
+`organizations.plan`/`status`, quita `tenants.plan`).
 
 **Backfill**: por cada tenant sin organización, crea una `Organization` 1:1
-(nombre = razón social, slug derivado + sufijo del id para unicidad), la
-asocia al tenant, y espeja cada `platform_users` de ese tenant a
-`organization_members` (el `admin_tenant` del tenant queda como `owner`, el
-resto como `member`) y a `tenant_members` (mismo rol que tenía en
-`PlatformUser.Role`).
+(nombre = razón social, slug derivado + sufijo del id), la asocia al tenant,
+y espeja cada `platform_users` de ese tenant a `organization_members` (el
+`admin_tenant` del tenant queda como `owner`, el resto como `member`) y a
+`tenant_members` (mismo rol que tenía en `PlatformUser.Role`).
 
 ### Módulo `Organizations` (vertical slice completo)
 
 `src/Domain/Organizations`, `src/Application/Organizations`,
-`src/Infrastructure/Organizations`, `src/Service/Controllers/OrganizationsController.cs`
-— mismo patrón que `Tenants`. Endpoints (todos bajo la política `Operator`,
-`X-Admin-Key`, igual que `TenantsController` hoy):
+`src/Infrastructure/Organizations`, `src/Service/Controllers/OrganizationsController.cs`.
 
-| Método | Ruta | Qué hace |
+| Método | Ruta | Quién |
 |---|---|---|
-| POST | `/api/v1/organizations` | Registra una organización |
-| GET | `/api/v1/organizations/{id}` | Detalle |
-| GET | `/api/v1/organizations` | Listado paginado |
-| POST | `/api/v1/organizations/{id}/members` | Agrega un miembro por correo |
-| GET | `/api/v1/organizations/{id}/members` | Lista miembros |
-| PATCH | `/api/v1/organizations/{id}/members/{userId}` | Cambia rol de un miembro |
-| DELETE | `/api/v1/organizations/{id}/members/{userId}` | Quita un miembro |
-| POST | `/api/v1/organizations/{id}/tenants/{tenantId}` | Asocia/reasocia un tenant existente |
-| GET | `/api/v1/organizations/{id}/tenants` | Lista los tenants de la organización |
+| POST | `/api/v1/organizations` | Operador (`ownerEmail` opcional: onboarding atómico) |
+| GET | `/api/v1/organizations/{id}` | Operador |
+| GET | `/api/v1/organizations` | Operador |
+| POST | `/api/v1/organizations/{id}/suspend` | Operador |
+| POST | `/api/v1/organizations/{id}/activate` | Operador |
+| POST | `/api/v1/organizations/{id}/members` | **Self-service**: `owner`/`admin` de esa organización, o el operador |
+| GET | `/api/v1/organizations/{id}/members` | **Self-service**: cualquier miembro de esa organización, o el operador |
+| PATCH | `/api/v1/organizations/{id}/members/{userId}` | **Self-service**: `owner`/`admin`, o el operador |
+| DELETE | `/api/v1/organizations/{id}/members/{userId}` | **Self-service**: `owner`/`admin`, o el operador |
+| POST | `/api/v1/organizations/{id}/tenants/{tenantId}` | Operador (crear/asociar tenants sigue siendo estructural) |
+| GET | `/api/v1/organizations/{id}/tenants` | Operador |
 
-### `PlatformUser` — qué cambió y qué NO
+## Fase 2 — Autorización + reparto operador/cliente — HECHO
 
-**No se tocaron** `PlatformUser.TenantId`/`PlatformUser.Role` ni ningún caso de
-uso que dependa de ellos (`InternalKeyAuthenticationHandler`,
-`GetCurrentUserUseCase`, `ProvisionTenantUserUseCase`, etc.). Es una decisión
-deliberada, no un olvido: tocarlos ahora habría roto el flujo de autenticación
-humana vigente para no ganar nada todavía (la Fase 2 es la que corta esa
-lectura hacia `tenant_members`). Lo que sí se agregó es la relación N:M en
-paralelo (`TenantMember`), poblada por el backfill, para que cuando llegue la
-Fase 2 los datos ya estén ahí.
+Principio rector: **el operador nunca es cuello de botella para la operación
+fiscal diaria del cliente.** Solo gobierna infraestructura, facturación y
+gobernanza; todo lo que toca DGII o la integración del cliente con su propio
+software es self-service.
 
-### Onboarding de un cliente hoy (sin cambios por la Fase 1)
+### Lo que solo hace el operador
 
-El orden real, sacado de los controllers (no cambia con este refactor, la capa
-de Organization se agrega encima):
+- **Planes y cuotas**: `TenantPlan` → `Organization.Plan`. `RegisterTenantCommand`
+  ya no pide plan; se factura y administra a nivel organización.
+- **Suspensión**: `Tenant.Suspend()`/`Activate()` y `Organization.Suspend()`/`Activate()`
+  ahora tienen idempotencia estricta (ErrorOr, como `PlatformUser.Revoke`) y
+  **se hacen cumplir de verdad** — antes el flag existía pero nada lo revisaba:
+  - `ApiKeyAuthenticator`: la key deja de autenticar si el tenant o su
+    organización dueña están suspendidos (`ApiKeyReadRepository.FindByHashAsync`
+    ahora cruza `tenants`/`organizations`).
+  - `InternalKeyAuthenticationHandler`/`PlatformUserAuthenticator`: mismo
+    chequeo, vía la resolución de tenant/rol de más abajo.
+  - Endpoints: `POST /tenants/{id}/suspend|activate`,
+    `POST /organizations/{id}/suspend|activate` — suspender la organización
+    bloquea en cascada a todos sus tenants sin tocarlos uno por uno.
+- **Onboarding estructural**: `POST /organizations` con `ownerEmail` opcional
+  da de alta el `PlatformUser` (si no existe, vía el nuevo
+  `PlatformUser.CreateOrganizationMember` — sin tenant fijo) y lo agrega como
+  `owner`, atómico. Crear/asociar un `Tenant` sigue siendo del operador.
+- **God mode (impersonar, etc.)**: pospuesto a Fase 5 — ver esa sección.
 
-1. Operador registra el `Tenant` — `POST /api/v1/tenants` (RNC, razón social, plan).
-2. Operador (o luego `admin_tenant` self-service) configura el `EmitterProfile`
-   — `PUT /tenants/{id}/emitter-profile`.
-3. Operador sube el certificado `.p12` — `POST /tenants/{id}/certificates`
-   (archivo, contraseña, **ambiente**). Necesario para el bootstrap: sin esto
-   no se puede acuñar la primera API key.
-4. Operador registra el rango de secuencia e-NCF autorizado por la DGII —
-   `POST /tenants/{id}/sequences` (tipo, serie, rango, **ambiente**).
-5. Con cert + secuencia activos en un ambiente, ya se puede acuñar la primera
-   API key — `POST /tenants/{id}/api-keys`.
-6. Operador (o luego `admin_tenant`) da de alta a los usuarios del dashboard —
-   `POST /tenants/{id}/users`.
-7. (Nuevo, Fase 1) Operador crea la `Organization`, agrega ese usuario como
-   miembro y asocia el tenant — pasos 2-4 de la sección de arriba. Todavía no
-   cambia nada de lo que ve el cliente (ver la advertencia arriba).
+### Lo que el cliente hace self-service, sin el operador
 
-Para pruebas internas sin certificado real existe `POST /api/v1/dev/sandbox`
-(onboarding en un paso, cert autofirmado) — no es el flujo real de un cliente.
+- Certificados, secuencias e-NCF, perfil fiscal, webhooks: ya lo eran antes
+  de esta fase (`TenantConfig`), no se tocaron.
+- **API keys** (era el bug real: vivían operator-only dentro de `TenantsController`):
+  se movieron a `ApiKeysController` propio — `POST/GET /api/v1/api-keys`,
+  `DELETE /api/v1/api-keys/{id}` bajo `TenantConfig` (self-service), más las
+  rutas `~/tenants/{id}/api-keys` de operador para soporte, mismo patrón dual
+  que `CertificatesController`.
+- **Gestión de miembros de organización**: `owner`/`admin` de esa organización
+  puntual pueden invitar, listar, cambiar rol y quitar miembros sin operador.
+  Implementado como chequeo **dentro del caso de uso**
+  (`Application.Organizations.OrganizationAccess`), no como policy declarativa
+  de ASP.NET — el rol de organización varía por organización (no es un claim
+  fijo del principal como `tenant_id`), así que hace falta resolver la
+  membresía puntual contra el id de la ruta. El controller solo exige
+  `Authenticated` (cualquier principal logueado); el caso de uso decide.
+  Protecciones extra: no se puede quitar ni degradar al último `owner`
+  (`OrganizationErrors.CannotRemoveLastOwner`).
+- **Reintentar un webhook atascado / reactivar un endpoint**: quedó **fuera de
+  alcance de esta pasada** (no se construyó) — señalado como pendiente real,
+  no falso "ya está". Ver "Pendiente" abajo.
+
+### El corte de autenticación humana (el corazón de esta fase)
+
+`PlatformUser.TenantId`/`Role` dejan de ser la fuente de verdad para un
+usuario de contribuyente (siguen existiendo en la tabla, ahora vestigiales
+para ese caso — ver `PlatformUser.CreateOrganizationMember`). El tenant/rol
+efectivo se resuelve en cada login:
+
+- `InternalKeyAuthenticationHandler` acepta `X-Acting-Tenant-Id` (solo
+  esquema `InternalKey` — una API key ya trae su tenant implícito).
+- `PlatformUserAuthenticator`/`IPlatformUserReadRepository.ResolveTenantAccessAsync`:
+  si viene el header, resuelve ese tenant puntual — directo por
+  `tenant_members`, o heredado como `admin_tenant` si el usuario es
+  `owner`/`admin` de la organización dueña, sin fila explícita. Si no tiene
+  acceso (o está suspendido), la autenticación **falla** (no cae a un default
+  silencioso — pidió un tenant puntual y no le corresponde).
+- Sin el header (`ResolveDefaultTenantAccessAsync`): toma el primer tenant
+  accesible por antigüedad (directo, luego heredado). Si no hay ninguno
+  todavía, el login **igual funciona** con `TenantId = null` — un usuario
+  recién invitado a una organización sin tenants no debe quedar sin poder
+  entrar al dashboard.
+- `GetCurrentUserUseCase`/`UserProfileDto` ganó `Organizations` (lista de
+  `{ organizationId, organizationName, role, tenants: [{ tenantId, tenantName, role }] }`)
+  para el switcher de Fase 3, **sin quitar** `TenantId`/`Role`/`TenantName` a
+  nivel raíz — el dashboard actual (`web/`) sigue funcionando sin cambios
+  hasta que la Fase 3 consuma el array nuevo.
+- Efecto colateral necesario: `ProvisionTenantUserUseCase` y
+  `ChangeUserRoleUseCase` ahora escriben también en `tenant_members` (antes
+  solo tocaban `PlatformUser`) — sin esto, un empleado recién dado de alta
+  quedaba con identidad pero sin acceso a ningún tenant.
 
 ### Ambiente (Test/Cert/Production): no es un estado del Tenant
 
-Aclaración importante para no diseñar mal la Fase 2/3: **no existe ni debería
-existir un "mover el tenant a producción"**. El ambiente es una propiedad de
-cada artefacto por separado, y todos conviven al mismo tiempo para el mismo
-tenant:
+No existe ni debería existir un "mover el tenant a producción". El ambiente
+es una propiedad de cada artefacto por separado (`Certificate.Environment`,
+`NcfSequence.Environment`, `ApiKey.Environment`), y los tres conviven a la
+vez para el mismo tenant. `EmitterProfile.DefaultEnvironment` es solo un
+*default*, no un gate. "Pasar a producción" = sumar los artefactos de
+producción sin tocar los de test.
 
-- `Certificate.Environment` — un certificado vale para un solo ambiente.
-- `NcfSequence.Environment` — un rango de secuencia también.
-- `ApiKey.Environment` — la key queda atada al ambiente al acuñarla
-  (`sk_nfe_test_...` vs `sk_nfe_prod_...`).
-- `EmitterProfile.DefaultEnvironment` — es solo un *default* (para cuando la
-  petición no especifica ambiente explícito), no un gate.
+### Onboarding de un cliente, de punta a punta (post-Fase 2)
 
-"Pasar a producción" = subir un certificado de producción + registrar la
-secuencia de producción + acuñar una key de producción, sin tocar lo que ya
-había en test. Un `admin_tenant` del cliente puede hacer todo esto él mismo
-por la API una vez que el tenant ya tiene *algo* funcionando — el operador
-solo es obligatorio en el bootstrap inicial (antes de la primera API key).
+1. Operador: `POST /organizations` con `ownerEmail` (crea org + usuario + membresía owner).
+2. Operador: `POST /api/v1/tenants` (RNC, razón social) + `POST /organizations/{id}/tenants/{tenantId}`.
+3. El owner entra al dashboard (Better Auth) y, self-service, sin operador:
+   perfil fiscal, certificado, secuencia, primera API key, invitar al equipo.
 
-### Límite conocido de `AddOrganizationMember`
+## Fase 4 — Hardening (parcialmente hecho)
 
-Agregar un miembro a una organización requiere que ya exista un
-`PlatformUser` con ese correo (dado de alta hoy por `/tenants/{id}/users` u
-`/operator-users`). Fase 1 no crea la identidad, solo la membresía — un flujo
-de "invitar a alguien que todavía no tiene cuenta" es trabajo de Fase 2/3
-(onboarding self-service), porque requiere decidir cómo se crea un
-`PlatformUser` sin atarlo de entrada a un único tenant+rol (la limitación que
-esta fase deliberadamente no tocó).
+Hecho en esta pasada: pruebas de integración para suspensión (tenant y
+organización, cascada), `X-Acting-Tenant-Id` (switch entre tenants, y
+rechazo si no hay acceso), y self-service de miembros (owner puede,
+member no). Pendiente real:
 
-## Pendiente
+- Retry/reactivación de webhooks (self-service + operador) — no construido.
+- `docs/multi-tenancy.md`, `docs/human-auth.md`, `docs/api-auth.md` todavía
+  no mencionan la jerarquía Organization — desactualizados desde Fase 1.
+- Decidir si un `OrgAdmin` podrá crear un `Tenant` nuevo self-service cuando
+  su plan tenga cupo (abierto, se retoma con el diseño de cuotas).
 
-### Fase 2 — Autorización humana (.NET)
+## Fase 5 — Herramientas de soporte del operador (pospuesta)
 
-- Cortar la lectura de tenant/rol de `PlatformUser.TenantId`/`Role` hacia
-  `tenant_members`/`organization_members`.
-- `InternalKeyAuthenticationHandler`: aceptar un header `X-Acting-Tenant-Id`,
-  validar membresía (directa en `tenant_members`, o vía
-  `organization_members` si un `owner`/`admin` de la organización debe ver
-  todos sus tenants sin fila explícita), emitir el claim `tenant_id` con el
-  rol efectivo en ese tenant.
-- `GetCurrentUserUseCase`/`UserProfileDto`: devolver `organizations[].tenants[]`
-  con el rol en cada uno, no un `tenantId`/`role` único.
-- Endpoint para invitar a alguien sin cuenta previa (crea el `PlatformUser` +
-  la membresía en un solo paso).
-- Mover `TenantPlan` (o una métrica derivada) a `Organization` si se confirma
-  que el plan se factura a nivel organización.
-- **Pendiente de decidir** (a propósito, no resuelto todavía): qué operaciones
-  de la jerarquía nueva quedan como self-service del cliente (`owner`/`admin`
-  de organización, `admin_tenant` de tenant) vs. cuáles siguen requiriendo al
-  operador — por ejemplo, crear una organización, crear un tenant nuevo dentro
-  de una organización existente, o invitar a alguien sin cuenta previa. Hoy
-  (Fase 1) *todo* el módulo `Organizations` es de operador porque no hay otra
-  opción (no hay autorización self-service todavía); esa restricción no es la
-  decisión final, es el punto de partida sobre el que la Fase 2 decide caso
-  por caso.
+Impersonar (login-as) un usuario para troubleshooting. Empezar por una
+versión de **solo lectura** antes de escritura (así lo hicieron Stripe/GitHub).
+Requiere un claim `impersonated_by` + reforzar que `audit_log` (RF-14.4)
+registre ambas identidades. No priorizado sin clientes reales en producción.
 
-### Fase 3 — Frontend (Next.js)
+## Fase 3 — Frontend (Next.js) — pendiente
 
 - Regenerar `schema.d.ts` contra la API ya cambiada en Fase 2.
 - Rutas `[orgSlug]/[tenantSlug]/...` en vez del árbol plano actual bajo
-  `(app)/*` (`Tenant` no tiene `Slug` todavía — hay que agregarlo, o resolver
-  el segmento por otro identificador corto; es una decisión de esta fase).
-- Extender `nav-tenant.tsx` (ya en curso en el working tree al momento de este
-  análisis) de "menú de un tenant" a switcher real org→proyecto.
-- Actualizar `identityHeaders()`, `use-current-user.ts`, `roles.ts`,
-  `lib/navigation.ts` para el nuevo contrato.
+  `(app)/*` (`Tenant` no tiene `Slug` todavía).
+- Extender `nav-tenant.tsx` de "menú de un tenant" a switcher real org→tenant,
+  consumiendo `UserProfileDto.Organizations`.
+- Mandar `X-Acting-Tenant-Id` desde `identityHeaders()` cuando el usuario
+  elige tenant activo.
 
-### Fase 4 — Hardening
+## Estado de la base de datos
 
-- Pruebas de integración: un usuario sin membresía en un tenant no puede
-  fijar ese tenant como activo (403); RLS sigue aislando aunque se salte la
-  capa de aplicación.
-- Actualizar `docs/multi-tenancy.md`, `docs/human-auth.md`, `docs/api-auth.md`
-  con la jerarquía nueva.
+**Importante — leer antes de tocar migraciones de este refactor de nuevo:**
+la rama `dev` del proyecto de Neon (`withered-bonus-39380900`, branch
+`br-cold-grass-a5480d8z` — la que apunta el connection string de
+user-secrets) **ya tiene aplicadas** `AddOrganizations` y
+`BackfillOrganizationsFromTenants`, con datos reales de prueba (backfill
+corrido). Esto pasó solo, probablemente por `Database:MigrateOnStartup: true`
++ algún `dotnet run` local mientras esos archivos ya existían en el repo — no
+por un `dotnet ef database update` explícito. La rama `production` de Neon
+está limpia (nunca tuvo estas tablas).
 
-## Aplicar la migración
+Por eso `MoveTenantPlanToOrganization` (Fase 2) es una migración **nueva
+hacia adelante** en vez de una regeneración de las anteriores — con
+`defaultValue` explícito (`Developer`/`Active`) para no romper las filas que
+ya existen en `dev`. **No** vuelvas a intentar `migrations remove` sobre
+`AddOrganizations`/`BackfillOrganizationsFromTenants`: la CLI se va a negar
+(correctamente) porque hay una base real detrás.
 
-No corrida contra ninguna base de datos real todavía — solo generada y
-probada contra el Postgres efímero de Testcontainers (`dotnet test`, que ya
-pasó). Para aplicarla a tu base de desarrollo:
+Para aplicar `MoveTenantPlanToOrganization` a `dev`:
 
 ```bash
 ASPNETCORE_ENVIRONMENT=Development dotnet dotnet-ef database update \

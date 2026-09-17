@@ -368,11 +368,23 @@ namespace NovaFE.Infrastructure.Persistence.EfCore.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("name");
 
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("plan");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(63)
                         .HasColumnType("character varying(63)")
                         .HasColumnName("slug");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -755,12 +767,6 @@ namespace NovaFE.Infrastructure.Persistence.EfCore.Migrations
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("uuid")
                         .HasColumnName("organization_id");
-
-                    b.Property<string>("Plan")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasColumnName("plan");
 
                     b.Property<string>("Rnc")
                         .IsRequired()

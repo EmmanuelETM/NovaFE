@@ -4,11 +4,27 @@ namespace NovaFE.Application.Users.Contracts;
 /// Quién es el que hizo la petición, para el dashboard: de acá sale la navegación
 /// por rol. Lo devuelve <c>GET /api/v1/users/me</c>.
 /// </summary>
-/// <param name="TenantId">El contribuyente; <c>null</c> = operador del SaaS.</param>
-/// <param name="TenantName">Razón social del contribuyente, si aplica.</param>
+/// <param name="TenantId">El tenant <b>activo</b> de esta sesión; <c>null</c> = operador del SaaS, o ningún tenant disponible todavía.</param>
+/// <param name="TenantName">Razón social del tenant activo, si aplica.</param>
+/// <param name="Organizations">
+/// Las organizaciones del usuario y, dentro de cada una, los tenants a los que
+/// tiene acceso — para el switcher del dashboard (Fase 3). Vacío para
+/// identidades sin <c>PlatformUser</c> detrás (API key, header de dev, operador).
+/// </param>
 public sealed record UserProfileDto(
     string Id,
     string? Email,
     string Role,
     Guid? TenantId,
-    string? TenantName);
+    string? TenantName,
+    IReadOnlyList<UserOrganizationDto> Organizations);
+
+/// <summary>Una organización del usuario y su rol ahí (<c>owner</c>/<c>admin</c>/<c>member</c>).</summary>
+public sealed record UserOrganizationDto(
+    Guid OrganizationId,
+    string OrganizationName,
+    string Role,
+    IReadOnlyList<UserOrganizationTenantDto> Tenants);
+
+/// <summary>Un tenant accesible dentro de una organización, con el rol efectivo del usuario ahí.</summary>
+public sealed record UserOrganizationTenantDto(Guid TenantId, string TenantName, string Role);

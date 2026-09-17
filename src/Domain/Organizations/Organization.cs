@@ -1,3 +1,4 @@
+using ErrorOr;
 using NovaFE.Domain.Common.Entities;
 
 namespace NovaFE.Domain.Organizations;
@@ -28,11 +29,13 @@ public sealed class Organization : Entity<Guid>, IAuditableEntity, ISoftDeletabl
     {
     }
 
-    private Organization(Guid id, string name, string slug)
+    private Organization(Guid id, string name, string slug, OrganizationPlan plan)
         : base(id)
     {
         Name = name;
         Slug = slug;
+        Plan = plan;
+        Status = OrganizationStatus.Active;
     }
 
     /// <summary>Nombre visible de la organización.</summary>
@@ -43,6 +46,11 @@ public sealed class Organization : Entity<Guid>, IAuditableEntity, ISoftDeletabl
     /// Minúsculas, dígitos y guiones — la forma exacta la valida el comando.
     /// </summary>
     public string Slug { get; private set; } = null!;
+
+    /// <summary>Nivel comercial / cuota. La bolsa de comprobantes se consolida acá, no por Tenant.</summary>
+    public OrganizationPlan Plan { get; private set; } = null!;
+
+    public OrganizationStatus Status { get; private set; } = null!;
 
     public DateTimeOffset CreatedAt { get; set; }
     public string? CreatedBy { get; set; }
@@ -57,8 +65,28 @@ public sealed class Organization : Entity<Guid>, IAuditableEntity, ISoftDeletabl
     /// Registra una nueva organización. La unicidad del slug es un chequeo de
     /// repositorio (necesita E/S), resuelto antes de llamar acá.
     /// </summary>
-    public static Organization Register(string name, string slug)
-        => new(Guid.CreateVersion7(), name.Trim(), slug.Trim().ToLowerInvariant());
+    public static Organization Register(string name, string slug, OrganizationPlan plan)
+        => new(Guid.CreateVersion7(), name.Trim(), slug.Trim().ToLowerInvariant(), plan);
 
     public void Rename(string name) => Name = name.Trim();
+
+    /// <summary>Reactiva una organización suspendida. Idempotencia estricta.</summary>
+    public ErrorOr<Success> Activate()
+    {
+        if (Status == OrganizationStatus.Active)
+            return OrganizationErrors.NotSuspended;
+
+        Status = OrganizationStatus.Active;
+        return Result.Success;
+    }
+
+    /// <summary>Suspende la organización. Bloquea en cascada a todos sus tenants (ver <c>Tenant.IsUsable</c>). Idempotencia estricta.</summary>
+    public ErrorOr<Success> Suspend()
+    {
+        if (Status == OrganizationStatus.Suspended)
+            return OrganizationErrors.AlreadySuspended;
+
+        Status = OrganizationStatus.Suspended;
+        return Result.Success;
+    }
 }

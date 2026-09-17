@@ -25,4 +25,8 @@ internal sealed class OrganizationMemberRepository(AppDbContext context) : IOrga
         context.OrganizationMembers.Remove(member);
         return context.SaveChangesAsync(ct);
     }
+
+    public Task<int> CountByRoleAsync(Guid organizationId, OrganizationRole role, CancellationToken ct = default)
+        => context.OrganizationMembers
+            .CountAsync(m => m.OrganizationId == organizationId && m.Role == role, ct);
 }

@@ -18,4 +18,7 @@ internal sealed class OrganizationRepository(AppDbContext context) : IOrganizati
         await context.Organizations.AddAsync(organization, ct);
         await context.SaveChangesAsync(ct);
     }
+
+    public Task UpdateAsync(Organization organization, CancellationToken ct = default)
+        => context.SaveChangesAsync(ct);
 }

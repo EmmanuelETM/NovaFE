@@ -9,6 +9,10 @@ namespace NovaFE.Domain.Organizations;
 /// </summary>
 public static class OrganizationErrors
 {
+    public static Error NotAllowed => Error.Forbidden(
+        code: "Organization.NotAllowed",
+        description: "No tenés permiso para administrar los miembros de esta organización.");
+
     public static Error NotFound(Guid id) => Error.NotFound(
         code: "Organization.NotFound",
         description: $"No existe una organización con id '{id}'.");
@@ -21,6 +25,18 @@ public static class OrganizationErrors
         code: "Organization.UnknownRole",
         description: $"Rol de organización desconocido: '{role}'.");
 
+    public static Error UnknownPlan(string plan) => Error.Validation(
+        code: "Organization.UnknownPlan",
+        description: $"Plan desconocido: '{plan}'.");
+
+    public static Error AlreadySuspended => Error.Conflict(
+        code: "Organization.AlreadySuspended",
+        description: "La organización ya estaba suspendida.");
+
+    public static Error NotSuspended => Error.Conflict(
+        code: "Organization.NotSuspended",
+        description: "La organización no está suspendida, no hay nada que reactivar.");
+
     public static Error MemberNotFound(Guid platformUserId) => Error.NotFound(
         code: "Organization.MemberNotFound",
         description: $"El usuario '{platformUserId}' no es miembro de esta organización.");
@@ -28,6 +44,10 @@ public static class OrganizationErrors
     public static Error MemberAlreadyExists(string email) => Error.Conflict(
         code: "Organization.MemberAlreadyExists",
         description: $"El usuario con correo '{email}' ya es miembro de esta organización.");
+
+    public static Error CannotRemoveLastOwner => Error.Conflict(
+        code: "Organization.CannotRemoveLastOwner",
+        description: "No podés quitar o degradar al último owner de la organización.");
 
     public static Error MemberUserNotFound(string email) => Error.NotFound(
         code: "Organization.MemberUserNotFound",

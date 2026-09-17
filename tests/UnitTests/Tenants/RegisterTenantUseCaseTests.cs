@@ -20,7 +20,7 @@ public class RegisterTenantUseCaseTests : UseCaseTestBase
         _tenants.RncExistsAsync("101672919", Arg.Any<CancellationToken>()).Returns(false);
 
         var result = await Sut().Execute(
-            new RegisterTenantCommand("101672919", "Acme SRL", null, "Developer"));
+            new RegisterTenantCommand("101672919", "Acme SRL", null));
 
         result.IsError.ShouldBeFalse();
         result.Value.ShouldNotBe(Guid.Empty);
@@ -35,7 +35,7 @@ public class RegisterTenantUseCaseTests : UseCaseTestBase
         _tenants.RncExistsAsync("101672919", Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await Sut().Execute(
-            new RegisterTenantCommand("101672919", "Acme SRL", null, "Developer"));
+            new RegisterTenantCommand("101672919", "Acme SRL", null));
 
         result.IsError.ShouldBeTrue();
         result.FirstError.Type.ShouldBe(ErrorType.Conflict);
@@ -44,12 +44,11 @@ public class RegisterTenantUseCaseTests : UseCaseTestBase
     }
 
     [Theory]
-    [InlineData("123", "Acme", "Developer")]     // bad RNC
-    [InlineData("101672919", "", "Developer")]   // missing legal name
-    [InlineData("101672919", "Acme", "Premium")] // unknown plan
-    public async Task Rejects_invalid_input_with_validation_errors(string rnc, string legalName, string plan)
+    [InlineData("123", "Acme")]   // bad RNC
+    [InlineData("101672919", "")] // missing legal name
+    public async Task Rejects_invalid_input_with_validation_errors(string rnc, string legalName)
     {
-        var result = await Sut().Execute(new RegisterTenantCommand(rnc, legalName, null, plan));
+        var result = await Sut().Execute(new RegisterTenantCommand(rnc, legalName, null));
 
         result.IsError.ShouldBeTrue();
         result.Errors.ShouldContain(e => e.Type == ErrorType.Validation);

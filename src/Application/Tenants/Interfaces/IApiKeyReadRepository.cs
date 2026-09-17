@@ -15,11 +15,17 @@ public interface IApiKeyReadRepository
     Task<ApiKeyLookup?> FindByHashAsync(string keyHash, CancellationToken ct = default);
 }
 
-/// <summary>Lo mínimo para autenticar: identidad, ambiente, rol y estado de vigencia.</summary>
+/// <summary>
+/// Lo mínimo para autenticar: identidad, ambiente, rol, estado de vigencia de
+/// la key, y si el tenant (o la organización dueña) está suspendido — una key
+/// vigente no basta si el tenant fue bloqueado por el operador.
+/// </summary>
 public sealed record ApiKeyLookup(
     Guid Id,
     Guid TenantId,
     string Environment,
     string Role,
     DateTimeOffset? ExpiresAt,
-    DateTimeOffset? RevokedAt);
+    DateTimeOffset? RevokedAt,
+    bool TenantSuspended,
+    bool OrganizationSuspended);

@@ -1,5 +1,6 @@
 using ErrorOr;
 using NSubstitute;
+using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Application.Users.ChangeUserRole;
 using NovaFE.Application.Users.Interfaces;
 using NovaFE.Domain.Users;
@@ -12,9 +13,10 @@ public class ChangeUserRoleUseCaseTests : UseCaseTestBase
     private static readonly Guid TenantId = Guid.CreateVersion7();
 
     private readonly IPlatformUserRepository _users = Substitute.For<IPlatformUserRepository>();
+    private readonly ITenantMemberRepository _tenantMembers = Substitute.For<ITenantMemberRepository>();
 
     private ChangeUserRoleUseCase Sut() =>
-        new(LoggerFactory, new ChangeUserRoleCommandValidator(), _users);
+        new(LoggerFactory, new ChangeUserRoleCommandValidator(), _users, _tenantMembers);
 
     private static PlatformUser TenantUser() =>
         PlatformUser.CreateTenantUser("emisor@cliente.do", TenantId, PlatformRole.Emisor).Value;

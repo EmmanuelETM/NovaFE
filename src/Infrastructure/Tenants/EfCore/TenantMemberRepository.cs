@@ -16,4 +16,7 @@ internal sealed class TenantMemberRepository(AppDbContext context) : ITenantMemb
         await context.TenantMembers.AddAsync(member, ct);
         await context.SaveChangesAsync(ct);
     }
+
+    public Task UpdateAsync(TenantMember member, CancellationToken ct = default)
+        => context.SaveChangesAsync(ct);
 }

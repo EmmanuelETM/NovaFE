@@ -41,16 +41,22 @@ internal sealed class ApiKeyReadRepository(IDbSession session) : IApiKeyReadRepo
 
     public async Task<ApiKeyLookup?> FindByHashAsync(string keyHash, CancellationToken ct = default)
     {
+        // Cruza tenants/organizations a propósito, igual que cruza tenants por
+        // el hash: todavía no hay tenant en la petición en este punto.
         const string sql =
             """
-            SELECT id          AS "Id",
-                   tenant_id   AS "TenantId",
-                   environment AS "Environment",
-                   role        AS "Role",
-                   expires_at  AS "ExpiresAt",
-                   revoked_at  AS "RevokedAt"
-            FROM api_keys
-            WHERE key_hash = @keyHash AND is_deleted = false
+            SELECT ak.id                             AS "Id",
+                   ak.tenant_id                       AS "TenantId",
+                   ak.environment                     AS "Environment",
+                   ak.role                            AS "Role",
+                   ak.expires_at                      AS "ExpiresAt",
+                   ak.revoked_at                      AS "RevokedAt",
+                   (t.status = 'Suspended')            AS "TenantSuspended",
+                   coalesce(o.status = 'Suspended', false) AS "OrganizationSuspended"
+            FROM api_keys ak
+            JOIN tenants t ON t.id = ak.tenant_id
+            LEFT JOIN organizations o ON o.id = t.organization_id
+            WHERE ak.key_hash = @keyHash AND ak.is_deleted = false
             """;
 
         var connection = await session.GetConnectionAsync(ct);

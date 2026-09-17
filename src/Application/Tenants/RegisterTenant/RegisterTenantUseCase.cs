@@ -24,15 +24,10 @@ public sealed class RegisterTenantUseCase(
 
         var rnc = rncResult.Value;
 
-        var plan = TenantPlan.GetAll()
-            .FirstOrDefault(p => string.Equals(p.Name, request.Plan.Trim(), StringComparison.OrdinalIgnoreCase));
-        if (plan is null)
-            return TenantErrors.UnknownPlan(request.Plan);
-
         if (await tenants.RncExistsAsync(rnc.Value, ct))
             return TenantErrors.RncAlreadyRegistered(rnc.Value);
 
-        var tenant = Tenant.Register(rnc, request.LegalName, request.TradeName, plan);
+        var tenant = Tenant.Register(rnc, request.LegalName, request.TradeName);
 
         await tenants.AddAsync(tenant, ct);
 

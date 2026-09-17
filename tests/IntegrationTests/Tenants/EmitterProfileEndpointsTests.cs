@@ -12,7 +12,6 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
         {
             rnc = "132786262",
             legalName = "Acme SRL",
-            plan = "Business",
         });
         register.EnsureSuccessStatusCode();
         return (await LeerAsync<IdResponse>(register))!.Id;

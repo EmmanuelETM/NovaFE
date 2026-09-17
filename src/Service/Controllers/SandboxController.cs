@@ -50,7 +50,7 @@ public sealed class SandboxController(
         var types = request.SequenceTypes is { Count: > 0 } ? request.SequenceTypes : DefaultSequenceTypes;
 
         var tenant = await registerTenant.Execute(
-            new RegisterTenantCommand(rnc, $"Sandbox {rnc} SRL", "Sandbox", "Business"), ct);
+            new RegisterTenantCommand(rnc, $"Sandbox {rnc} SRL", "Sandbox"), ct);
         if (tenant.IsError)
             return Problem(tenant.Errors);
 

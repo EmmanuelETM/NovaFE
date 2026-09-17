@@ -1,0 +1,142 @@
+using System.Net;
+using System.Net.Http.Json;
+using NovaFE.IntegrationTests.Fixtures;
+
+namespace NovaFE.IntegrationTests.Tenants;
+
+/// <summary>
+/// Organizaciones (Fase 2 de la jerarquía User -&gt; Organization -&gt; Tenant):
+/// alta, membresía self-service, asociación de tenants y suspensión en
+/// cascada. Ver <c>docs/multi-tenancy-hierarchy.md</c>.
+/// </summary>
+public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : IntegrationTestBase(database)
+{
+    private async Task<Guid> RegisterOrganizationAsync(string name, string slug, string? ownerEmail = null)
+    {
+        var response = await Client.PostAsJsonAsync("/api/v1/organizations", new { name, slug, plan = "Developer", ownerEmail });
+        response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        return (await LeerAsync<IdResponse>(response))!.Id;
+    }
+
+    private void ActAsHuman(string authUserId, string email)
+    {
+        foreach (var h in new[] { "X-API-Key", "X-Tenant-Id", "X-Internal-Key", "X-Acting-User", "X-Acting-Email" })
+            Client.DefaultRequestHeaders.Remove(h);
+
+        Client.DefaultRequestHeaders.Add("X-Internal-Key", ApiFactory.InternalApiKey);
+        Client.DefaultRequestHeaders.Add("X-Acting-User", authUserId);
+        Client.DefaultRequestHeaders.Add("X-Acting-Email", email);
+    }
+
+    [RequiresDockerFact]
+    public async Task Register_then_get_returns_the_organization()
+    {
+        var id = await RegisterOrganizationAsync("Acme Group", "acme-group");
+
+        var get = await Client.GetAsync($"/api/v1/organizations/{id}");
+        get.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var detail = await LeerAsync<OrganizationDetailResponse>(get);
+        detail!.Name.ShouldBe("Acme Group");
+        detail.Slug.ShouldBe("acme-group");
+        detail.Plan.ShouldBe("Developer");
+        detail.Status.ShouldBe("Active");
+    }
+
+    [RequiresDockerFact]
+    public async Task Register_rejects_a_duplicate_slug_with_409()
+    {
+        await RegisterOrganizationAsync("Acme", "acme-dup");
+
+        var response = await Client.PostAsJsonAsync(
+            "/api/v1/organizations", new { name = "Acme 2", slug = "acme-dup", plan = "Developer" });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+    }
+
+    [RequiresDockerFact]
+    public async Task Register_with_owner_email_provisions_the_user_and_adds_them_as_owner()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-owner", ownerEmail: "owner@acme.do");
+
+        ActAsHuman("auth-owner", "owner@acme.do");
+        var members = await LeerAsync<OrganizationMemberResponse[]>(
+            await Client.GetAsync($"/api/v1/organizations/{orgId}/members"));
+
+        var owner = members!.ShouldHaveSingleItem();
+        owner.Email.ShouldBe("owner@acme.do");
+        owner.Role.ShouldBe("owner");
+    }
+
+    [RequiresDockerFact]
+    public async Task Assign_tenant_then_list_shows_it()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-tenants");
+        var tenantId = await RegisterTenantAsync("130444555");
+
+        var assign = await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}", null);
+        assign.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var tenants = await LeerAsync<PagedResponse<TenantSummaryResponse>>(
+            await Client.GetAsync($"/api/v1/organizations/{orgId}/tenants"));
+
+        tenants!.Items.ShouldHaveSingleItem().Id.ShouldBe(tenantId);
+    }
+
+    [RequiresDockerFact]
+    public async Task Suspending_the_organization_blocks_authentication_for_its_tenants()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-suspend");
+
+        var setup = await Client.PostAsJsonAsync("/api/v1/dev/sandbox", new { });
+        setup.StatusCode.ShouldBe(HttpStatusCode.OK, await setup.Content.ReadAsStringAsync());
+        var sandbox = await LeerAsync<SandboxResponse>(setup);
+
+        (await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{sandbox!.TenantId}", null))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        Client.DefaultRequestHeaders.Add("X-API-Key", sandbox.ApiKey);
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        Client.DefaultRequestHeaders.Remove("X-API-Key");
+        (await Client.PostAsync($"/api/v1/organizations/{orgId}/suspend", null)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        Client.DefaultRequestHeaders.Add("X-API-Key", sandbox.ApiKey);
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [RequiresDockerFact]
+    public async Task An_owner_can_manage_members_but_a_plain_member_cannot()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-roles", ownerEmail: "owner@acme.do");
+        await RegisterOrganizationAsync("Other", "other-org", ownerEmail: "member@acme.do");
+        await RegisterOrganizationAsync("Third", "third-org", ownerEmail: "third@acme.do");
+
+        ActAsHuman("auth-owner", "owner@acme.do");
+        var addMember = await Client.PostAsJsonAsync(
+            $"/api/v1/organizations/{orgId}/members", new { email = "member@acme.do", role = "member" });
+        addMember.StatusCode.ShouldBe(HttpStatusCode.Created);
+
+        // Un member no puede agregar a un tercero.
+        ActAsHuman("auth-member", "member@acme.do");
+        var denied = await Client.PostAsJsonAsync(
+            $"/api/v1/organizations/{orgId}/members", new { email = "third@acme.do", role = "member" });
+        denied.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+
+        // El owner sí puede.
+        ActAsHuman("auth-owner", "owner@acme.do");
+        var allowed = await Client.PostAsJsonAsync(
+            $"/api/v1/organizations/{orgId}/members", new { email = "third@acme.do", role = "member" });
+        allowed.StatusCode.ShouldBe(HttpStatusCode.Created);
+    }
+
+    private sealed record OrganizationDetailResponse(Guid Id, string Name, string Slug, string Plan, string Status);
+
+    private sealed record OrganizationMemberResponse(Guid PlatformUserId, string Email, string Role);
+
+    private sealed record TenantSummaryResponse(Guid Id, string Rnc, string LegalName, string Status);
+
+    private sealed record PagedResponse<T>(IEnumerable<T> Items, int TotalCount, int Page, int PageSize);
+
+    private sealed record SandboxResponse(Guid TenantId, string ApiKey);
+}

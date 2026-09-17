@@ -50,6 +50,140 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
                 cancellationToken: ct));
     }
 
+    public async Task<TenantAccessLookup?> ResolveTenantAccessAsync(
+        Guid platformUserId, Guid tenantId, CancellationToken ct = default)
+    {
+        // Acceso directo (tenant_members) o heredado: owner/admin de la
+        // organización dueña del tenant actúa como admin_tenant ahí, sin fila
+        // explícita. Ninguno de los dos si el tenant o su organización están
+        // suspendidos.
+        const string sql =
+            """
+            SELECT t.id                              AS "TenantId",
+                   coalesce(tm.role, 'admin_tenant')  AS "Role"
+            FROM tenants t
+            LEFT JOIN tenant_members tm
+                ON tm.tenant_id = t.id AND tm.platform_user_id = @platformUserId
+            LEFT JOIN organization_members om
+                ON om.organization_id = t.organization_id
+               AND om.platform_user_id = @platformUserId
+               AND om.role IN ('owner', 'admin')
+            WHERE t.id = @tenantId
+              AND t.is_deleted = false
+              AND t.status = 'Active'
+              AND (tm.platform_user_id IS NOT NULL OR om.platform_user_id IS NOT NULL)
+              AND NOT EXISTS (
+                  SELECT 1 FROM organizations o
+                  WHERE o.id = t.organization_id AND o.status = 'Suspended'
+              )
+            """;
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        return await connection.QuerySingleOrDefaultAsync<TenantAccessLookup>(
+            new CommandDefinition(sql, new { platformUserId, tenantId }, session.Transaction, cancellationToken: ct));
+    }
+
+    public async Task<TenantAccessLookup?> ResolveDefaultTenantAccessAsync(
+        Guid platformUserId, CancellationToken ct = default)
+    {
+        // El primero por antigüedad con acceso directo; si no hay ninguno, el
+        // primer tenant heredado de una organización donde sea owner/admin.
+        const string sql =
+            """
+            SELECT combined.tenant_id AS "TenantId", combined.role AS "Role"
+            FROM (
+                SELECT t.id AS tenant_id, tm.role AS role, 0 AS priority, tm.created_at AS ordering
+                FROM tenant_members tm
+                JOIN tenants t ON t.id = tm.tenant_id
+                WHERE tm.platform_user_id = @platformUserId
+                  AND t.is_deleted = false AND t.status = 'Active'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM organizations o
+                      WHERE o.id = t.organization_id AND o.status = 'Suspended'
+                  )
+
+                UNION ALL
+
+                SELECT t.id AS tenant_id, 'admin_tenant' AS role, 1 AS priority, t.created_at AS ordering
+                FROM organization_members om
+                JOIN tenants t ON t.organization_id = om.organization_id
+                WHERE om.platform_user_id = @platformUserId
+                  AND om.role IN ('owner', 'admin')
+                  AND t.is_deleted = false AND t.status = 'Active'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM organizations o
+                      WHERE o.id = t.organization_id AND o.status = 'Suspended'
+                  )
+            ) combined
+            ORDER BY combined.priority, combined.ordering
+            LIMIT 1
+            """;
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        return await connection.QuerySingleOrDefaultAsync<TenantAccessLookup>(
+            new CommandDefinition(sql, new { platformUserId }, session.Transaction, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<OrganizationMembershipLookup>> ListOrganizationMembershipsAsync(
+        Guid platformUserId, CancellationToken ct = default)
+    {
+        // Fila plana (organización × tenant accesible); se agrupa acá porque
+        // Dapper no arma jerarquías de más de un nivel sin un splitOn frágil.
+        // owner/admin ven todos los tenants activos de su organización
+        // (heredado, admin_tenant salvo que tengan una fila propia en
+        // tenant_members); member solo los que tiene explícitos. Una
+        // organización sin tenants todavía sale con TenantId nulo.
+        const string sql =
+            """
+            SELECT o.id                              AS "OrganizationId",
+                   o.name                             AS "OrganizationName",
+                   om.role                             AS "OrgRole",
+                   t.id                                AS "TenantId",
+                   t.legal_name                        AS "TenantName",
+                   coalesce(tm.role, 'admin_tenant')   AS "TenantRole"
+            FROM organization_members om
+            JOIN organizations o ON o.id = om.organization_id AND o.is_deleted = false
+            LEFT JOIN tenants t
+                ON t.organization_id = o.id
+               AND t.is_deleted = false
+               AND t.status = 'Active'
+               AND (
+                     om.role IN ('owner', 'admin')
+                  OR EXISTS (
+                        SELECT 1 FROM tenant_members tm2
+                        WHERE tm2.tenant_id = t.id AND tm2.platform_user_id = @platformUserId
+                     )
+                   )
+            LEFT JOIN tenant_members tm ON tm.tenant_id = t.id AND tm.platform_user_id = @platformUserId
+            WHERE om.platform_user_id = @platformUserId
+            ORDER BY o.created_at, t.created_at
+            """;
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        var rows = await connection.QueryAsync<MembershipRow>(
+            new CommandDefinition(sql, new { platformUserId }, session.Transaction, cancellationToken: ct));
+
+        return [.. rows
+            .GroupBy(r => (r.OrganizationId, r.OrganizationName, r.OrgRole))
+            .Select(g => new OrganizationMembershipLookup(
+                g.Key.OrganizationId,
+                g.Key.OrganizationName,
+                g.Key.OrgRole,
+                [.. g.Where(r => r.TenantId is not null)
+                    .Select(r => new OrganizationTenantLookup(r.TenantId!.Value, r.TenantName!, r.TenantRole!))]))];
+    }
+
+    private sealed record MembershipRow(
+        Guid OrganizationId,
+        string OrganizationName,
+        string OrgRole,
+        Guid? TenantId,
+        string? TenantName,
+        string? TenantRole);
+
     public async Task<PlatformUserDto?> FindByIdAsync(Guid id, CancellationToken ct = default)
     {
         const string sql =
@@ -97,6 +231,9 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
 
     public async Task<IReadOnlyList<PlatformUserDto>> ListOperatorsAsync(CancellationToken ct = default)
     {
+        // "Operador" es el rol admin_sistema, no "sin tenant" — desde Fase 2 un
+        // miembro de organización sin tenant fijo (CreateOrganizationMember)
+        // también tiene tenant_id null, y no es operador.
         const string sql =
             """
             SELECT id           AS "Id",
@@ -107,7 +244,7 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
                    revoked_at   AS "RevokedAt",
                    created_at   AS "CreatedAt"
             FROM platform_users
-            WHERE tenant_id IS NULL AND is_deleted = false
+            WHERE role = 'admin_sistema' AND is_deleted = false
             ORDER BY created_at DESC
             """;
 

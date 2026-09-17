@@ -77,6 +77,25 @@ public sealed class PlatformUser : Entity<Guid>, IAuditableEntity, ISoftDeletabl
     }
 
     /// <summary>
+    /// Da de alta a un miembro de organización sin tenant fijo (Fase 2): un
+    /// <c>owner</c>/<c>admin</c> que puede operar varios contribuyentes vía
+    /// <see cref="Tenants.TenantMember"/>, no uno solo. <see cref="TenantId"/>
+    /// queda <c>null</c> y <see cref="Role"/> se fija en <c>consultor</c> (el
+    /// mínimo) como valor vestigial — el acceso real de este usuario lo dan
+    /// <c>organization_members</c>/<c>tenant_members</c>, no estos dos campos.
+    /// No es <c>admin_sistema</c>: <see cref="TenantId"/> nulo ya no implica
+    /// operador (ver <c>ListOperatorsAsync</c>, que filtra por rol, no por esto).
+    /// </summary>
+    public static ErrorOr<PlatformUser> CreateOrganizationMember(string email)
+    {
+        var normalized = NormalizeEmail(email);
+        if (normalized.IsError)
+            return normalized.Errors;
+
+        return new PlatformUser(Guid.CreateVersion7(), normalized.Value, tenantId: null, PlatformRole.Consultor);
+    }
+
+    /// <summary>
     /// Da de alta a un usuario de un contribuyente. Rechaza <c>admin_sistema</c>
     /// (ese rol es exclusivo del operador).
     /// </summary>

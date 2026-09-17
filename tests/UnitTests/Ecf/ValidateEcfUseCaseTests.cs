@@ -22,7 +22,7 @@ public class ValidateEcfUseCaseTests : UseCaseTestBase
     {
         _tenant.TenantId.Returns(TenantId);
         _tenants.GetByIdAsync(TenantId, Arg.Any<CancellationToken>())
-            .Returns(Tenant.Register(Rnc.FromStorage("132786262"), "AlMax Solutions EIRL", "AlMax", TenantPlan.GetAll().First()));
+            .Returns(Tenant.Register(Rnc.FromStorage("132786262"), "AlMax Solutions EIRL", "AlMax"));
         _profiles.GetByTenantAsync(TenantId, Arg.Any<CancellationToken>())
             .Returns(EmitterProfile.Create(TenantId, "Av. 27 de Febrero 100", "010100", "01",
                 ["809-555-0100"], "f@almax.do", "Comercio", DgiiEnvironment.Test).Value);

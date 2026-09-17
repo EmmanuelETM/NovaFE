@@ -106,7 +106,7 @@ public abstract class IntegrationTestBase(DatabaseFixture database) : IAsyncLife
     // --- helpers compartidos por los slices ---------------------------------
 
     /// <summary>Registra un contribuyente y devuelve su id.</summary>
-    protected async Task<Guid> RegisterTenantAsync(string rnc, string plan = "Business")
+    protected async Task<Guid> RegisterTenantAsync(string rnc)
     {
         Client.DefaultRequestHeaders.Remove(TenantHeader);
 
@@ -114,7 +114,6 @@ public abstract class IntegrationTestBase(DatabaseFixture database) : IAsyncLife
         {
             rnc,
             legalName = $"Contribuyente {rnc}",
-            plan,
         });
 
         response.EnsureSuccessStatusCode();

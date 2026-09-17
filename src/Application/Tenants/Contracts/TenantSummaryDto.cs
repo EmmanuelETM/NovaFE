@@ -5,5 +5,4 @@ public sealed record TenantSummaryDto(
     Guid Id,
     string Rnc,
     string LegalName,
-    string Plan,
     string Status);

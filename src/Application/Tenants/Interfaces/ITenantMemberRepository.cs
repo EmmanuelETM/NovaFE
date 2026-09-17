@@ -13,4 +13,6 @@ public interface ITenantMemberRepository
     Task<TenantMember?> GetAsync(Guid tenantId, Guid platformUserId, CancellationToken ct = default);
 
     Task AddAsync(TenantMember member, CancellationToken ct = default);
+
+    Task UpdateAsync(TenantMember member, CancellationToken ct = default);
 }

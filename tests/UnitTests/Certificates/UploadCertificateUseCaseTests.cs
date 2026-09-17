@@ -25,7 +25,7 @@ public class UploadCertificateUseCaseTests : UseCaseTestBase
         _tenant.TenantId.Returns(TenantId);
         _tenant.HasValue.Returns(true);
         _tenants.GetByIdAsync(TenantId, Arg.Any<CancellationToken>())
-            .Returns(Tenant.Register(Rnc.Create(TenantRnc).Value, "Acme SRL", null, TenantPlan.Business));
+            .Returns(Tenant.Register(Rnc.Create(TenantRnc).Value, "Acme SRL", null));
         _vault.StoreAsync(Arg.Any<byte[]>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns("vault-ref-1");
         _certificates.HasActiveCertificateAsync(Arg.Any<DgiiEnvironment>(), Arg.Any<CancellationToken>())

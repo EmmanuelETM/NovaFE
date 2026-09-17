@@ -23,7 +23,7 @@ public class SetEmitterProfileUseCaseTests : UseCaseTestBase
         _currentTenant.TenantId.Returns(TenantId);
         _currentTenant.HasValue.Returns(true);
         _tenants.GetByIdAsync(TenantId, Arg.Any<CancellationToken>())
-            .Returns(new TenantDto(TenantId, "132786262", "Acme SRL", null, "Business", "Active", Clock.GetUtcNow()));
+            .Returns(new TenantDto(TenantId, "132786262", "Acme SRL", null, "Active", null, Clock.GetUtcNow()));
     }
 
     private SetEmitterProfileUseCase Sut() =>

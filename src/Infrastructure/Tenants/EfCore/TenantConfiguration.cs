@@ -32,11 +32,6 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(t => t.TradeName)
             .HasMaxLength(150);
 
-        builder.Property(t => t.Plan)
-            .HasConversion(plan => plan.Name, name => TenantPlan.FromName(name))
-            .HasMaxLength(20)
-            .IsRequired();
-
         builder.Property(t => t.Status)
             .HasConversion(status => status.Name, name => TenantStatus.FromName(name))
             .HasMaxLength(20)

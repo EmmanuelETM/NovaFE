@@ -17,7 +17,11 @@ public static class TenantErrors
         code: "Tenant.RncAlreadyRegistered",
         description: $"Ya hay un contribuyente registrado con el RNC '{rnc}'.");
 
-    public static Error UnknownPlan(string plan) => Error.Validation(
-        code: "Tenant.UnknownPlan",
-        description: $"Plan desconocido: '{plan}'.");
+    public static Error AlreadySuspended => Error.Conflict(
+        code: "Tenant.AlreadySuspended",
+        description: "El contribuyente ya estaba suspendido.");
+
+    public static Error NotSuspended => Error.Conflict(
+        code: "Tenant.NotSuspended",
+        description: "El contribuyente no está suspendido, no hay nada que reactivar.");
 }

@@ -57,11 +57,15 @@ internal sealed class InternalKeyAuthenticationHandler(
         if (actingUser is null && actingEmail is null)
             return AuthenticateResult.Fail("Falta la identidad del usuario (X-Acting-User / X-Acting-Email).");
 
+        Guid? actingTenantId = Guid.TryParse(Header(SecuritySchemes.ActingTenantHeader), out var parsedTenantId)
+            ? parsedTenantId
+            : null;
+
         var identity = await authenticator.AuthenticateAsync(
-            actingUser, actingEmail ?? string.Empty, Context.RequestAborted);
+            actingUser, actingEmail ?? string.Empty, actingTenantId, Context.RequestAborted);
 
         if (identity is null)
-            return AuthenticateResult.Fail("El usuario no está dado de alta o fue revocado.");
+            return AuthenticateResult.Fail("El usuario no está dado de alta, fue revocado, o no tiene acceso a ese tenant.");
 
         var claims = new List<Claim>
         {

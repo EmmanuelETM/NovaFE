@@ -6,6 +6,6 @@ public sealed record TenantDto(
     string Rnc,
     string LegalName,
     string? TradeName,
-    string Plan,
     string Status,
+    Guid? OrganizationId,
     DateTimeOffset CreatedAt);

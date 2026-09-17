@@ -33,7 +33,9 @@ internal sealed class ApiKeyAuthenticator(
 
         var now = timeProvider.GetUtcNow();
         var usable = lookup.RevokedAt is null
-                     && (lookup.ExpiresAt is null || lookup.ExpiresAt > now);
+                     && (lookup.ExpiresAt is null || lookup.ExpiresAt > now)
+                     && !lookup.TenantSuspended
+                     && !lookup.OrganizationSuspended;
         if (!usable)
             return null;
 

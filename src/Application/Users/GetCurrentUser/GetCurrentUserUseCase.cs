@@ -14,10 +14,17 @@ namespace NovaFE.Application.Users.GetCurrentUser;
 /// Quién hizo la petición, para <c>GET /api/v1/users/me</c>. Responde según el
 /// esquema que autenticó:
 /// <list type="bullet">
-/// <item>humano del dashboard (<c>user:{id}</c>) → su <see cref="PlatformUser"/>;</item>
+/// <item>humano del dashboard (<c>user:{id}</c>) → su <see cref="PlatformUser"/>
+/// + sus organizaciones/tenants (Fase 2);</item>
 /// <item>cualquier otro esquema (API key, header de dev, operador) → un perfil
 /// derivado de los claims, para que el dashboard igual pinte algo.</item>
 /// </list>
+/// El tenant/rol <b>activos</b> (<see cref="UserProfileDto.TenantId"/>/
+/// <see cref="UserProfileDto.Role"/>) salen siempre de <see cref="ICurrentUser"/>/
+/// <see cref="ICurrentTenant"/> — ya resueltos por el pipeline de autenticación
+/// (Fase 2: <c>tenant_members</c>/<c>organization_members</c>, no
+/// <c>PlatformUser.TenantId</c>/<c>Role</c>, que son vestigiales para un
+/// usuario de contribuyente desde esta fase).
 /// </summary>
 public sealed class GetCurrentUserUseCase(
     ILoggerFactory loggerFactory,
@@ -35,6 +42,10 @@ public sealed class GetCurrentUserUseCase(
         if (string.IsNullOrEmpty(principalId))
             return Errors.Auth.NotAuthenticated;
 
+        var role = currentUser.Roles.FirstOrDefault() ?? PlatformRole.Consultor.Name;
+        var tenantId = currentTenant.TenantId;
+        var tenantName = await TenantNameAsync(tenantId, ct);
+
         if (principalId.StartsWith(PlatformUserPrefix, StringComparison.Ordinal)
             && Guid.TryParse(principalId[PlatformUserPrefix.Length..], out var userId))
         {
@@ -43,23 +54,22 @@ public sealed class GetCurrentUserUseCase(
                 return PlatformUserErrors.NotFound(userId);
 
             return new UserProfileDto(
-                userId.ToString(),
-                user.Email,
-                user.Role,
-                user.TenantId,
-                await TenantNameAsync(user.TenantId, ct));
+                userId.ToString(), user.Email, role, tenantId, tenantName, await OrganizationsAsync(userId, ct));
         }
 
         // API key / X-Tenant-Id de dev / operador: no hay PlatformUser detrás.
-        var role = currentUser.Roles.FirstOrDefault() ?? "consultor";
-        var tenantId = currentTenant.TenantId;
+        return new UserProfileDto(principalId, currentUser.UserName, role, tenantId, tenantName, []);
+    }
 
-        return new UserProfileDto(
-            principalId,
-            currentUser.UserName,
-            role,
-            tenantId,
-            await TenantNameAsync(tenantId, ct));
+    private async Task<IReadOnlyList<UserOrganizationDto>> OrganizationsAsync(Guid userId, CancellationToken ct)
+    {
+        var memberships = await platformUsers.ListOrganizationMembershipsAsync(userId, ct);
+
+        return [.. memberships.Select(m => new UserOrganizationDto(
+            m.OrganizationId,
+            m.OrganizationName,
+            m.OrganizationRole,
+            [.. m.Tenants.Select(t => new UserOrganizationTenantDto(t.TenantId, t.TenantName, t.Role))]))];
     }
 
     private async Task<string?> TenantNameAsync(Guid? tenantId, CancellationToken ct)

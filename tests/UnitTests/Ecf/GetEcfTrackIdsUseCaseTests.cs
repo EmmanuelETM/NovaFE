@@ -28,7 +28,7 @@ public class GetEcfTrackIdsUseCaseTests : UseCaseTestBase
     {
         _currentTenant.TenantId.Returns(TenantId);
         _tenants.GetByIdAsync(TenantId, Arg.Any<CancellationToken>())
-            .Returns(Tenant.Register(Rnc.FromStorage("132786262"), "AlMax Solutions EIRL", "AlMax", TenantPlan.GetAll().First()));
+            .Returns(Tenant.Register(Rnc.FromStorage("132786262"), "AlMax Solutions EIRL", "AlMax"));
         _tokenProvider.GetTokenAsync(Arg.Any<DgiiEnvironment>(), Arg.Any<CancellationToken>())
             .Returns(new AuthenticationToken("bearer-xyz", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddHours(1)));
     }

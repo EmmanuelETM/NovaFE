@@ -25,6 +25,14 @@ internal static class SecuritySchemes
     public const string ActingUserHeader = "X-Acting-User";
     public const string ActingEmailHeader = "X-Acting-Email";
 
+    /// <summary>
+    /// Fase 2: el tenant que el dashboard pide activar para un humano que
+    /// puede pertenecer a varias organizaciones/tenants. Solo aplica al
+    /// esquema <see cref="InternalKey"/> — una API key ya trae su tenant
+    /// implícito, no necesita este header.
+    /// </summary>
+    public const string ActingTenantHeader = "X-Acting-Tenant-Id";
+
     /// <summary>Claim que lleva el id del contribuyente en el principal autenticado.</summary>
     public const string TenantClaim = "tenant_id";
 

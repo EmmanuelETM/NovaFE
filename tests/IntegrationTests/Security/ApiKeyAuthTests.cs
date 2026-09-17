@@ -118,6 +118,29 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
     }
 
     [RequiresDockerFact]
+    public async Task A_suspended_tenant_stops_authenticating_even_with_a_valid_key()
+    {
+        var (tenantId, token) = await OnboardAsync();
+
+        UseApiKey(token);
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        Client.DefaultRequestHeaders.Remove(ApiKeyHeader);
+        var suspend = await Client.PostAsync($"/api/v1/tenants/{tenantId}/suspend", null);
+        suspend.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        UseApiKey(token);
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        Client.DefaultRequestHeaders.Remove(ApiKeyHeader);
+        var activate = await Client.PostAsync($"/api/v1/tenants/{tenantId}/activate", null);
+        activate.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        UseApiKey(token);
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [RequiresDockerFact]
     public async Task Repeated_failed_attempts_lock_out_the_caller()
     {
         var (_, token) = await OnboardAsync();
@@ -203,7 +226,6 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
         {
             rnc = "130111222",
             legalName = "Sin Llave SRL",
-            plan = "Business",
         });
         withoutKey.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
 
@@ -212,7 +234,6 @@ public sealed class ApiKeyAuthTests(DatabaseFixture database) : IntegrationTestB
         {
             rnc = "130111222",
             legalName = "Con Llave SRL",
-            plan = "Business",
         });
         withKey.StatusCode.ShouldBe(HttpStatusCode.Created);
     }

@@ -5,4 +5,6 @@ public sealed record OrganizationDto(
     Guid Id,
     string Name,
     string Slug,
+    string Plan,
+    string Status,
     DateTimeOffset CreatedAt);

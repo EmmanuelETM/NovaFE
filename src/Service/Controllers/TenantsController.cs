@@ -1,14 +1,13 @@
 using Asp.Versioning;
 using NovaFE.Application.Audit.ListAuditLog;
+using NovaFE.Application.Tenants.ActivateTenant;
 using NovaFE.Application.Tenants.Contracts;
-using NovaFE.Application.Tenants.CreateApiKey;
 using NovaFE.Application.Tenants.GetEmitterProfile;
 using NovaFE.Application.Tenants.GetTenant;
-using NovaFE.Application.Tenants.ListApiKeys;
 using NovaFE.Application.Tenants.ListTenants;
 using NovaFE.Application.Tenants.RegisterTenant;
-using NovaFE.Application.Tenants.RevokeApiKey;
 using NovaFE.Application.Tenants.SetEmitterProfile;
+using NovaFE.Application.Tenants.SuspendTenant;
 using NovaFE.Application.Users.ChangeUserRole;
 using NovaFE.Application.Users.Contracts;
 using NovaFE.Application.Users.ListTenantUsers;
@@ -37,9 +36,8 @@ public sealed class TenantsController(
     ListTenantsUseCase list,
     GetEmitterProfileUseCase getEmitterProfile,
     SetEmitterProfileUseCase setEmitterProfile,
-    CreateApiKeyUseCase createApiKey,
-    ListApiKeysUseCase listApiKeys,
-    RevokeApiKeyUseCase revokeApiKey,
+    SuspendTenantUseCase suspendTenant,
+    ActivateTenantUseCase activateTenant,
     ProvisionTenantUserUseCase provisionUser,
     ListTenantUsersUseCase listUsers,
     RevokeUserUseCase revokeUser,
@@ -109,35 +107,23 @@ public sealed class TenantsController(
     }
 
     /// <summary>
-    /// Acuña una API key para el contribuyente. El <c>token</c> de la respuesta es
-    /// la <b>única</b> vez que se puede ver: guárdalo.
+    /// Suspende el tenant: bloquea autenticación (API keys y dashboard) y
+    /// emisión de inmediato. No pago, abuso, o requerimiento legal.
     /// </summary>
-    [HttpPost("{id:guid}/api-keys")]
-    [ProducesResponseType(typeof(ApiKeyCreatedDto), StatusCodes.Status201Created)]
-    public async Task<IActionResult> CreateApiKey(
-        Guid id,
-        [FromBody] CreateApiKeyBody? body,
-        CancellationToken ct)
-        => (await createApiKey.Execute(
-                new CreateApiKeyCommand(id, body?.Label, body?.Environment, body?.Role, body?.ExpiresAt), ct))
-            .Match(
-                created => CreatedAtAction(nameof(ListApiKeys), new { id, version = "1" }, created),
-                Problem);
+    [HttpPost("{id:guid}/suspend")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Suspend(Guid id, CancellationToken ct)
+        => (await suspendTenant.Execute(new SuspendTenantCommand(id), ct)).Match(_ => NoContent(), Problem);
 
-    /// <summary>Las API keys del contribuyente (sin los tokens).</summary>
-    [HttpGet("{id:guid}/api-keys")]
-    [ProducesResponseType(typeof(IReadOnlyList<ApiKeyDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ListApiKeys(Guid id, CancellationToken ct)
-        => (await listApiKeys.Execute(new ListApiKeysQuery(id), ct)).Match(Ok, Problem);
-
-    /// <summary>Revoca una API key. Deja de autenticar de inmediato.</summary>
-    [HttpDelete("{id:guid}/api-keys/{keyid:guid}")]
-    public async Task<IActionResult> RevokeApiKey(
-        Guid id,
-        [FromRoute(Name = "keyid")] Guid keyId,
-        CancellationToken ct)
-        => (await revokeApiKey.Execute(new RevokeApiKeyCommand(id, keyId), ct))
-            .Match(_ => NoContent(), Problem);
+    /// <summary>Reactiva un tenant suspendido.</summary>
+    [HttpPost("{id:guid}/activate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Activate(Guid id, CancellationToken ct)
+        => (await activateTenant.Execute(new ActivateTenantCommand(id), ct)).Match(_ => NoContent(), Problem);
 
     /// <summary>
     /// Da de alta a un empleado del contribuyente en el dashboard, por correo. La
@@ -220,13 +206,6 @@ public sealed class TenantsController(
         string? Email,
         string? EconomicActivity,
         string DefaultEnvironment);
-
-    /// <summary>
-    /// Cuerpo del <c>POST .../api-keys</c>. <c>environment</c> por defecto es el
-    /// del perfil de emisor; <c>role</c> (<c>admin_tenant</c> / <c>emisor</c> /
-    /// <c>consultor</c>, RF-14.5) es obligatorio — sin default.
-    /// </summary>
-    public sealed record CreateApiKeyBody(string? Label, string? Environment, string Role, DateTimeOffset? ExpiresAt);
 
     /// <summary>
     /// Cuerpo del <c>POST .../users</c>. <c>role</c> (<c>admin_tenant</c> /

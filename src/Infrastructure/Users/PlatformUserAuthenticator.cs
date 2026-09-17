@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NovaFE.Application.Users.Interfaces;
+using NovaFE.Domain.Users;
 
 namespace NovaFE.Infrastructure.Users;
 
@@ -8,6 +9,14 @@ namespace NovaFE.Infrastructure.Users;
 /// y, si no da resultado, por correo (usuario recién aprovisionado que entra por
 /// primera vez) — y en ese caso enlaza la cuenta para que el próximo lookup sea
 /// por id.
+/// <para>
+/// Fase 2: el tenant/rol efectivo ya <b>no</b> sale de
+/// <c>PlatformUser.TenantId</c>/<c>Role</c> para un usuario de contribuyente —
+/// esos campos quedan vestigiales para ese caso (ver
+/// <see cref="Domain.Users.PlatformUser.CreateOrganizationMember"/>). Se
+/// resuelven en cada login vía <c>tenant_members</c>/<c>organization_members</c>,
+/// para el tenant pedido (<c>X-Acting-Tenant-Id</c>) o uno por defecto.
+/// </para>
 /// </summary>
 internal sealed class PlatformUserAuthenticator(
     IPlatformUserReadRepository readRepository,
@@ -18,6 +27,7 @@ internal sealed class PlatformUserAuthenticator(
     public async Task<PlatformUserIdentity?> AuthenticateAsync(
         string? authUserId,
         string email,
+        Guid? actingTenantId,
         CancellationToken ct = default)
     {
         var trimmedAuthId = string.IsNullOrWhiteSpace(authUserId) ? null : authUserId.Trim();
@@ -52,6 +62,24 @@ internal sealed class PlatformUserAuthenticator(
             }
         }
 
-        return new PlatformUserIdentity(lookup.Id, lookup.TenantId, lookup.Role, lookup.Email);
+        // El operador no es miembro de tenant_members/organization_members:
+        // su rol es fijo, sin tenant.
+        if (string.Equals(lookup.Role, PlatformRole.AdminSistema.Name, StringComparison.Ordinal))
+            return new PlatformUserIdentity(lookup.Id, null, lookup.Role, lookup.Email);
+
+        if (actingTenantId is { } tenantId)
+        {
+            var access = await readRepository.ResolveTenantAccessAsync(lookup.Id, tenantId, ct);
+            return access is null
+                ? null // Pidió explícito un tenant al que no llega (o suspendido): se rechaza, no se cae a un default.
+                : new PlatformUserIdentity(lookup.Id, access.TenantId, access.Role, lookup.Email);
+        }
+
+        var defaultAccess = await readRepository.ResolveDefaultTenantAccessAsync(lookup.Id, ct);
+        return new PlatformUserIdentity(
+            lookup.Id,
+            defaultAccess?.TenantId,
+            defaultAccess?.Role ?? PlatformRole.Consultor.Name,
+            lookup.Email);
     }
 }

@@ -1,3 +1,4 @@
+using ErrorOr;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Common.Entities;
 
@@ -19,13 +20,12 @@ public sealed class Tenant : Entity<Guid>, IAuditableEntity, ISoftDeletable
     {
     }
 
-    private Tenant(Guid id, Rnc rnc, string legalName, string? tradeName, TenantPlan plan)
+    private Tenant(Guid id, Rnc rnc, string legalName, string? tradeName)
         : base(id)
     {
         Rnc = rnc;
         LegalName = legalName;
         TradeName = tradeName;
-        Plan = plan;
         Status = TenantStatus.Active;
     }
 
@@ -38,15 +38,15 @@ public sealed class Tenant : Entity<Guid>, IAuditableEntity, ISoftDeletable
     /// <summary>Nombre comercial. Opcional.</summary>
     public string? TradeName { get; private set; }
 
-    public TenantPlan Plan { get; private set; } = null!;
-
     public TenantStatus Status { get; private set; } = null!;
 
     /// <summary>
     /// La organización que agrupa a este contribuyente en la jerarquía
     /// <c>User -&gt; Organization -&gt; Tenant</c>. Nullable durante la
     /// transición (Fase 1): un tenant existente todavía sin backfillear no
-    /// tiene organización hasta que se le asigne una.
+    /// tiene organización hasta que se le asigne una. El plan/cuota vive en
+    /// <see cref="Organizations.Organization.Plan"/>, no acá — la facturación
+    /// se consolida a nivel organización (Fase 2).
     /// </summary>
     public Guid? OrganizationId { get; private set; }
 
@@ -64,16 +64,35 @@ public sealed class Tenant : Entity<Guid>, IAuditableEntity, ISoftDeletable
     /// with <see cref="Rnc.Create"/> in the use case). Uniqueness of the RNC is a
     /// repository concern, checked before this call.
     /// </summary>
-    public static Tenant Register(Rnc rnc, string legalName, string? tradeName, TenantPlan plan)
+    public static Tenant Register(Rnc rnc, string legalName, string? tradeName)
     {
         var trimmedTradeName = string.IsNullOrWhiteSpace(tradeName) ? null : tradeName.Trim();
 
-        return new Tenant(Guid.CreateVersion7(), rnc, legalName.Trim(), trimmedTradeName, plan);
+        return new Tenant(Guid.CreateVersion7(), rnc, legalName.Trim(), trimmedTradeName);
     }
 
-    public void Activate() => Status = TenantStatus.Active;
+    /// <summary>Reactiva un tenant suspendido. Idempotencia estricta: reactivar uno activo es un error.</summary>
+    public ErrorOr<Success> Activate()
+    {
+        if (Status == TenantStatus.Active)
+            return TenantErrors.NotSuspended;
 
-    public void Suspend() => Status = TenantStatus.Suspended;
+        Status = TenantStatus.Active;
+        return Result.Success;
+    }
+
+    /// <summary>Suspende el tenant — bloquea autenticación y emisión. Idempotencia estricta.</summary>
+    public ErrorOr<Success> Suspend()
+    {
+        if (Status == TenantStatus.Suspended)
+            return TenantErrors.AlreadySuspended;
+
+        Status = TenantStatus.Suspended;
+        return Result.Success;
+    }
+
+    /// <summary>Utilizable: activo. Ni el tenant ni (si aplica) su organización dueña están suspendidos.</summary>
+    public bool IsUsable(bool organizationSuspended) => Status == TenantStatus.Active && !organizationSuspended;
 
     /// <summary>Asigna (o reasigna) la organización dueña de este contribuyente.</summary>
     public void AssignToOrganization(Guid organizationId) => OrganizationId = organizationId;

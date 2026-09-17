@@ -12,4 +12,7 @@ public interface IOrganizationMemberRepository
     Task UpdateAsync(OrganizationMember member, CancellationToken ct = default);
 
     Task RemoveAsync(OrganizationMember member, CancellationToken ct = default);
+
+    /// <summary>Cuántos miembros de la organización tienen ese rol. Usado para no dejar la organización sin owner.</summary>
+    Task<int> CountByRoleAsync(Guid organizationId, OrganizationRole role, CancellationToken ct = default);
 }

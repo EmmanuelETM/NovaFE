@@ -18,13 +18,13 @@ internal sealed class TenantReadRepository(IDbSession session) : ITenantReadRepo
     {
         const string sql =
             """
-            SELECT id            AS "Id",
-                   rnc           AS "Rnc",
-                   legal_name    AS "LegalName",
-                   trade_name    AS "TradeName",
-                   plan          AS "Plan",
-                   status        AS "Status",
-                   created_at    AS "CreatedAt"
+            SELECT id              AS "Id",
+                   rnc             AS "Rnc",
+                   legal_name      AS "LegalName",
+                   trade_name      AS "TradeName",
+                   status          AS "Status",
+                   organization_id AS "OrganizationId",
+                   created_at      AS "CreatedAt"
             FROM tenants
             WHERE id = @id AND is_deleted = false
             """;
@@ -65,7 +65,6 @@ internal sealed class TenantReadRepository(IDbSession session) : ITenantReadRepo
             SELECT id         AS "Id",
                    rnc        AS "Rnc",
                    legal_name AS "LegalName",
-                   plan       AS "Plan",
                    status     AS "Status"
             FROM tenants
             {filter}

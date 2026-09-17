@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
+using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Application.Users.Interfaces;
+using NovaFE.Domain.Tenants;
 using NovaFE.Domain.Users;
 using NovaFE.IntegrationTests.Fixtures;
 
@@ -30,8 +32,19 @@ public sealed class HumanAuthTests(DatabaseFixture database) : IntegrationTestBa
         return user.Id;
     }
 
-    private Task<Guid> ProvisionTenantUserAsync(Guid tenantId, string email, PlatformRole role)
-        => ProvisionAsync(PlatformUser.CreateTenantUser(email, tenantId, role).Value);
+    private async Task<Guid> ProvisionTenantUserAsync(Guid tenantId, string email, PlatformRole role)
+    {
+        var user = PlatformUser.CreateTenantUser(email, tenantId, role).Value;
+        var userId = await ProvisionAsync(user);
+
+        // Fase 2: el login del dashboard resuelve el tenant/rol desde
+        // tenant_members, no desde PlatformUser.TenantId/Role.
+        using var scope = Factory.Services.CreateScope();
+        var members = scope.ServiceProvider.GetRequiredService<ITenantMemberRepository>();
+        await members.AddAsync(TenantMember.Create(tenantId, userId, role).Value);
+
+        return userId;
+    }
 
     private Task<Guid> ProvisionOperatorAsync(string email)
         => ProvisionAsync(PlatformUser.CreateOperator(email).Value);
@@ -187,6 +200,47 @@ public sealed class HumanAuthTests(DatabaseFixture database) : IntegrationTestBa
         me.Role.ShouldBe("emisor");
         me.TenantId.ShouldBe(tenantId);
         me.TenantName.ShouldNotBeNullOrWhiteSpace();
+    }
+
+    [RequiresDockerFact]
+    public async Task Acting_tenant_header_lets_a_multi_tenant_user_switch()
+    {
+        var tenantA = await OnboardTenantAsync();
+        var tenantB = await OnboardTenantAsync();
+
+        var userId = await ProvisionTenantUserAsync(tenantA, "multi@cliente.do", PlatformRole.AdminTenant);
+
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var members = scope.ServiceProvider.GetRequiredService<ITenantMemberRepository>();
+            await members.AddAsync(TenantMember.Create(tenantB, userId, PlatformRole.Consultor).Value);
+        }
+
+        ActAsHuman("auth-multi", "multi@cliente.do");
+        Client.DefaultRequestHeaders.Add("X-Acting-Tenant-Id", tenantA.ToString());
+        var meA = await LeerAsync<ProfileResponse>(await Client.GetAsync("/api/v1/users/me"));
+        meA!.TenantId.ShouldBe(tenantA);
+        meA.Role.ShouldBe("admin_tenant");
+
+        Client.DefaultRequestHeaders.Remove("X-Acting-Tenant-Id");
+        Client.DefaultRequestHeaders.Add("X-Acting-Tenant-Id", tenantB.ToString());
+        var meB = await LeerAsync<ProfileResponse>(await Client.GetAsync("/api/v1/users/me"));
+        meB!.TenantId.ShouldBe(tenantB);
+        meB.Role.ShouldBe("consultor");
+    }
+
+    [RequiresDockerFact]
+    public async Task Acting_tenant_header_for_a_tenant_without_access_is_unauthorized()
+    {
+        var tenantA = await OnboardTenantAsync();
+        var tenantB = await OnboardTenantAsync();
+        await ProvisionTenantUserAsync(tenantA, "onlya@cliente.do", PlatformRole.AdminTenant);
+
+        ActAsHuman("auth-onlya", "onlya@cliente.do");
+        Client.DefaultRequestHeaders.Add("X-Acting-Tenant-Id", tenantB.ToString());
+        var response = await Client.GetAsync("/api/v1/users/me");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     [RequiresDockerFact]
