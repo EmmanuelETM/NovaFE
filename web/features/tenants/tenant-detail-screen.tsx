@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ApiKeysTab } from "./api-keys-tab";
+import { AuditLogTab } from "./audit-log-tab";
 import { CertificatesTab } from "./certificates-tab";
 import { EmitterProfileTab } from "./emitter-profile-tab";
 import { SequencesTab } from "./sequences-tab";
 import { useTenant } from "./use-tenants";
+import { WebhooksTab } from "./webhooks-tab";
 
 export function TenantDetailScreen({ tenantId }: { tenantId: string }) {
   const { data: tenant, isPending, error } = useTenant(tenantId);
@@ -45,6 +47,8 @@ export function TenantDetailScreen({ tenantId }: { tenantId: string }) {
           <TabsTrigger value="secuencias">Secuencias</TabsTrigger>
           <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           <TabsTrigger value="usuarios">Usuarios</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+          <TabsTrigger value="auditoria">Auditoría</TabsTrigger>
         </TabsList>
 
         <TabsContent value="perfil">
@@ -66,6 +70,7 @@ export function TenantDetailScreen({ tenantId }: { tenantId: string }) {
         <TabsContent value="usuarios">
           <Button
             variant="outline"
+            nativeButton={false}
             render={
               <Link
                 href={`/nemus/usuarios?vista=contribuyente&tenant=${tenantId}`}
@@ -74,6 +79,14 @@ export function TenantDetailScreen({ tenantId }: { tenantId: string }) {
           >
             <ExternalLink /> Ver usuarios de este contribuyente
           </Button>
+        </TabsContent>
+
+        <TabsContent value="webhooks">
+          <WebhooksTab tenantId={tenantId} />
+        </TabsContent>
+
+        <TabsContent value="auditoria">
+          <AuditLogTab tenantId={tenantId} />
         </TabsContent>
       </Tabs>
     </div>

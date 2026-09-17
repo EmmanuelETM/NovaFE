@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import {
@@ -19,6 +20,27 @@ const ch = createAppColumnHelper<TenantSummary>();
 const columns = ch.columns([
   ch.accessor("rnc", { header: "RNC", meta: { label: "RNC" } }),
   ch.accessor("legalName", { header: "Razón social" }),
+  ch.display({
+    id: "organizacion",
+    header: "Organización",
+    cell: (cell) => {
+      const { organizationId, organizationName } = cell.row.original;
+
+      if (!organizationId) {
+        return <span className="text-muted-foreground">—</span>;
+      }
+
+      return (
+        <Link
+          href={`/nemus/organizaciones/${organizationId}`}
+          onClick={(event) => event.stopPropagation()}
+          className="hover:underline"
+        >
+          {organizationName}
+        </Link>
+      );
+    },
+  }),
   ch.display({
     id: "estado",
     header: "Estado",

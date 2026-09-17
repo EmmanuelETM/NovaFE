@@ -65,12 +65,19 @@ export const queryKeys = {
     certificates: (id: string) => ["tenants", "certificates", id] as const,
     sequences: (id: string) => ["tenants", "sequences", id] as const,
     apiKeys: (id: string) => ["tenants", "api-keys", id] as const,
+    webhooks: (id: string) => ["tenants", "webhooks", id] as const,
+    webhookDeliveries: (id: string, endpointId: string) =>
+      ["tenants", "webhooks", id, endpointId, "deliveries"] as const,
+    auditLog: (id: string, filters: Filters) =>
+      ["tenants", "audit-log", id, filters] as const,
   },
 
   /** `GET /ops/status`: latido de workers, outbox y secuencias (operador). */
   ops: {
     all: ["ops"] as const,
     status: () => ["ops", "status"] as const,
+    deadDeliveries: (filters: Filters) =>
+      ["ops", "dead-deliveries", filters] as const,
   },
 
   /**

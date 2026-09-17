@@ -31,6 +31,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -155,23 +156,25 @@ function MemberActions({
           <MoreHorizontal />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel className="text-muted-foreground text-xs">
-            Cambiar rol
-          </DropdownMenuLabel>
-          {ORGANIZATION_ROLE_OPTIONS.map((option) => (
-            <DropdownMenuItem
-              key={option.value}
-              disabled={busy || option.value === member.role}
-              onClick={() =>
-                changeRole.mutate({
-                  userId: member.platformUserId,
-                  role: option.value,
-                })
-              }
-            >
-              {option.label}
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="text-muted-foreground text-xs">
+              Cambiar rol
+            </DropdownMenuLabel>
+            {ORGANIZATION_ROLE_OPTIONS.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                disabled={busy || option.value === member.role}
+                onClick={() =>
+                  changeRole.mutate({
+                    userId: member.platformUserId,
+                    role: option.value,
+                  })
+                }
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             disabled={busy}
