@@ -123,10 +123,12 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
             await Client.GetAsync("/api/v1/tenants?search=Organizacion"));
 
         var withOrg = page!.Items.Single(t => t.Id == tenantId);
+        withOrg.OrganizationId.ShouldBe(orgId);
         withOrg.OrganizationName.ShouldBe("Acme");
         withOrg.OrganizationSlug.ShouldBe("acme-tenant-org-column");
 
         var withoutOrg = page.Items.Single(t => t.Id == withoutOrgId);
+        withoutOrg.OrganizationId.ShouldBeNull();
         withoutOrg.OrganizationName.ShouldBeNull();
         withoutOrg.OrganizationSlug.ShouldBeNull();
     }
@@ -135,7 +137,7 @@ public sealed class TenantsEndpointsTests(DatabaseFixture database) : Integratio
         Guid Id, string Rnc, string LegalName, string? TradeName, string Status, Guid? OrganizationId, DateTimeOffset CreatedAt);
 
     private sealed record TenantSummaryResponse(
-        Guid Id, string Rnc, string LegalName, string Status, string? OrganizationName, string? OrganizationSlug);
+        Guid Id, string Rnc, string LegalName, string Status, Guid? OrganizationId, string? OrganizationName, string? OrganizationSlug);
 
     private sealed record PagedResponse<T>(IEnumerable<T> Items, int TotalCount, int Page, int PageSize);
 }

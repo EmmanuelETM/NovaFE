@@ -66,6 +66,7 @@ internal sealed class TenantReadRepository(IDbSession session) : ITenantReadRepo
                    t.rnc        AS "Rnc",
                    t.legal_name AS "LegalName",
                    t.status     AS "Status",
+                   o.id         AS "OrganizationId",
                    o.name       AS "OrganizationName",
                    o.slug       AS "OrganizationSlug"
             FROM tenants t

@@ -5307,6 +5307,8 @@ export interface components {
             rnc: string;
             legalName: string;
             status: string;
+            /** Format: uuid */
+            organizationId: null | string;
             organizationName: null | string;
             organizationSlug: null | string;
         };

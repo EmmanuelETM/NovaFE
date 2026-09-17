@@ -6,5 +6,6 @@ public sealed record TenantSummaryDto(
     string Rnc,
     string LegalName,
     string Status,
+    Guid? OrganizationId,
     string? OrganizationName,
     string? OrganizationSlug);
