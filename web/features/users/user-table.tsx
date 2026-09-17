@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 
 import {
   DataTable,
+  STATIC_TABLE_STATE,
   createAppColumnHelper,
-  type DataTableSearchState,
-  type PagedResult,
+  toStaticPage,
 } from "@/components/shared/data-table";
 import { Badge } from "@/components/ui/badge";
 import { roleLabel } from "@/features/auth/roles";
@@ -55,28 +55,6 @@ function columnsFor(tenantId: string | null) {
   ]);
 }
 
-// Los endpoints devuelven la lista completa (sin paginar). El DataTable pide un
-// PagedResult, así que se envuelve en una sola página.
-const STATIC_STATE: DataTableSearchState = {
-  page: 1,
-  pageSize: 100,
-  search: "",
-  sort: null,
-  filters: {},
-};
-
-function toPage(items: PlatformUser[]): PagedResult<PlatformUser> {
-  return {
-    items,
-    totalCount: items.length,
-    page: 1,
-    pageSize: Math.max(items.length, 1),
-    totalPages: 1,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  };
-}
-
 interface UserTableProps {
   users: PlatformUser[] | undefined;
   isPending: boolean;
@@ -97,10 +75,10 @@ export function UserTable({
   return (
     <DataTable
       columns={columnsFor(tenantId)}
-      page={users ? toPage(users) : undefined}
+      page={toStaticPage(users)}
       isPending={isPending}
       error={error}
-      state={STATIC_STATE}
+      state={STATIC_TABLE_STATE}
       onStateChange={() => {}}
       searchable={false}
       emptyState={{ title: emptyTitle }}

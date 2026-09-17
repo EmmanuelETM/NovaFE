@@ -6,6 +6,12 @@ import { useController, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Check, Copy, KeyRound } from "lucide-react";
 
+import {
+  DataTable,
+  STATIC_TABLE_STATE,
+  createAppColumnHelper,
+  toStaticPage,
+} from "@/components/shared/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,14 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { applyFieldErrors } from "@/lib/api/form-errors";
 import { roleLabel } from "@/features/auth/roles";
 import { formatDate } from "@/lib/format";
@@ -54,84 +52,92 @@ function isActive(key: ApiKey): boolean {
   return !key.revokedAt;
 }
 
-export function ApiKeysTab({ tenantId }: { tenantId: string }) {
-  const { data: keys, isPending } = useTenantApiKeys(tenantId);
+const ch = createAppColumnHelper<ApiKey>();
+
+function columnsFor(tenantId: string) {
+  return ch.columns([
+    ch.accessor("label", { header: "Etiqueta" }),
+    ch.accessor("prefix", {
+      header: "Prefijo",
+      cell: (cell) => (
+        <span className="font-mono text-xs">{cell.getValue()}</span>
+      ),
+    }),
+    ch.accessor("environment", { header: "Ambiente" }),
+    ch.display({
+      id: "rol",
+      header: "Rol",
+      cell: (cell) => roleLabel(cell.row.original.role),
+    }),
+    ch.display({
+      id: "vencimiento",
+      header: "Vencimiento",
+      cell: (cell) =>
+        cell.row.original.expiresAt
+          ? formatDate(cell.row.original.expiresAt)
+          : "Sin vencimiento",
+    }),
+    ch.display({
+      id: "estado",
+      header: "Estado",
+      cell: (cell) => (
+        <Badge
+          variant={isActive(cell.row.original) ? "outline" : "destructive"}
+        >
+          {isActive(cell.row.original) ? "Activa" : "Revocada"}
+        </Badge>
+      ),
+    }),
+    ch.display({
+      id: "acciones",
+      header: "",
+      meta: { align: "right" },
+      cell: (cell) => (
+        <ApiKeyActions tenantId={tenantId} apiKey={cell.row.original} />
+      ),
+    }),
+  ]);
+}
+
+function ApiKeyActions({
+  tenantId,
+  apiKey,
+}: {
+  tenantId: string;
+  apiKey: ApiKey;
+}) {
   const revoke = useRevokeApiKey();
 
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <CreateApiKeyDialog tenantId={tenantId} />
-      </div>
+  if (!isActive(apiKey)) return null;
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Etiqueta</TableHead>
-            <TableHead>Prefijo</TableHead>
-            <TableHead>Ambiente</TableHead>
-            <TableHead>Rol</TableHead>
-            <TableHead>Vencimiento</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isPending ? (
-            <TableRow>
-              <TableCell
-                colSpan={7}
-                className="text-muted-foreground text-center"
-              >
-                Cargando…
-              </TableCell>
-            </TableRow>
-          ) : !keys || keys.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={7}
-                className="text-muted-foreground text-center"
-              >
-                Sin API keys acuñadas.
-              </TableCell>
-            </TableRow>
-          ) : (
-            keys.map((key) => (
-              <TableRow key={key.id}>
-                <TableCell>{key.label}</TableCell>
-                <TableCell className="font-mono text-xs">
-                  {key.prefix}
-                </TableCell>
-                <TableCell>{key.environment}</TableCell>
-                <TableCell>{roleLabel(key.role)}</TableCell>
-                <TableCell>
-                  {key.expiresAt
-                    ? formatDate(key.expiresAt)
-                    : "Sin vencimiento"}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={isActive(key) ? "outline" : "destructive"}>
-                    {isActive(key) ? "Activa" : "Revocada"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  {isActive(key) && (
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      disabled={revoke.isPending}
-                      onClick={() => revoke.mutate({ tenantId, keyId: key.id })}
-                    >
-                      Revocar
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+  return (
+    <Button
+      size="xs"
+      variant="ghost"
+      disabled={revoke.isPending}
+      onClick={() => revoke.mutate({ tenantId, keyId: apiKey.id })}
+    >
+      Revocar
+    </Button>
+  );
+}
+
+export function ApiKeysTab({ tenantId }: { tenantId: string }) {
+  const { data: keys, isPending, error } = useTenantApiKeys(tenantId);
+
+  return (
+    <DataTable
+      columns={columnsFor(tenantId)}
+      page={toStaticPage(keys)}
+      isPending={isPending}
+      error={error}
+      state={STATIC_TABLE_STATE}
+      onStateChange={() => {}}
+      searchable={false}
+      emptyState={{ title: "Sin API keys acuñadas." }}
+      toolbarActions={<CreateApiKeyDialog tenantId={tenantId} />}
+      getRowId={(key) => key.id}
+    />
   );
 }
 

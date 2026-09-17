@@ -34,64 +34,70 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { applyFieldErrors } from "@/lib/api/form-errors";
+import { ENVIRONMENT_OPTIONS } from "@/features/tenants/options";
 import { formatDate } from "@/lib/format";
 import { selectItems } from "@/lib/select-items";
 
-import { ENVIRONMENT_OPTIONS } from "./options";
 import {
+  tenantConfigErrorMessage,
+  useCertificates,
   useRevokeCertificate,
-  useTenantCertificates,
   useUploadCertificate,
-} from "./use-tenant-certificates";
-import { tenantErrorMessage } from "./use-tenants";
+} from "./use-certificates";
 import type { Certificate } from "./types";
 
 const ch = createAppColumnHelper<Certificate>();
 
-function columnsFor(tenantId: string) {
-  return ch.columns([
-    ch.accessor("environment", { header: "Ambiente" }),
-    ch.accessor("holderIdentifier", { header: "Titular" }),
-    ch.display({
-      id: "vigencia",
-      header: "Vigencia",
-      cell: (cell) =>
-        `${formatDate(cell.row.original.validFrom)} – ${formatDate(cell.row.original.validTo)}`,
-    }),
-    ch.display({
-      id: "estado",
-      header: "Estado",
-      cell: (cell) => (
-        <Badge
-          variant={
-            cell.row.original.status === "Active" ? "outline" : "destructive"
-          }
-        >
-          {cell.row.original.status}
-        </Badge>
-      ),
-    }),
-    ch.display({
-      id: "acciones",
-      header: "",
-      meta: { align: "right" },
-      cell: (cell) => (
-        <CertificateActions
-          tenantId={tenantId}
-          certificate={cell.row.original}
-        />
-      ),
-    }),
-  ]);
+const columns = ch.columns([
+  ch.accessor("environment", { header: "Ambiente" }),
+  ch.accessor("holderIdentifier", { header: "Titular" }),
+  ch.display({
+    id: "vigencia",
+    header: "Vigencia",
+    cell: (cell) =>
+      `${formatDate(cell.row.original.validFrom)} – ${formatDate(cell.row.original.validTo)}`,
+  }),
+  ch.display({
+    id: "estado",
+    header: "Estado",
+    cell: (cell) => (
+      <Badge
+        variant={
+          cell.row.original.status === "Active" ? "outline" : "destructive"
+        }
+      >
+        {cell.row.original.status}
+      </Badge>
+    ),
+  }),
+  ch.display({
+    id: "acciones",
+    header: "",
+    meta: { align: "right" },
+    cell: (cell) => <CertificateActions certificate={cell.row.original} />,
+  }),
+]);
+
+export function CertificatesScreen() {
+  const { data: certificates, isPending, error } = useCertificates();
+
+  return (
+    <DataTable
+      columns={columns}
+      page={toStaticPage(certificates)}
+      isPending={isPending}
+      error={error}
+      state={STATIC_TABLE_STATE}
+      onStateChange={() => {}}
+      searchable={false}
+      emptyState={{ title: "Sin certificados cargados." }}
+      toolbarActions={<UploadCertificateDialog />}
+      getRowId={(certificate) => certificate.id}
+    />
+  );
 }
 
-function CertificateActions({
-  tenantId,
-  certificate,
-}: {
-  tenantId: string;
-  certificate: Certificate;
-}) {
+function CertificateActions({ certificate }: { certificate: Certificate }) {
   const revoke = useRevokeCertificate();
 
   if (certificate.status !== "Active") return null;
@@ -101,33 +107,10 @@ function CertificateActions({
       size="xs"
       variant="ghost"
       disabled={revoke.isPending}
-      onClick={() => revoke.mutate({ tenantId, id: certificate.id })}
+      onClick={() => revoke.mutate(certificate.id)}
     >
       Revocar
     </Button>
-  );
-}
-
-export function CertificatesTab({ tenantId }: { tenantId: string }) {
-  const {
-    data: certificates,
-    isPending,
-    error,
-  } = useTenantCertificates(tenantId);
-
-  return (
-    <DataTable
-      columns={columnsFor(tenantId)}
-      page={toStaticPage(certificates)}
-      isPending={isPending}
-      error={error}
-      state={STATIC_TABLE_STATE}
-      onStateChange={() => {}}
-      searchable={false}
-      emptyState={{ title: "Sin certificados cargados." }}
-      toolbarActions={<UploadCertificateDialog tenantId={tenantId} />}
-      getRowId={(certificate) => certificate.id}
-    />
   );
 }
 
@@ -138,7 +121,7 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-function UploadCertificateDialog({ tenantId }: { tenantId: string }) {
+function UploadCertificateDialog() {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -162,7 +145,6 @@ function UploadCertificateDialog({ tenantId }: { tenantId: string }) {
 
     try {
       await upload.mutateAsync({
-        tenantId,
         file,
         password: values.password,
         environment: values.environment,
@@ -172,7 +154,7 @@ function UploadCertificateDialog({ tenantId }: { tenantId: string }) {
       setOpen(false);
     } catch (error) {
       if (!applyFieldErrors(error, form.setError)) {
-        form.setError("password", { message: tenantErrorMessage(error) });
+        form.setError("password", { message: tenantConfigErrorMessage(error) });
       }
     }
   });
@@ -197,7 +179,7 @@ function UploadCertificateDialog({ tenantId }: { tenantId: string }) {
         <DialogHeader>
           <DialogTitle>Cargar certificado</DialogTitle>
           <DialogDescription>
-            El .p12/.pfx del contribuyente, su contraseña y el ambiente en el
+            El .p12/.pfx de tu contribuyente, su contraseña y el ambiente en el
             que va a operar.
           </DialogDescription>
         </DialogHeader>

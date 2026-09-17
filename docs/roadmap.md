@@ -9,9 +9,11 @@ Estado de los módulos ya construidos: la sección de arquitectura de `CLAUDE.md
 
 **Construido:** M1 (parcial), M2, M3, M4, M6 (núcleo), M7 (v1), M9, M10
 (parcial — ver abajo), M11 (parcial — Tipo 1, ver abajo), M12, M13, M14, M15
-(parcial — panel de operador: settings, consola de operación en vivo,
-onboarding de contribuyentes; falta auth humano completo y las pantallas
-self-service del contribuyente). **Sin empezar:** M5, M8 (parcial).
+(panel de operador completo: settings, consola de operación en vivo,
+onboarding de contribuyentes; auth humano completo — OAuth Google/GitHub/
+Microsoft + email/contraseña con verificación y reset; self-service del
+contribuyente: listado y detalle de sus e-CF en `/comprobantes`).
+**Sin empezar:** M5, M8 (parcial).
 
 ---
 
@@ -30,7 +32,7 @@ Bloquean el primer cliente o la certificación con la DGII.
 
 | Ítem | Detalle | Doc |
 |---|---|---|
-| **M15 — Panel de administración** | Auth humano (BetterAuth self-hosted, solo GitHub OAuth por ahora) y las pantallas de **operador** ya están: settings, usuarios, consola de operación, onboarding de contribuyentes. Falta Google/MS + login email-password, y las pantallas **self-service del contribuyente** (ver sus propios e-CF, no solo `/configuracion`). | plan `linear-beaming-squirrel.md`, memoria `human-auth-plan` / `ops-console-and-onboarding` |
+| ~~M15 — Panel de administración~~ | **Hecho.** Auth humano (BetterAuth self-hosted) completo: OAuth Google/GitHub/Microsoft + email/contraseña (registro, verificación de correo, reset). Pantallas de **operador**: settings, usuarios, consola de operación, onboarding de contribuyentes. Pantallas **self-service del contribuyente**: `/comprobantes` (listado + detalle con XML/RI/reintento) y `/configuracion` con pestañas de certificados, secuencias de e-NCF y webhooks (antes solo operables por un operador desde `/nemus/tenants/{id}`), visible a `consultor`/`emisor`/`admin_tenant` según la acción. | plan `linear-beaming-squirrel.md`, memoria `human-auth-plan` / `ops-console-and-onboarding` |
 | ~~Consola de operación en vivo~~ | **Hecho.** `GET /api/v1/ops/status` (operador): heartbeat de los 5 workers, profundidad/antigüedad de los outbox (DGII + webhooks), tenants con secuencia por agotarse. Dashboard en `/plataforma/operacion`. | memoria `ops-console-and-onboarding` |
 | ~~Onboarding de contribuyentes~~ | **Hecho.** Endpoints de operador para cargar certificado y rango de secuencia de un tenant nuevo (resuelve el candado circular de alta) + wizard de registro en 2 pasos en el dashboard. | memoria `ops-console-and-onboarding` |
 | ~~M11 Tipo 1 — Contingencia por falta de conectividad~~ | **Hecho.** `platform.contingency_mode` (manual + detección automática sobre la antigüedad del outbox de envío), reintento sin dar por perdido mientras dure, leyenda verbatim en la RI, webhooks `contingency.activated`/`deactivated`. | `docs/contingency.md` |

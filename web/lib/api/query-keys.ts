@@ -66,4 +66,29 @@ export const queryKeys = {
     all: ["ops"] as const,
     status: () => ["ops", "status"] as const,
   },
+
+  /** `GET /ecf`: comprobantes emitidos del contribuyente (self-service). */
+  ecf: {
+    all: ["ecf"] as const,
+    list: (filters: Filters) => ["ecf", "list", filters] as const,
+    detail: (id: string) => ["ecf", "detail", id] as const,
+  },
+
+  /** `GET /certificates`: certificados del contribuyente actual (self-service). */
+  myCertificates: {
+    all: ["my-certificates"] as const,
+    list: () => ["my-certificates", "list"] as const,
+  },
+
+  /** `GET /sequences`: secuencias de e-NCF del contribuyente actual (self-service). */
+  mySequences: {
+    all: ["my-sequences"] as const,
+    list: () => ["my-sequences", "list"] as const,
+  },
+
+  /** `GET /webhooks`: endpoints de webhook del contribuyente actual (self-service). */
+  webhooks: {
+    all: ["webhooks"] as const,
+    list: () => ["webhooks", "list"] as const,
+  },
 } as const;

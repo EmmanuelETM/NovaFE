@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using NovaFE.Application.Webhooks.Contracts;
 using NovaFE.Application.Webhooks.CreateEndpoint;
 using NovaFE.Application.Webhooks.DeleteEndpoint;
 using NovaFE.Application.Webhooks.GetEndpoint;
@@ -7,6 +8,7 @@ using NovaFE.Application.Webhooks.ListEndpoints;
 using NovaFE.Application.Webhooks.PingEndpoint;
 using NovaFE.Application.Webhooks.RotateEndpointSecret;
 using NovaFE.Application.Webhooks.UpdateEndpoint;
+using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -35,6 +37,8 @@ public sealed class WebhooksController(
 {
     /// <summary>Registra un endpoint. La respuesta lleva el <c>secret</c> — única vez que se ve.</summary>
     [HttpPost]
+    [ProducesResponseType(typeof(WebhookEndpointCreatedDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateWebhookEndpointRequest body, CancellationToken ct)
         => (await create.Execute(
                 new CreateWebhookEndpointCommand(body.Url, body.Events, body.Description), ct))
@@ -43,35 +47,48 @@ public sealed class WebhooksController(
                 Problem);
 
     [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<WebhookEndpointDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(CancellationToken ct)
         => (await list.Execute(ct)).Match(Ok, Problem);
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(WebhookEndpointDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => (await get.Execute(new GetWebhookEndpointQuery(id), ct)).Match(Ok, Problem);
 
     /// <summary>Actualización parcial: un campo omitido no cambia; <c>description: ""</c> la borra.</summary>
     [HttpPatch("{id:guid}")]
+    [ProducesResponseType(typeof(WebhookEndpointDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateWebhookEndpointRequest body, CancellationToken ct)
         => (await update.Execute(
                 new UpdateWebhookEndpointCommand(id, body.Url, body.Events, body.Enabled, body.Description), ct))
             .Match(Ok, Problem);
 
     [HttpPost("{id:guid}/rotate-secret")]
+    [ProducesResponseType(typeof(WebhookSecretDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RotateSecret(Guid id, CancellationToken ct)
         => (await rotateSecret.Execute(new RotateWebhookEndpointSecretCommand(id), ct)).Match(Ok, Problem);
 
     /// <summary>Envía un <c>webhook.ping</c> al endpoint y devuelve el resultado de la entrega.</summary>
     [HttpPost("{id:guid}/ping")]
+    [ProducesResponseType(typeof(WebhookPingResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Ping(Guid id, CancellationToken ct)
         => (await ping.Execute(new PingWebhookEndpointCommand(id), ct)).Match(Ok, Problem);
 
     /// <summary>Log de entregas del endpoint, paginado (más reciente primero).</summary>
     [HttpGet("{id:guid}/deliveries")]
+    [ProducesResponseType(typeof(PagedResult<WebhookDeliveryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deliveries(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
         => (await listDeliveries.Execute(new ListWebhookDeliveriesQuery(id, page, pageSize), ct)).Match(Ok, Problem);
 
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
         => (await delete.Execute(new DeleteWebhookEndpointCommand(id), ct)).Match(_ => NoContent(), Problem);
 

@@ -33,6 +33,14 @@ const isoDay = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+const calendarDate = new Intl.DateTimeFormat("es-DO", {
+  // La fecha ya es un día calendario (`DateOnly` de la API, sin hora): no hay
+  // hora que convertir, y aplicar `ZONE` (UTC-4) la correría un día para
+  // atrás — medianoche UTC del 16 cae el 15 a las 8pm en Santo Domingo.
+  timeZone: "UTC",
+  dateStyle: "medium",
+});
+
 /** `"2026-08-21T22:38:41+00:00"` → `"21 ago 2026, 6:38 p. m."` */
 export function formatDateTime(iso: string): string {
   return dateAndTime.format(new Date(iso));
@@ -44,6 +52,24 @@ export function formatDate(iso: string): string {
 
 export function formatTime(iso: string): string {
   return timeOnly.format(new Date(iso));
+}
+
+/**
+ * Un `DateOnly` de la API, en formato DGII `dd-MM-yyyy` (`DateOnlyJsonConverter`,
+ * `src/Domain/Common/Json/DateOnlyJsonConverter.cs` — así viaja **todo**
+ * `DateOnly` de la API, no solo lo que se manda a la DGII). `"16-09-2026"` →
+ * `"16 sep 2026"`.
+ *
+ * Se arma la fecha con `Date.UTC` a partir de las tres partes en vez de
+ * reconstruir un string ISO y volver a parsearlo — evita una segunda vuelta
+ * de parseo y el margen de error que trae.
+ */
+export function formatCalendarDate(day: string): string {
+  const parts = day.split("-");
+  const dd = Number(parts[0]);
+  const mm = Number(parts[1]);
+  const yyyy = Number(parts[2]);
+  return calendarDate.format(new Date(Date.UTC(yyyy, mm - 1, dd)));
 }
 
 /**

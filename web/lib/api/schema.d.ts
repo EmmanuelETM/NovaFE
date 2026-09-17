@@ -377,6 +377,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ecf/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IssueEcfCommand"];
+                    "text/json": components["schemas"]["IssueEcfCommand"];
+                    "application/*+json": components["schemas"]["IssueEcfCommand"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidateEcfResultDto"];
+                        "application/json": components["schemas"]["ValidateEcfResultDto"];
+                        "text/json": components["schemas"]["ValidateEcfResultDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ecf/{id}": {
         parameters: {
             query?: never;
@@ -568,6 +622,56 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ecf/{id}/trackids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DgiiTrackIdEntry"][];
+                        "application/json": components["schemas"]["DgiiTrackIdEntry"][];
+                        "text/json": components["schemas"]["DgiiTrackIdEntry"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -955,6 +1059,43 @@ export interface paths {
                         "text/plain": components["schemas"]["OpsStatusDto"];
                         "application/json": components["schemas"]["OpsStatusDto"];
                         "text/json": components["schemas"]["OpsStatusDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/dgii-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DgiiStatusDiagnosticDto"];
+                        "application/json": components["schemas"]["DgiiStatusDiagnosticDto"];
+                        "text/json": components["schemas"]["DgiiStatusDiagnosticDto"];
                     };
                 };
             };
@@ -2322,7 +2463,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["WebhookEndpointDto"][];
+                        "application/json": components["schemas"]["WebhookEndpointDto"][];
+                        "text/json": components["schemas"]["WebhookEndpointDto"][];
+                    };
                 };
             };
         };
@@ -2342,12 +2487,27 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description OK */
-                200: {
+                /** @description Created */
+                201: {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["WebhookEndpointCreatedDto"];
+                        "application/json": components["schemas"]["WebhookEndpointCreatedDto"];
+                        "text/json": components["schemas"]["WebhookEndpointCreatedDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
                 };
             };
         };
@@ -2380,7 +2540,22 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["WebhookEndpointDto"];
+                        "application/json": components["schemas"]["WebhookEndpointDto"];
+                        "text/json": components["schemas"]["WebhookEndpointDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
                 };
             };
         };
@@ -2397,12 +2572,23 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description OK */
-                200: {
+                /** @description No Content */
+                204: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
                 };
             };
         };
@@ -2430,7 +2616,22 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["WebhookEndpointDto"];
+                        "application/json": components["schemas"]["WebhookEndpointDto"];
+                        "text/json": components["schemas"]["WebhookEndpointDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
                 };
             };
         };
@@ -2461,7 +2662,22 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["WebhookSecretDto"];
+                        "application/json": components["schemas"]["WebhookSecretDto"];
+                        "text/json": components["schemas"]["WebhookSecretDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
                 };
             };
         };
@@ -2496,7 +2712,22 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["WebhookPingResultDto"];
+                        "application/json": components["schemas"]["WebhookPingResultDto"];
+                        "text/json": components["schemas"]["WebhookPingResultDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
                 };
             };
         };
@@ -2532,7 +2763,22 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["PagedResultOfWebhookDeliveryDto"];
+                        "application/json": components["schemas"]["PagedResultOfWebhookDeliveryDto"];
+                        "text/json": components["schemas"]["PagedResultOfWebhookDeliveryDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
                 };
             };
         };
@@ -2608,10 +2854,51 @@ export interface components {
             events: null | string[];
             description: null | string;
         };
+        DgiiEnvironmentStatus: {
+            enMantenimiento: null | boolean;
+            rawJson: string;
+        };
+        DgiiEnvironmentStatusEntryDto: {
+            environment: string;
+            status: null | components["schemas"]["DgiiEnvironmentStatus"];
+            error: null | string;
+        };
+        DgiiMaintenanceWindow: {
+            /** Format: date-time */
+            inicio: null | string;
+            /** Format: date-time */
+            fin: null | string;
+            rawJson: string;
+        };
         DgiiMessage: {
             /** Format: int32 */
             code: number | string;
             value: string;
+        };
+        DgiiServiceStatus: {
+            nombre: null | string;
+            disponible: null | boolean;
+            rawJson: string;
+        };
+        DgiiStatusDiagnosticDto: {
+            verified: boolean;
+            services: components["schemas"]["DgiiStatusSectionDtoOfIReadOnlyListOfDgiiServiceStatus"];
+            maintenanceWindows: components["schemas"]["DgiiStatusSectionDtoOfIReadOnlyListOfDgiiMaintenanceWindow"];
+            environments: components["schemas"]["DgiiEnvironmentStatusEntryDto"][];
+        };
+        DgiiStatusSectionDtoOfIReadOnlyListOfDgiiMaintenanceWindow: {
+            data: null | components["schemas"]["DgiiMaintenanceWindow"][];
+            error: null | string;
+        };
+        DgiiStatusSectionDtoOfIReadOnlyListOfDgiiServiceStatus: {
+            data: null | components["schemas"]["DgiiServiceStatus"][];
+            error: null | string;
+        };
+        DgiiTrackIdEntry: {
+            trackId: string;
+            estado: string;
+            /** Format: date-time */
+            fechaRecepcion: null | string;
         };
         EcfAdditionalInfoPayload: {
             issuer?: null | string;
@@ -3180,6 +3467,19 @@ export interface components {
             hasNextPage?: boolean;
             hasPreviousPage?: boolean;
         };
+        PagedResultOfWebhookDeliveryDto: {
+            items: components["schemas"]["WebhookDeliveryDto"][];
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            totalPages?: number | string;
+            hasNextPage?: boolean;
+            hasPreviousPage?: boolean;
+        };
         PlatformSettingChangeDto: {
             previousValue: null | string;
             newValue: null | string;
@@ -3525,6 +3825,27 @@ export interface components {
             tenantId: null | string;
             tenantName: null | string;
         };
+        ValidateEcfResultDto: {
+            /** Format: int32 */
+            type: number | string;
+            typeName: string;
+            sampleEncf: string;
+            /** Format: date */
+            issueDate: string;
+            /** Format: date */
+            sequenceExpiresOnEstimate: null | string;
+            /** Format: double */
+            montoGravadoTotal: number | string;
+            /** Format: double */
+            montoExento: number | string;
+            /** Format: double */
+            totalItbis: number | string;
+            /** Format: double */
+            montoImpuestoAdicional: number | string;
+            /** Format: double */
+            montoTotal: number | string;
+            expectConditionalAcceptance: boolean;
+        };
         ValidationProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -3535,6 +3856,56 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        WebhookDeliveryDto: {
+            /** Format: uuid */
+            id: string;
+            eventId: string;
+            eventType: string;
+            status: string;
+            /** Format: int32 */
+            attempts: number | string;
+            /** Format: int32 */
+            lastStatusCode: null | number | string;
+            lastError: null | string;
+            /** Format: date-time */
+            nextAttemptAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        WebhookEndpointCreatedDto: {
+            endpoint: components["schemas"]["WebhookEndpointDto"];
+            secret: string;
+        };
+        WebhookEndpointDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            tenantId: string;
+            url: string;
+            description: null | string;
+            events: string[];
+            enabled: boolean;
+            /** Format: int32 */
+            consecutiveFailures: number | string;
+            disabledReason: null | string;
+            /** Format: date-time */
+            disabledAt: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: null | string;
+        };
+        WebhookPingResultDto: {
+            delivered: boolean;
+            /** Format: int32 */
+            statusCode: null | number | string;
+            error: null | string;
+        };
+        WebhookSecretDto: {
+            secret: string;
         };
         WorkerStatusDto: {
             name: string;

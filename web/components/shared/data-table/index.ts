@@ -1,5 +1,6 @@
 export { DataTable } from "./data-table";
 export { DataTableColumnHeader } from "./data-table-column-header";
+export { STATIC_TABLE_STATE, toStaticPage } from "./static-page";
 export { createAppColumnHelper, useTableContext } from "./table-hook";
 export {
   DEFAULT_PAGE_SIZE,

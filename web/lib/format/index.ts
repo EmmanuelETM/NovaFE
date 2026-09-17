@@ -3,6 +3,7 @@ export {
   formatDateTime,
   formatDate,
   formatTime,
+  formatCalendarDate,
   localDay,
   today,
   addDays,

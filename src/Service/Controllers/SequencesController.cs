@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using NovaFE.Application.Sequences.AllocateNcf;
 using NovaFE.Application.Sequences.Contracts;
+using NovaFE.Application.Sequences.DeactivateSequenceRange;
 using NovaFE.Application.Sequences.GetSequence;
 using NovaFE.Application.Sequences.ListSequences;
 using NovaFE.Application.Sequences.RegisterSequenceRange;
@@ -25,11 +26,15 @@ public sealed class SequencesController(
     GetSequenceUseCase get,
     ListSequencesUseCase list,
     AllocateNcfUseCase allocate,
+    DeactivateSequenceRangeUseCase deactivate,
     CurrentTenant currentTenant) : ApiController
 {
     /// <summary>Registra un rango de e-NCF autorizado por la DGII.</summary>
     [HttpPost]
     [Authorize(Policy = SecurityPolicies.TenantConfig)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register(
         [FromBody] RegisterSequenceRangeCommand command,
         CancellationToken ct)
@@ -39,21 +44,39 @@ public sealed class SequencesController(
 
     [HttpGet("{id:guid}")]
     [Authorize(Policy = SecurityPolicies.TenantConfig)]
+    [ProducesResponseType(typeof(NcfSequenceDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
         => (await get.Execute(new GetSequenceQuery(id), ct)).Match(Ok, Problem);
 
     [HttpGet]
     [Authorize(Policy = SecurityPolicies.TenantConfig)]
+    [ProducesResponseType(typeof(IReadOnlyList<NcfSequenceDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> List(CancellationToken ct)
         => (await list.Execute(ct)).Match(Ok, Problem);
 
     /// <summary>Toma la siguiente secuencia disponible para un tipo y ambiente.</summary>
     [HttpPost("allocate")]
     [Authorize(Policy = SecurityPolicies.TenantConfig)]
+    [ProducesResponseType(typeof(AllocatedNcfDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Allocate(
         [FromBody] AllocateNcfCommand command,
         CancellationToken ct)
         => (await allocate.Execute(command, ct)).Match(Ok, Problem);
+
+    /// <summary>
+    /// Desactiva un rango — típicamente uno agotado, para poder registrar uno
+    /// nuevo con la misma serie (no puede haber dos rangos activos de la misma
+    /// serie/tipo/ambiente a la vez).
+    /// </summary>
+    [HttpPost("{id:guid}/deactivate")]
+    [Authorize(Policy = SecurityPolicies.TenantConfig)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken ct)
+        => (await deactivate.Execute(new DeactivateSequenceRangeCommand(id), ct)).Match(_ => NoContent(), Problem);
 
     /// <summary>
     /// Registra un rango de e-NCF para un contribuyente, como <b>operador</b>. Ver

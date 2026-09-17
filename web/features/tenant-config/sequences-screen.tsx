@@ -4,7 +4,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useController, useForm } from "react-hook-form";
 import { z } from "zod";
-import { Plus } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 
 import {
   DataTable,
@@ -24,6 +24,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -35,16 +41,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { applyFieldErrors } from "@/lib/api/form-errors";
+import {
+  ECF_TYPE_OPTIONS,
+  ENVIRONMENT_OPTIONS,
+} from "@/features/tenants/options";
 import { formatCount } from "@/lib/format";
 import { selectItems } from "@/lib/select-items";
 import { cn } from "@/lib/utils";
 
-import { ECF_TYPE_OPTIONS, ENVIRONMENT_OPTIONS } from "./options";
+import { tenantConfigErrorMessage } from "./use-certificates";
 import {
+  useDeactivateSequence,
   useRegisterSequence,
-  useTenantSequences,
-} from "./use-tenant-sequences";
-import { tenantErrorMessage } from "./use-tenants";
+  useSequences,
+} from "./use-sequences";
 import type { NcfSequence } from "./types";
 
 const ch = createAppColumnHelper<NcfSequence>();
@@ -91,10 +101,16 @@ const columns = ch.columns([
     header: "Estado",
     cell: (cell) => <SequenceStatus sequence={cell.row.original} />,
   }),
+  ch.display({
+    id: "acciones",
+    header: "",
+    meta: { align: "right" },
+    cell: (cell) => <SequenceActions sequence={cell.row.original} />,
+  }),
 ]);
 
-export function SequencesTab({ tenantId }: { tenantId: string }) {
-  const { data: sequences, isPending, error } = useTenantSequences(tenantId);
+export function SequencesScreen() {
+  const { data: sequences, isPending, error } = useSequences();
 
   return (
     <DataTable
@@ -106,7 +122,7 @@ export function SequencesTab({ tenantId }: { tenantId: string }) {
       onStateChange={() => {}}
       searchable={false}
       emptyState={{ title: "Sin secuencias registradas." }}
-      toolbarActions={<RegisterSequenceDialog tenantId={tenantId} />}
+      toolbarActions={<RegisterSequenceDialog />}
       getRowId={(sequence) => sequence.id}
     />
   );
@@ -160,6 +176,30 @@ function SequenceStatus({ sequence }: { sequence: NcfSequence }) {
   );
 }
 
+function SequenceActions({ sequence }: { sequence: NcfSequence }) {
+  const deactivate = useDeactivateSequence();
+
+  if (!sequence.active) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="xs" aria-label="Acciones" />}
+      >
+        <MoreHorizontal />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          disabled={deactivate.isPending}
+          onClick={() => deactivate.mutate(sequence.id)}
+        >
+          Desactivar
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 const schema = z.object({
   environment: z.string().min(1, "El ambiente es obligatorio."),
   type: z.string().min(1, "El tipo de e-CF es obligatorio."),
@@ -177,7 +217,7 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-function RegisterSequenceDialog({ tenantId }: { tenantId: string }) {
+function RegisterSequenceDialog() {
   const [open, setOpen] = useState(false);
   const register = useRegisterSequence();
 
@@ -200,7 +240,6 @@ function RegisterSequenceDialog({ tenantId }: { tenantId: string }) {
   const submit = form.handleSubmit(async (values) => {
     try {
       await register.mutateAsync({
-        tenantId,
         environment: values.environment,
         type: Number(values.type),
         series: values.series.toUpperCase(),
@@ -211,7 +250,7 @@ function RegisterSequenceDialog({ tenantId }: { tenantId: string }) {
       setOpen(false);
     } catch (error) {
       if (!applyFieldErrors(error, form.setError)) {
-        form.setError("rangeTo", { message: tenantErrorMessage(error) });
+        form.setError("rangeTo", { message: tenantConfigErrorMessage(error) });
       }
     }
   });
@@ -232,7 +271,8 @@ function RegisterSequenceDialog({ tenantId }: { tenantId: string }) {
         <DialogHeader>
           <DialogTitle>Registrar rango de e-NCF</DialogTitle>
           <DialogDescription>
-            El rango autorizado por la DGII para este tipo de comprobante.
+            El rango que te autorizó la DGII para este tipo de comprobante. Si
+            ya tenías uno agotado con la misma serie, desactívalo primero.
           </DialogDescription>
         </DialogHeader>
 
