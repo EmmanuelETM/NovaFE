@@ -8,8 +8,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * Gestión de accesos humanos (solo operador): operadores del SaaS y, eligiendo un
- * contribuyente, sus empleados. Alta por correo, cambio de rol, revocar y reactivar.
+ * Gestión de accesos humanos (solo operador): los operadores del SaaS. Los
+ * empleados de un contribuyente puntual se gestionan en su propia pestaña
+ * "Usuarios", dentro de `/nemus/tenants/[id]`.
  */
 export default function NemusUsuariosPage() {
   return (

@@ -277,7 +277,7 @@ export const NAVIGATION: readonly NavSection[] = [
       {
         href: "/nemus/usuarios",
         label: "Usuarios",
-        description: "Quién entra a la plataforma y con qué rol",
+        description: "Los operadores del SaaS y sus roles",
         icon: UsersRound,
         minRole: ROLE.admin_sistema,
         ready: true,

@@ -9,6 +9,7 @@ import {
 } from "@/components/shared/app-shell";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { AccessScreen } from "@/features/auth/access-screen";
+import { InsufficientRoleScreen } from "@/features/auth/insufficient-role-screen";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
@@ -41,8 +42,11 @@ export const dynamic = "force-dynamic";
  * El esqueleto de `/nemus/**` (Fase 3): recursos de **operador**, sin tenant.
  * Las pantallas de un tenant tienen su propio shell en
  * `app/tenant/[tenantId]/layout.tsx`, que además valida acceso al tenant de
- * la URL — acá no hace falta, `GET /users/me` sin `tenantId` ya resuelve el
- * perfil del operador (`role: admin_sistema`, sin tenant).
+ * la URL — acá el equivalente es el chequeo de rol de abajo: `GET /users/me`
+ * puede devolver perfectamente a un `admin_tenant`/`emisor` (por ejemplo, si
+ * escribe la URL a mano), y sin ese chequeo el shell entero de Nemus Admin
+ * se pintaba igual para cualquiera — el filtro de `lib/navigation.ts` solo
+ * esconde el enlace del sidebar, no protege la ruta.
  *
  * El perfil se resuelve **en el servidor**, y de ahí sale la navegación. Hacerlo aquí y no
  * con un hook tiene dos consecuencias buenas: el sidebar sale correcto en el primer
@@ -69,6 +73,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         }
       />
     );
+  }
+
+  if (user.role !== "admin_sistema") {
+    return <InsufficientRoleScreen role={user.role} />;
   }
 
   const store = await cookies();

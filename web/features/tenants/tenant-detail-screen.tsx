@@ -1,10 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ExternalLink } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ApiKeysTab } from "./api-keys-tab";
@@ -13,6 +9,7 @@ import { CertificatesTab } from "./certificates-tab";
 import { EmitterProfileTab } from "./emitter-profile-tab";
 import { SequencesTab } from "./sequences-tab";
 import { useTenant } from "./use-tenants";
+import { UsersTab } from "./users-tab";
 import { WebhooksTab } from "./webhooks-tab";
 
 export function TenantDetailScreen({ tenantId }: { tenantId: string }) {
@@ -68,17 +65,7 @@ export function TenantDetailScreen({ tenantId }: { tenantId: string }) {
         </TabsContent>
 
         <TabsContent value="usuarios">
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={
-              <Link
-                href={`/nemus/usuarios?vista=contribuyente&tenant=${tenantId}`}
-              />
-            }
-          >
-            <ExternalLink /> Ver usuarios de este contribuyente
-          </Button>
+          <UsersTab tenantId={tenantId} />
         </TabsContent>
 
         <TabsContent value="webhooks">
