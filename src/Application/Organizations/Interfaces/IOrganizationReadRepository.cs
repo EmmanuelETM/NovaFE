@@ -1,5 +1,4 @@
 using NovaFE.Application.Organizations.Contracts;
-using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Domain.Common;
 
 namespace NovaFE.Application.Organizations.Interfaces;
@@ -19,7 +18,7 @@ public interface IOrganizationReadRepository
     Task<IReadOnlyList<OrganizationMemberDto>> ListMembersAsync(Guid organizationId, CancellationToken ct = default);
 
     /// <summary>Los contribuyentes (tenants/"proyectos") asociados a la organización.</summary>
-    Task<PagedResult<TenantSummaryDto>> ListTenantsAsync(
+    Task<PagedResult<OrganizationTenantSummaryDto>> ListTenantsAsync(
         Guid organizationId,
         int page,
         int pageSize,

@@ -1,7 +1,6 @@
 using Dapper;
 using NovaFE.Application.Organizations.Contracts;
 using NovaFE.Application.Organizations.Interfaces;
-using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Domain.Common;
 using NovaFE.Infrastructure.Persistence.Sql;
 
@@ -102,24 +101,38 @@ internal sealed class OrganizationReadRepository(IDbSession session) : IOrganiza
         return [.. members];
     }
 
-    public async Task<PagedResult<TenantSummaryDto>> ListTenantsAsync(
+    public async Task<PagedResult<OrganizationTenantSummaryDto>> ListTenantsAsync(
         Guid organizationId,
         int page,
         int pageSize,
         CancellationToken ct = default)
     {
-        const string filter = "WHERE organization_id = @organizationId AND is_deleted = false";
+        const string filter = "WHERE t.organization_id = @organizationId AND t.is_deleted = false";
 
-        var countSql = $"SELECT count(*) FROM tenants {filter}";
+        var countSql = $"SELECT count(*) FROM tenants t {filter}";
         var pageSql =
             $"""
-            SELECT id         AS "Id",
-                   rnc        AS "Rnc",
-                   legal_name AS "LegalName",
-                   status     AS "Status"
-            FROM tenants
+            SELECT t.id             AS "Id",
+                   t.rnc            AS "Rnc",
+                   t.legal_name     AS "LegalName",
+                   t.status         AS "Status",
+                   ep.default_environment AS "DefaultEnvironment",
+                   cert.expires_at  AS "CertificateExpiresAt",
+                   ecf.last_issued  AS "LastEcfIssuedAt"
+            FROM tenants t
+            LEFT JOIN emitter_profiles ep ON ep.tenant_id = t.id
+            LEFT JOIN LATERAL (
+                SELECT MAX(valid_to) AS expires_at
+                FROM certificates
+                WHERE tenant_id = t.id AND status = 'Active' AND is_deleted = false
+            ) cert ON true
+            LEFT JOIN LATERAL (
+                SELECT MAX(created_at) AS last_issued
+                FROM issued_ecf
+                WHERE tenant_id = t.id
+            ) ecf ON true
             {filter}
-            ORDER BY created_at DESC
+            ORDER BY t.created_at DESC
             LIMIT @take OFFSET @skip
             """;
 
@@ -135,9 +148,9 @@ internal sealed class OrganizationReadRepository(IDbSession session) : IOrganiza
         var total = await connection.ExecuteScalarAsync<int>(
             new CommandDefinition(countSql, parameters, session.Transaction, cancellationToken: ct));
 
-        var items = await connection.QueryAsync<TenantSummaryDto>(
+        var items = await connection.QueryAsync<OrganizationTenantSummaryDto>(
             new CommandDefinition(pageSql, parameters, session.Transaction, cancellationToken: ct));
 
-        return new PagedResult<TenantSummaryDto>(items.AsList(), total, page, pageSize);
+        return new PagedResult<OrganizationTenantSummaryDto>(items.AsList(), total, page, pageSize);
     }
 }

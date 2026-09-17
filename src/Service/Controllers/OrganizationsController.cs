@@ -13,7 +13,6 @@ using NovaFE.Application.Organizations.ListOrganizationTenants;
 using NovaFE.Application.Organizations.RegisterOrganization;
 using NovaFE.Application.Organizations.RemoveOrganizationMember;
 using NovaFE.Application.Organizations.SuspendOrganization;
-using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
@@ -168,7 +167,7 @@ public sealed class OrganizationsController(
     /// <summary>Los contribuyentes (tenants/"proyectos") de la organización. Self-service para cualquier miembro (o el operador).</summary>
     [HttpGet("{id:guid}/tenants")]
     [Authorize(Policy = SecurityPolicies.Authenticated)]
-    [ProducesResponseType(typeof(PagedResult<TenantSummaryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PagedResult<OrganizationTenantSummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ListTenants(
         Guid id,

@@ -180,6 +180,7 @@ Recurso por tenant, política `TenantConfig` (rol `admin_tenant`).
 | `POST` | `/api/v1/webhooks/{id}/ping` | Entrega un `webhook.ping` **inline** (no pasa por el outbox) y devuelve `{ delivered, statusCode, error }` |
 | `DELETE` | `/api/v1/webhooks/{id}` | Borrado lógico; deja de recibir entregas de inmediato |
 | `GET` | `/api/v1/webhooks/{id}/deliveries` | Log paginado (`?page=&pageSize=`): tipo, `status`, `lastStatusCode`, `attempts`, timestamps |
+| `POST` | `/api/v1/webhooks/{id}/deliveries/{deliveryId}/retry` | Reintenta manualmente una entrega **`dead`**: vuelve a `pending`, lista de inmediato, intentos y backoff en cero. `404` si no existe, no es del tenant, o no estaba `dead` |
 
 **Validación del `url`** (`WebhookEndpoint.Create` + validador):
 - `https` obligatorio fuera de Development.
@@ -228,6 +229,5 @@ grupo "Webhooks"; ver docs/configuration.md).
 
 - Los eventos de M5 / M8 / M11 Tipo 2-3 (llegan con su módulo).
 - Rotación de secret con período de gracia (v1: el viejo muere al instante).
-- Reintento manual de una entrega `dead` desde la API.
 - Filtros de payload / transformaciones por endpoint.
 - Firma asimétrica (hoy HMAC simétrico; el secret alcanza a esta escala).

@@ -15,10 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { TenantSummary } from "@/features/tenants/types";
+import {
+  ENVIRONMENT_COLOR,
+  environmentLabel,
+} from "@/features/tenants/options";
 import { selectItems } from "@/lib/select-items";
+import { cn } from "@/lib/utils";
 
 import { useOrganizationTenants } from "./use-organizations";
+import type { OrganizationTenantSummary } from "./types";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Todos los estados" },
@@ -30,7 +35,7 @@ function statusLabel(status: string): string {
   return status === "Active" ? "Activo" : "Suspendido";
 }
 
-function matches(tenant: TenantSummary, query: string): boolean {
+function matches(tenant: OrganizationTenantSummary, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (q === "") return true;
 
@@ -42,11 +47,10 @@ function matches(tenant: TenantSummary, query: string): boolean {
 
 /**
  * El grid de tenants de una organización — la vista principal de
- * `/org/[orgSlug]`. Solo Razón Social, RNC y estado por ahora: el ambiente,
- * el vencimiento del certificado y el último e-CF necesitarían enriquecer
- * `TenantSummaryDto` (o pegarle N+1 veces al backend, que además puede
- * fallar si sos miembro de la organización pero no de ese tenant puntual) —
- * queda para una siguiente pasada.
+ * `/org/[orgSlug]`. A propósito minimalista: solo Razón Social/RNC y los dos
+ * badges (estado, ambiente DGII). Certificado y último e-CF quedan para el
+ * `/inicio` del tenant — son datos operativos de ese contribuyente puntual,
+ * no algo que se compare de un vistazo entre tenants de la organización.
  */
 export function TenantsGrid({ organizationId }: { organizationId: string }) {
   const { data, isPending, error } = useOrganizationTenants(organizationId);
@@ -124,19 +128,35 @@ export function TenantsGrid({ organizationId }: { organizationId: string }) {
               <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
                 <Building2 className="size-4" aria-hidden />
               </div>
+
               <div className="flex flex-1 flex-col gap-0.5">
                 <span className="text-sm font-medium">{tenant.legalName}</span>
                 <span className="text-muted-foreground font-mono text-xs">
                   {tenant.rnc}
                 </span>
               </div>
-              <Badge
-                variant={tenant.status === "Active" ? "outline" : "secondary"}
-              >
-                {statusLabel(tenant.status)}
-              </Badge>
+
+              <div className="flex flex-col items-end gap-1">
+                <Badge
+                  variant={tenant.status === "Active" ? "outline" : "secondary"}
+                >
+                  {statusLabel(tenant.status)}
+                </Badge>
+                {tenant.defaultEnvironment && (
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "font-normal",
+                      ENVIRONMENT_COLOR[tenant.defaultEnvironment],
+                    )}
+                  >
+                    {environmentLabel(tenant.defaultEnvironment)}
+                  </Badge>
+                )}
+              </div>
+
               <ChevronRight
-                className="text-muted-foreground size-4"
+                className="text-muted-foreground size-4 shrink-0"
                 aria-hidden
               />
             </Link>

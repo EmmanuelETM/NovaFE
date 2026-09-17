@@ -87,6 +87,32 @@ public sealed class AuditLoggingTests(DatabaseFixture database) : IntegrationTes
         page!.Items.ShouldBeEmpty();
     }
 
+    [RequiresDockerFact]
+    public async Task Self_service_audit_log_matches_the_operator_view_but_needs_admin_tenant()
+    {
+        var (tenantId, token) = await OnboardAsync();
+        UseApiKey(token);
+
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var selfService = await LeerAsync<AuditPage>(await Client.GetAsync("/api/v1/audit-log"));
+        var operatorView = await LeerAsync<AuditPage>(
+            await Client.GetAsync($"/api/v1/tenants/{tenantId}/audit-log"));
+
+        // El propio GET /audit-log queda auditado, así que la vista de operador
+        // (pedida después) trae una fila más que la self-service — se compara
+        // que la fila del /ecf esté en las dos, no la lista completa.
+        selfService!.Items.ShouldContain(i => i.Path == "/api/v1/ecf");
+        operatorView!.Items.ShouldContain(i => i.Path == "/api/v1/ecf");
+
+        var mint = await Client.PostAsJsonAsync($"/api/v1/tenants/{tenantId}/api-keys", new { role = "consultor" });
+        var consultorToken = (await LeerAsync<ApiKeyCreatedView>(mint))!.Token;
+
+        Client.DefaultRequestHeaders.Remove(ApiKeyHeader);
+        UseApiKey(consultorToken);
+        (await Client.GetAsync("/api/v1/audit-log")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
     private sealed record SandboxResponse(Guid TenantId, string ApiKey);
 
     private sealed record ApiKeyCreatedView(string Token);

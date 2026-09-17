@@ -2,8 +2,8 @@ using ErrorOr;
 using Microsoft.Extensions.Logging;
 using NovaFE.Application.Common;
 using NovaFE.Application.Common.Interfaces;
+using NovaFE.Application.Organizations.Contracts;
 using NovaFE.Application.Organizations.Interfaces;
-using NovaFE.Application.Tenants.Contracts;
 using NovaFE.Domain.Common;
 using NovaFE.Domain.Organizations;
 
@@ -14,9 +14,9 @@ public sealed class ListOrganizationTenantsUseCase(
     ICurrentUser currentUser,
     IOrganizationReadRepository organizations,
     IOrganizationMemberRepository members)
-    : QueryUseCase<ListOrganizationTenantsQuery, PagedResult<TenantSummaryDto>>(loggerFactory)
+    : QueryUseCase<ListOrganizationTenantsQuery, PagedResult<OrganizationTenantSummaryDto>>(loggerFactory)
 {
-    protected override async Task<ErrorOr<PagedResult<TenantSummaryDto>>> ExecuteCore(
+    protected override async Task<ErrorOr<PagedResult<OrganizationTenantSummaryDto>>> ExecuteCore(
         ListOrganizationTenantsQuery request,
         CancellationToken ct)
     {

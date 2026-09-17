@@ -192,4 +192,68 @@ public sealed class WebhookDeliveryTests(DatabaseFixture database) : Integration
         return await db.Database.ExecuteSqlRawAsync(
             "UPDATE webhook_deliveries SET next_attempt_at = now() - interval '1 minute' WHERE status = 'pending'");
     }
+
+    /// <summary>Marca la (única) fila de entrega del endpoint como muerta. Devuelve su id.</summary>
+    private async Task<Guid> ForceDeadAsync(Guid endpointId)
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var id = await db.Database
+            .SqlQuery<Guid>($"SELECT id AS \"Value\" FROM webhook_deliveries WHERE endpoint_id = {endpointId} ORDER BY created_at DESC LIMIT 1")
+            .SingleAsync();
+
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE webhook_deliveries SET status = 'dead', attempts = 5, last_status_code = 500 WHERE id = {id}");
+
+        return id;
+    }
+
+    [RequiresDockerFact]
+    public async Task Retrying_a_dead_delivery_requeues_it_and_a_later_pump_delivers_it()
+    {
+        using var receiver = new WireMockFixture();
+        receiver.Server.Given(Request.Create().WithPath("/hook").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(500));
+
+        var tenant = await RegisterAndActAsTenantAsync("141222333");
+        var created = await CreateEndpointAsync($"{receiver.BaseUrl}/hook", "ecf.accepted");
+
+        await EnqueueAsync(tenant, WebhookEventType.EcfAccepted, new { id = "dead-one" });
+        var deliveryId = await ForceDeadAsync(created.Endpoint.Id);
+
+        // Sin haber reintentado, no queda nada para reclamar: el pump no toca la fila muerta.
+        (await PumpAsync()).ShouldBe(0);
+        (await DeliveryStatusAsync(created.Endpoint.Id)).ShouldBe("dead");
+
+        (await Client.PostAsync($"/api/v1/webhooks/{created.Endpoint.Id}/deliveries/{deliveryId}/retry", content: null))
+            .StatusCode.ShouldBe(System.Net.HttpStatusCode.NoContent);
+        (await DeliveryStatusAsync(created.Endpoint.Id)).ShouldBe("pending");
+
+        receiver.Server.Reset();
+        receiver.Server.Given(Request.Create().WithPath("/hook").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200));
+
+        await EventuallyAsync(
+            async () => await DeliveryStatusAsync(created.Endpoint.Id) == "delivered",
+            tick: PumpAsync);
+    }
+
+    [RequiresDockerFact]
+    public async Task Retrying_a_delivery_that_is_not_dead_is_a_404()
+    {
+        var tenant = await RegisterAndActAsTenantAsync("141444555");
+        var created = await CreateEndpointAsync("http://localhost:9/hook", "ecf.accepted");
+
+        await EnqueueAsync(tenant, WebhookEventType.EcfAccepted, new { id = "still-pending" });
+
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var pendingId = await db.Database
+            .SqlQuery<Guid>($"SELECT id AS \"Value\" FROM webhook_deliveries WHERE endpoint_id = {created.Endpoint.Id} ORDER BY created_at DESC LIMIT 1")
+            .SingleAsync();
+
+        (await Client.PostAsync($"/api/v1/webhooks/{created.Endpoint.Id}/deliveries/{pendingId}/retry", content: null))
+            .StatusCode.ShouldBe(System.Net.HttpStatusCode.NotFound);
+    }
 }

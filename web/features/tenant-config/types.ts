@@ -19,3 +19,15 @@ export type WebhookSecret = components["schemas"]["WebhookSecretDto"];
 
 /** Resultado de un `ping`. */
 export type WebhookPingResult = components["schemas"]["WebhookPingResultDto"];
+
+/** Una fila del log de entregas de un webhook (`WebhookDeliveryDto`). */
+export type WebhookDelivery = components["schemas"]["WebhookDeliveryDto"];
+
+export type WebhookDeliveryPage =
+  components["schemas"]["PagedResultOfWebhookDeliveryDto"];
+
+/** Una fila del registro de auditoría (RF-14.4, `AuditLogEntryDto`). */
+export type AuditLogEntry = components["schemas"]["AuditLogEntryDto"];
+
+export type AuditLogPage =
+  components["schemas"]["PagedResultOfAuditLogEntryDto"];

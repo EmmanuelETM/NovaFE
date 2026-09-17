@@ -6,6 +6,7 @@ using NovaFE.Application.Webhooks.GetEndpoint;
 using NovaFE.Application.Webhooks.ListDeliveries;
 using NovaFE.Application.Webhooks.ListEndpoints;
 using NovaFE.Application.Webhooks.PingEndpoint;
+using NovaFE.Application.Webhooks.RetryDelivery;
 using NovaFE.Application.Webhooks.RotateEndpointSecret;
 using NovaFE.Application.Webhooks.UpdateEndpoint;
 using NovaFE.Domain.Common;
@@ -33,7 +34,9 @@ public sealed class WebhooksController(
     RotateWebhookEndpointSecretUseCase rotateSecret,
     PingWebhookEndpointUseCase ping,
     ListWebhookDeliveriesUseCase listDeliveries,
-    DeleteWebhookEndpointUseCase delete) : ApiController
+    RetryWebhookDeliveryUseCase retryDelivery,
+    DeleteWebhookEndpointUseCase delete,
+    CurrentTenant currentTenant) : ApiController
 {
     /// <summary>Registra un endpoint. La respuesta lleva el <c>secret</c> — única vez que se ve.</summary>
     [HttpPost]
@@ -85,6 +88,21 @@ public sealed class WebhooksController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Deliveries(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
         => (await listDeliveries.Execute(new ListWebhookDeliveriesQuery(id, page, pageSize), ct)).Match(Ok, Problem);
+
+    /// <summary>
+    /// Reintenta manualmente una entrega <c>dead</c> — vuelve a <c>pending</c>,
+    /// lista de inmediato, con intentos y backoff en cero. La escalera
+    /// automática solo reanuda si vuelve a fallar.
+    /// </summary>
+    [HttpPost("{id:guid}/deliveries/{deliveryid:guid}/retry")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RetryDelivery(
+        Guid id,
+        [FromRoute(Name = "deliveryid")] Guid deliveryId,
+        CancellationToken ct)
+        => (await retryDelivery.Execute(new RetryWebhookDeliveryCommand(currentTenant.Require(), deliveryId), ct))
+            .Match(_ => NoContent(), Problem);
 
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

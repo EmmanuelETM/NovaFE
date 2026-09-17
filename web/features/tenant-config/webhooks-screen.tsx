@@ -4,7 +4,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Check, Copy, MoreHorizontal, Plus } from "lucide-react";
+import { Check, Copy, ListOrdered, MoreHorizontal, Plus } from "lucide-react";
 
 import {
   AlertDialog,
@@ -47,6 +47,7 @@ import {
 
 import { WEBHOOK_EVENT_GROUPS, webhookEventLabel } from "./webhook-events";
 import { tenantConfigErrorMessage } from "./use-certificates";
+import { WebhookDeliveriesDialog } from "./webhook-deliveries-dialog";
 import {
   useCreateWebhook,
   useDeleteWebhook,
@@ -61,64 +62,79 @@ const MAX_EVENT_BADGES = 3;
 
 const ch = createAppColumnHelper<WebhookEndpoint>();
 
-const columns = ch.columns([
-  ch.accessor("url", {
-    header: "URL",
-    cell: (cell) => (
-      <span className="block max-w-64 truncate font-mono text-xs">
-        {cell.getValue()}
-      </span>
-    ),
-  }),
-  ch.display({
-    id: "eventos",
-    header: "Eventos",
-    cell: (cell) => <WebhookEvents webhook={cell.row.original} />,
-  }),
-  ch.display({
-    id: "estado",
-    header: "Estado",
-    cell: (cell) => (
-      <div className="flex items-center gap-2">
-        <Badge variant={cell.row.original.enabled ? "outline" : "secondary"}>
-          {cell.row.original.enabled ? "Activo" : "Deshabilitado"}
-        </Badge>
-        {Number(cell.row.original.consecutiveFailures) > 0 && (
-          <Badge variant="destructive">
-            {cell.row.original.consecutiveFailures} fallos
+function columnsFor(onViewDeliveries: (webhook: WebhookEndpoint) => void) {
+  return ch.columns([
+    ch.accessor("url", {
+      header: "URL",
+      cell: (cell) => (
+        <span className="block max-w-64 truncate font-mono text-xs">
+          {cell.getValue()}
+        </span>
+      ),
+    }),
+    ch.display({
+      id: "eventos",
+      header: "Eventos",
+      cell: (cell) => <WebhookEvents webhook={cell.row.original} />,
+    }),
+    ch.display({
+      id: "estado",
+      header: "Estado",
+      cell: (cell) => (
+        <div className="flex items-center gap-2">
+          <Badge variant={cell.row.original.enabled ? "outline" : "secondary"}>
+            {cell.row.original.enabled ? "Activo" : "Deshabilitado"}
           </Badge>
-        )}
-      </div>
-    ),
-  }),
-  ch.display({
-    id: "acciones",
-    header: "",
-    meta: { align: "right" },
-    cell: (cell) => <WebhookActions webhook={cell.row.original} />,
-  }),
-]);
+          {Number(cell.row.original.consecutiveFailures) > 0 && (
+            <Badge variant="destructive">
+              {cell.row.original.consecutiveFailures} fallos
+            </Badge>
+          )}
+        </div>
+      ),
+    }),
+    ch.display({
+      id: "acciones",
+      header: "",
+      meta: { align: "right" },
+      cell: (cell) => (
+        <WebhookActions
+          webhook={cell.row.original}
+          onViewDeliveries={() => onViewDeliveries(cell.row.original)}
+        />
+      ),
+    }),
+  ]);
+}
 
 export function WebhooksScreen() {
   const { data: webhooks, isPending, error } = useWebhooks();
+  const [selected, setSelected] = useState<WebhookEndpoint | null>(null);
 
   return (
-    <DataTable
-      columns={columns}
-      page={toStaticPage(webhooks)}
-      isPending={isPending}
-      error={error}
-      state={STATIC_TABLE_STATE}
-      onStateChange={() => {}}
-      searchable={false}
-      emptyState={{
-        title: "Sin webhooks registrados.",
-        description:
-          "Registrá un endpoint para que te avisemos en tiempo real del ciclo de vida de tus e-CF.",
-      }}
-      toolbarActions={<CreateWebhookDialog />}
-      getRowId={(webhook) => webhook.id}
-    />
+    <>
+      <DataTable
+        columns={columnsFor(setSelected)}
+        page={toStaticPage(webhooks)}
+        isPending={isPending}
+        error={error}
+        state={STATIC_TABLE_STATE}
+        onStateChange={() => {}}
+        searchable={false}
+        emptyState={{
+          title: "Sin webhooks registrados.",
+          description:
+            "Registrá un endpoint para que te avisemos en tiempo real del ciclo de vida de tus e-CF.",
+        }}
+        toolbarActions={<CreateWebhookDialog />}
+        getRowId={(webhook) => webhook.id}
+      />
+
+      <WebhookDeliveriesDialog
+        webhook={selected}
+        onClose={() => setSelected(null)}
+      />
+    </>
   );
 }
 
@@ -138,7 +154,13 @@ function WebhookEvents({ webhook }: { webhook: WebhookEndpoint }) {
   );
 }
 
-function WebhookActions({ webhook }: { webhook: WebhookEndpoint }) {
+function WebhookActions({
+  webhook,
+  onViewDeliveries,
+}: {
+  webhook: WebhookEndpoint;
+  onViewDeliveries: () => void;
+}) {
   const ping = usePingWebhook();
   const update = useUpdateWebhook();
   const remove = useDeleteWebhook();
@@ -159,6 +181,9 @@ function WebhookActions({ webhook }: { webhook: WebhookEndpoint }) {
           <MoreHorizontal />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={onViewDeliveries}>
+            <ListOrdered /> Ver entregas
+          </DropdownMenuItem>
           <DropdownMenuItem
             disabled={busy}
             onClick={() => ping.mutate(webhook.id)}

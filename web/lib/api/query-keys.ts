@@ -110,6 +110,21 @@ export const queryKeys = {
     list: (tenantId: string) => ["my-api-keys", tenantId, "list"] as const,
   },
 
+  /** `GET /webhooks/{id}/deliveries`: log de entregas de un endpoint (self-service). */
+  webhookDeliveries: {
+    all: (tenantId: string, endpointId: string) =>
+      ["webhook-deliveries", tenantId, endpointId] as const,
+    list: (tenantId: string, endpointId: string, filters: Filters) =>
+      ["webhook-deliveries", tenantId, endpointId, "list", filters] as const,
+  },
+
+  /** `GET /audit-log`: registro de auditoría del contribuyente actual (self-service, RF-14.4). */
+  myAuditLog: {
+    all: (tenantId: string) => ["my-audit-log", tenantId] as const,
+    list: (tenantId: string, filters: Filters) =>
+      ["my-audit-log", tenantId, "list", filters] as const,
+  },
+
   /** `GET /emitter-profile`: perfil fiscal del emisor del contribuyente actual (self-service). */
   myEmitterProfile: (tenantId: string) =>
     ["my-emitter-profile", tenantId] as const,

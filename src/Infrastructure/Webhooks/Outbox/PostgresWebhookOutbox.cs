@@ -112,6 +112,20 @@ internal sealed class PostgresWebhookOutbox(AppDbContext context, TimeProvider t
             WHERE id = {rowId}
             """, ct);
 
+    public async Task<bool> RetryAsync(Guid rowId, Guid tenantId, CancellationToken ct = default)
+    {
+        var affected = await context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            UPDATE webhook_deliveries
+            SET status = 'pending', attempts = 0, next_attempt_at = {timeProvider.GetUtcNow()},
+                last_status_code = NULL, last_error = NULL, locked_at = NULL, locked_by = NULL,
+                updated_at = {timeProvider.GetUtcNow()}
+            WHERE id = {rowId} AND tenant_id = {tenantId} AND status = 'dead'
+            """, ct);
+
+        return affected > 0;
+    }
+
     public Task<int> ReapStuckAsync(TimeSpan olderThan, CancellationToken ct = default)
     {
         var cutoff = timeProvider.GetUtcNow() - olderThan;

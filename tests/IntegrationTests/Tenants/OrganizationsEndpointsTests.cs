@@ -162,11 +162,63 @@ public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : Inte
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
+    [RequiresDockerFact]
+    public async Task The_tenant_grid_shows_environment_certificate_and_last_ecf()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-tenant-grid", ownerEmail: "owner@acme-grid.do");
+
+        var setup = await Client.PostAsJsonAsync("/api/v1/dev/sandbox", new { });
+        setup.StatusCode.ShouldBe(HttpStatusCode.OK, await setup.Content.ReadAsStringAsync());
+        var sandbox = await LeerAsync<SandboxResponse>(setup);
+
+        (await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{sandbox!.TenantId}", null))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        ActAsHuman("auth-owner", "owner@acme-grid.do");
+        var beforeIssuance = await LeerAsync<PagedResponse<TenantSummaryResponse>>(
+            await Client.GetAsync($"/api/v1/organizations/{orgId}/tenants"));
+        var row = beforeIssuance!.Items.ShouldHaveSingleItem();
+
+        // El sandbox ya deja perfil de emisor + certificado activo, pero
+        // todavía ningún e-CF.
+        row.DefaultEnvironment.ShouldBe("Test");
+        row.CertificateExpiresAt.ShouldNotBeNull();
+        row.LastEcfIssuedAt.ShouldBeNull();
+
+        Client.DefaultRequestHeaders.Add("X-API-Key", sandbox.ApiKey);
+        var issue = await Client.PostAsJsonAsync("/api/v1/ecf", new
+        {
+            type = 31,
+            incomeType = "01",
+            buyer = new { name = "Cliente de Prueba SRL", rnc = "131880681" },
+            payment = new { condition = "cash", methods = new[] { new { type = "cash", amount = 2360m } } },
+            lines = new[]
+            {
+                new { name = "Consultoría", kind = "service", quantity = 1, unitPrice = 2000m, itbisRate = 1, unitOfMeasure = "43" },
+            },
+        });
+        issue.StatusCode.ShouldBe(HttpStatusCode.Created, await issue.Content.ReadAsStringAsync());
+        Client.DefaultRequestHeaders.Remove("X-API-Key");
+
+        ActAsHuman("auth-owner", "owner@acme-grid.do");
+        var afterIssuance = await LeerAsync<PagedResponse<TenantSummaryResponse>>(
+            await Client.GetAsync($"/api/v1/organizations/{orgId}/tenants"));
+
+        afterIssuance!.Items.ShouldHaveSingleItem().LastEcfIssuedAt.ShouldNotBeNull();
+    }
+
     private sealed record OrganizationDetailResponse(Guid Id, string Name, string Slug, string Plan, string Status);
 
     private sealed record OrganizationMemberResponse(Guid PlatformUserId, string Email, string Role);
 
-    private sealed record TenantSummaryResponse(Guid Id, string Rnc, string LegalName, string Status);
+    private sealed record TenantSummaryResponse(
+        Guid Id,
+        string Rnc,
+        string LegalName,
+        string Status,
+        string? DefaultEnvironment,
+        DateTimeOffset? CertificateExpiresAt,
+        DateTimeOffset? LastEcfIssuedAt);
 
     private sealed record PagedResponse<T>(IEnumerable<T> Items, int TotalCount, int Page, int PageSize);
 

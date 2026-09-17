@@ -21,7 +21,10 @@ import {
 } from "@/components/ui/popover";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { useEmitterProfile } from "@/features/tenant-config/use-emitter-profile";
-import { ENVIRONMENT_OPTIONS } from "@/features/tenants/options";
+import {
+  ENVIRONMENT_COLOR,
+  environmentLabel,
+} from "@/features/tenants/options";
 import { cn } from "@/lib/utils";
 
 interface TenantSwitcherProps {
@@ -32,19 +35,6 @@ interface TenantSwitcherProps {
 /** A dónde aterriza `/` por defecto la próxima vez — nunca decide qué tenant está activo en una pantalla ya cargada, eso lo da la URL. */
 const LAST_TENANT_COOKIE = "last_tenant_id";
 const LAST_TENANT_MAX_AGE = 60 * 60 * 24 * 30; // 30 días
-
-const ENVIRONMENT_COLOR: Record<string, string> = {
-  Test: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  Cert: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  Production:
-    "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-};
-
-function environmentLabel(value: string): string {
-  return (
-    ENVIRONMENT_OPTIONS.find((option) => option.value === value)?.label ?? value
-  );
-}
 
 /** Reemplaza el `[tenantId]` de la ruta actual, conservando la sub-ruta (`/comprobantes`, etc.). */
 function withTenant(pathname: string, tenantId: string): string {

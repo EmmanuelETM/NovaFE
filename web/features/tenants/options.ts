@@ -14,6 +14,24 @@ export const ENVIRONMENT_OPTIONS = [
   { value: "Production", label: "Producción (eCF)" },
 ];
 
+export function environmentLabel(value: string): string {
+  return (
+    ENVIRONMENT_OPTIONS.find((option) => option.value === value)?.label ?? value
+  );
+}
+
+/**
+ * Color por ambiente — mismo criterio en todos lados que muestran un badge
+ * de ambiente (`TenantSwitcher`, el grid de tenants de una organización):
+ * Test en ámbar, Cert en celeste, Producción en verde.
+ */
+export const ENVIRONMENT_COLOR: Record<string, string> = {
+  Test: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  Cert: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+  Production:
+    "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+};
+
 /** Los 10 tipos de e-CF (`EcfType`), con su código y nombre DGII. */
 export const ECF_TYPE_OPTIONS = [
   { value: "31", label: "31 — Crédito Fiscal" },

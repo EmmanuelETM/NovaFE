@@ -6,9 +6,8 @@ import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/problem";
 import { queryKeys } from "@/lib/api/query-keys";
-import type { TenantPage } from "@/features/tenants/types";
 
-import type { OrganizationMember } from "./types";
+import type { OrganizationMember, OrganizationTenantPage } from "./types";
 
 /** El mensaje ante un error de mutación. Un 400 trae el detalle en `fieldErrors`. */
 export function organizationErrorMessage(error: unknown): string {
@@ -31,10 +30,10 @@ export function useOrganizationTenants(organizationId: string) {
   return useQuery({
     queryKey: queryKeys.organizations.tenants(organizationId),
     queryFn: () =>
-      api.get<TenantPage>(`/organizations/${organizationId}/tenants`, {
-        page: 1,
-        pageSize: 100,
-      }),
+      api.get<OrganizationTenantPage>(
+        `/organizations/${organizationId}/tenants`,
+        { page: 1, pageSize: 100 },
+      ),
   });
 }
 

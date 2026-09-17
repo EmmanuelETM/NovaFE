@@ -25,6 +25,15 @@ public interface IWebhookOutbox
 
     Task MarkDeadAsync(Guid rowId, int? statusCode, string? lastError, CancellationToken ct = default);
 
+    /// <summary>
+    /// Reencola una entrega <c>dead</c> como <c>pending</c>, lista de inmediato
+    /// (intentos y backoff en cero — el reintento manual no hereda la escalera
+    /// del intento automático). Devuelve <c>false</c> si no existe, no es del
+    /// tenant, o no estaba <c>dead</c> (evita pisar una fila que el worker ya
+    /// tiene en curso).
+    /// </summary>
+    Task<bool> RetryAsync(Guid rowId, Guid tenantId, CancellationToken ct = default);
+
     /// <summary>Recupera filas atascadas en <c>processing</c> (worker caído a mitad de una entrega).</summary>
     Task<int> ReapStuckAsync(TimeSpan olderThan, CancellationToken ct = default);
 

@@ -165,7 +165,7 @@ export const NAVIGATION: readonly NavSection[] = [
         icon: ScrollText,
         minRole: ROLE.admin_tenant,
         maxRole: ROLE.admin_tenant,
-        ready: false,
+        ready: true,
       },
     ],
   },
