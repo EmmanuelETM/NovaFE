@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Building, Building2 } from "lucide-react";
 
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -65,52 +66,54 @@ export function CommandPalette({ user, scope }: CommandPaletteProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Buscar una pantalla, tenant u organización…" />
-      <CommandList>
-        <CommandEmpty>No encontramos nada.</CommandEmpty>
+      <Command>
+        <CommandInput placeholder="Buscar una pantalla, tenant u organización…" />
+        <CommandList>
+          <CommandEmpty>No encontramos nada.</CommandEmpty>
 
-        {destinos.length > 0 && (
-          <CommandGroup heading="Ir a">
-            {destinos.map((item) => (
-              <CommandItem
-                key={item.href}
-                onSelect={() => go(scopedHref(scope, item.href))}
-              >
-                <item.icon aria-hidden />
-                {item.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-
-        {user.organizations.length > 0 && (
-          <>
-            <CommandSeparator />
-            {user.organizations.map((org) => (
-              <CommandGroup
-                key={org.organizationId}
-                heading={org.organizationName}
-              >
-                {org.tenants.map((tenant) => (
-                  <CommandItem
-                    key={tenant.tenantId}
-                    onSelect={() => go(`/tenant/${tenant.tenantId}`)}
-                  >
-                    <Building aria-hidden />
-                    {tenant.tenantName}
-                  </CommandItem>
-                ))}
+          {destinos.length > 0 && (
+            <CommandGroup heading="Ir a">
+              {destinos.map((item) => (
                 <CommandItem
-                  onSelect={() => go(`/org/${org.organizationSlug}`)}
+                  key={item.href}
+                  onSelect={() => go(scopedHref(scope, item.href))}
                 >
-                  <Building2 aria-hidden />
-                  Ver organización
+                  <item.icon aria-hidden />
+                  {item.label}
                 </CommandItem>
-              </CommandGroup>
-            ))}
-          </>
-        )}
-      </CommandList>
+              ))}
+            </CommandGroup>
+          )}
+
+          {user.organizations.length > 0 && (
+            <>
+              <CommandSeparator />
+              {user.organizations.map((org) => (
+                <CommandGroup
+                  key={org.organizationId}
+                  heading={org.organizationName}
+                >
+                  {org.tenants.map((tenant) => (
+                    <CommandItem
+                      key={tenant.tenantId}
+                      onSelect={() => go(`/tenant/${tenant.tenantId}`)}
+                    >
+                      <Building aria-hidden />
+                      {tenant.tenantName}
+                    </CommandItem>
+                  ))}
+                  <CommandItem
+                    onSelect={() => go(`/org/${org.organizationSlug}`)}
+                  >
+                    <Building2 aria-hidden />
+                    Ver organización
+                  </CommandItem>
+                </CommandGroup>
+              ))}
+            </>
+          )}
+        </CommandList>
+      </Command>
     </CommandDialog>
   );
 }

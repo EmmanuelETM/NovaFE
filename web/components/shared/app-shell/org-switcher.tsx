@@ -21,7 +21,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useSidebar } from "@/components/ui/sidebar";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { PLAN_OPTIONS } from "@/features/tenants/options";
 import { cn } from "@/lib/utils";
@@ -32,12 +31,12 @@ interface OrgSwitcherProps {
   scope: Scope;
 }
 
-function planLabel(plan: string): string {
+export function planLabel(plan: string): string {
   return PLAN_OPTIONS.find((option) => option.value === plan)?.label ?? plan;
 }
 
 /** La organización dueña del tenant activo — `undefined` fuera de scope tenant. */
-function ownerOrg(user: CurrentUser, scope: Scope) {
+export function ownerOrg(user: CurrentUser, scope: Scope) {
   if (scope.kind === "tenant") {
     return user.organizations.find((org) =>
       org.tenants.some((tenant) => tenant.tenantId === scope.tenantId),
@@ -51,16 +50,35 @@ function ownerOrg(user: CurrentUser, scope: Scope) {
   return undefined;
 }
 
-export function OrgSwitcher({ user, scope }: OrgSwitcherProps) {
-  const router = useRouter();
-  const { isMobile } = useSidebar();
-  const [open, setOpen] = useState(false);
+interface OrgPickerListProps {
+  user: CurrentUser;
+  scope: Scope;
+  activeOrgId?: string;
+  /** Se llama después de navegar — cierra el popover (desktop) o el sheet (mobile). */
+  onSelect: () => void;
+}
 
-  const active = ownerOrg(user, scope);
+/**
+ * La lista de organizaciones del usuario, buscable, más "Todas las
+ * organizaciones" — el contenido que comparten el popover de escritorio
+ * (`OrgSwitcher`) y la pestaña "Organización" del sheet mobile
+ * (`WorkspaceSwitcherMobile`). Sin trigger propio.
+ *
+ * Elegir una organización aterriza en su primer tenant si ya estabas en el
+ * espacio de trabajo de un tenant —así no se cae a una pantalla vacía— o en
+ * `/org/{slug}` si estabas navegando a nivel de organización.
+ */
+export function OrgPickerList({
+  user,
+  scope,
+  activeOrgId,
+  onSelect,
+}: OrgPickerListProps) {
+  const router = useRouter();
 
   const goToOrg = useCallback(
     (orgId: string) => {
-      setOpen(false);
+      onSelect();
 
       const org = user.organizations.find((o) => o.organizationId === orgId);
       if (!org) return;
@@ -77,8 +95,80 @@ export function OrgSwitcher({ user, scope }: OrgSwitcherProps) {
 
       router.push(`/org/${org.organizationSlug}`);
     },
-    [router, scope, user.organizations],
+    [router, scope, user.organizations, onSelect],
   );
+
+  return (
+    <Command>
+      <CommandInput
+        placeholder="Buscar organización…"
+        className="h-9 text-xs"
+      />
+      <CommandList>
+        <CommandEmpty className="text-muted-foreground py-4 text-center text-xs">
+          No encontramos nada.
+        </CommandEmpty>
+        <CommandGroup>
+          {user.organizations.map((org) => (
+            <CommandItem
+              key={org.organizationId}
+              onSelect={() => goToOrg(org.organizationId)}
+              className="flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-xs"
+            >
+              <Building2
+                className="text-muted-foreground size-3.5 shrink-0"
+                aria-hidden
+              />
+              <span className="flex-1 truncate font-medium">
+                {org.organizationName}
+              </span>
+              <Badge
+                variant="outline"
+                className="text-muted-foreground h-4 px-1 font-mono text-[10px] uppercase"
+              >
+                {planLabel(org.plan)}
+              </Badge>
+              <Check
+                aria-hidden
+                className={cn(
+                  "text-primary size-3.5 shrink-0 transition-opacity",
+                  org.organizationId === activeOrgId
+                    ? "opacity-100"
+                    : "opacity-0",
+                )}
+              />
+            </CommandItem>
+          ))}
+        </CommandGroup>
+
+        <CommandSeparator />
+
+        <CommandGroup>
+          <CommandItem
+            className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-xs"
+            onSelect={() => {
+              onSelect();
+              router.push("/organizaciones");
+            }}
+          >
+            <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
+            <span>Todas las organizaciones</span>
+          </CommandItem>
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  );
+}
+
+/**
+ * El primer segmento del topbar: qué organización estás mirando, con un
+ * badge de plan — patrón "split button" (Supabase). Escondido en mobile
+ * (`WorkspaceSwitcherMobile` lo reemplaza ahí, ver `app-topbar.tsx`).
+ */
+export function OrgSwitcher({ user, scope }: OrgSwitcherProps) {
+  const [open, setOpen] = useState(false);
+
+  const active = ownerOrg(user, scope);
 
   if (user.organizations.length === 0) return null;
 
@@ -129,68 +219,16 @@ export function OrgSwitcher({ user, scope }: OrgSwitcherProps) {
 
         <PopoverContent
           className="w-72 p-0"
-          side={isMobile ? "bottom" : "bottom"}
+          side="bottom"
           align="start"
           sideOffset={6}
         >
-          <Command>
-            <CommandInput
-              placeholder="Buscar organización…"
-              className="h-9 text-xs"
-            />
-            <CommandList>
-              <CommandEmpty className="text-muted-foreground py-4 text-center text-xs">
-                No encontramos nada.
-              </CommandEmpty>
-              <CommandGroup>
-                {user.organizations.map((org) => (
-                  <CommandItem
-                    key={org.organizationId}
-                    onSelect={() => goToOrg(org.organizationId)}
-                    className="flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-xs"
-                  >
-                    <Building2
-                      className="text-muted-foreground size-3.5 shrink-0"
-                      aria-hidden
-                    />
-                    <span className="flex-1 truncate font-medium">
-                      {org.organizationName}
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className="text-muted-foreground h-4 px-1 font-mono text-[10px] uppercase"
-                    >
-                      {planLabel(org.plan)}
-                    </Badge>
-                    <Check
-                      aria-hidden
-                      className={cn(
-                        "text-primary size-3.5 shrink-0 transition-opacity",
-                        org.organizationId === active?.organizationId
-                          ? "opacity-100"
-                          : "opacity-0",
-                      )}
-                    />
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-
-              <CommandSeparator />
-
-              <CommandGroup>
-                <CommandItem
-                  className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-2 px-2.5 py-1.5 text-xs"
-                  onSelect={() => {
-                    setOpen(false);
-                    router.push("/organizaciones");
-                  }}
-                >
-                  <LayoutGrid className="size-3.5 shrink-0" aria-hidden />
-                  <span>Todas las organizaciones</span>
-                </CommandItem>
-              </CommandGroup>
-            </CommandList>
-          </Command>
+          <OrgPickerList
+            user={user}
+            scope={scope}
+            activeOrgId={active?.organizationId}
+            onSelect={() => setOpen(false)}
+          />
         </PopoverContent>
       </Popover>
     </div>

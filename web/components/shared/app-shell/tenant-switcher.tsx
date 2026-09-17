@@ -19,7 +19,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useSidebar } from "@/components/ui/sidebar";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { useEmitterProfile } from "@/features/tenant-config/use-emitter-profile";
 import { ENVIRONMENT_OPTIONS } from "@/features/tenants/options";
@@ -54,21 +53,27 @@ function withTenant(pathname: string, tenantId: string): string {
     : `/tenant/${tenantId}`;
 }
 
+interface TenantPickerListProps {
+  user: CurrentUser;
+  tenantId: string;
+  pathname: string;
+  /** Se llama después de navegar — cierra el popover (desktop) o el sheet (mobile). */
+  onSelect: () => void;
+}
+
 /**
- * El segundo segmento del breadcrumb del topbar: qué tenant, dentro de la
- * organización activa, con un badge de ambiente DGII (`Test`/`Cert`/
- * `Production` — nunca solo dos valores). Solo se pinta en scope tenant.
- *
- * A diferencia del viejo `NavTenant` (pie del sidebar), este componente
- * **únicamente** cambia de tenant — nada de Certificados/Secuencias/
- * Webhooks/Configuración, que ahora viven en el sidebar categorizado.
+ * La lista de tenants de la organización activa, buscable — el contenido
+ * que comparten el popover de escritorio (`TenantSwitcher`) y la pestaña
+ * "Tenant" del sheet mobile (`WorkspaceSwitcherMobile`). Sin trigger propio:
+ * quien la usa decide cómo se abre.
  */
-export function TenantSwitcher({ user, tenantId }: TenantSwitcherProps) {
+export function TenantPickerList({
+  user,
+  tenantId,
+  pathname,
+  onSelect,
+}: TenantPickerListProps) {
   const router = useRouter();
-  const pathname = usePathname();
-  const { isMobile } = useSidebar();
-  const [open, setOpen] = useState(false);
-  const { data: profile } = useEmitterProfile();
 
   const currentOrg = user.organizations.find((org) =>
     org.tenants.some((tenant) => tenant.tenantId === tenantId),
@@ -76,7 +81,7 @@ export function TenantSwitcher({ user, tenantId }: TenantSwitcherProps) {
 
   const rememberAndGo = useCallback(
     (path: string, rememberTenantId: string) => {
-      setOpen(false);
+      onSelect();
 
       try {
         document.cookie = `${LAST_TENANT_COOKIE}=${rememberTenantId}; path=/; max-age=${LAST_TENANT_MAX_AGE}`;
@@ -87,10 +92,59 @@ export function TenantSwitcher({ user, tenantId }: TenantSwitcherProps) {
 
       router.push(path);
     },
-    [router],
+    [router, onSelect],
   );
 
   if (!currentOrg) return null;
+
+  return (
+    <Command>
+      <CommandInput placeholder="Buscar tenant…" />
+      <CommandList>
+        <CommandEmpty>No encontramos nada.</CommandEmpty>
+        <CommandGroup heading={currentOrg.organizationName}>
+          {currentOrg.tenants.map((tenant) => (
+            <CommandItem
+              key={tenant.tenantId}
+              onSelect={() =>
+                rememberAndGo(
+                  withTenant(pathname, tenant.tenantId),
+                  tenant.tenantId,
+                )
+              }
+            >
+              <Building aria-hidden />
+              <span className="flex-1 truncate">{tenant.tenantName}</span>
+              <Check
+                aria-hidden
+                className={cn(
+                  "size-4",
+                  tenant.tenantId === tenantId ? "opacity-100" : "opacity-0",
+                )}
+              />
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  );
+}
+
+/**
+ * El segundo segmento del breadcrumb del topbar: qué tenant, dentro de la
+ * organización activa, con un badge de ambiente DGII (`Test`/`Cert`/
+ * `Production` — nunca solo dos valores). Solo se pinta en scope tenant.
+ * Escondido en mobile (`WorkspaceSwitcherMobile` lo reemplaza ahí, ver
+ * `app-topbar.tsx`) — el par de switchers no entra en una pantalla angosta.
+ *
+ * A diferencia del viejo `NavTenant` (pie del sidebar), este componente
+ * **únicamente** cambia de tenant — nada de Certificados/Secuencias/
+ * Webhooks/Configuración, que ahora viven en el sidebar categorizado.
+ */
+export function TenantSwitcher({ user, tenantId }: TenantSwitcherProps) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const { data: profile } = useEmitterProfile();
 
   const nombre = user.tenantName ?? "Tu contribuyente";
 
@@ -126,41 +180,16 @@ export function TenantSwitcher({ user, tenantId }: TenantSwitcherProps) {
 
       <PopoverContent
         className="w-72 p-0"
-        side={isMobile ? "bottom" : "bottom"}
+        side="bottom"
         align="start"
         sideOffset={8}
       >
-        <Command>
-          <CommandInput placeholder="Buscar tenant…" />
-          <CommandList>
-            <CommandEmpty>No encontramos nada.</CommandEmpty>
-            <CommandGroup heading={currentOrg.organizationName}>
-              {currentOrg.tenants.map((tenant) => (
-                <CommandItem
-                  key={tenant.tenantId}
-                  onSelect={() =>
-                    rememberAndGo(
-                      withTenant(pathname, tenant.tenantId),
-                      tenant.tenantId,
-                    )
-                  }
-                >
-                  <Building aria-hidden />
-                  <span className="flex-1 truncate">{tenant.tenantName}</span>
-                  <Check
-                    aria-hidden
-                    className={cn(
-                      "size-4",
-                      tenant.tenantId === tenantId
-                        ? "opacity-100"
-                        : "opacity-0",
-                    )}
-                  />
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+        <TenantPickerList
+          user={user}
+          tenantId={tenantId}
+          pathname={pathname}
+          onSelect={() => setOpen(false)}
+        />
       </PopoverContent>
     </Popover>
   );

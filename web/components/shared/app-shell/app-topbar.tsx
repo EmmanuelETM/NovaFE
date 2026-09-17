@@ -12,6 +12,7 @@ import { useCommandPaletteStore } from "@/lib/stores/command-palette";
 
 import { OrgSwitcher } from "./org-switcher";
 import { TenantSwitcher } from "./tenant-switcher";
+import { WorkspaceSwitcherMobile } from "./workspace-switcher-mobile";
 
 interface AppTopbarProps {
   user: CurrentUser;
@@ -29,6 +30,12 @@ interface AppTopbarProps {
  * `TenantSwitcher` no se pinta fuera de scope tenant: no hay un tenant activo
  * del que colgar el segundo segmento.
  *
+ * En mobile, el par `OrgSwitcher`+`TenantSwitcher` no entra en el ancho
+ * disponible — se reemplaza por `WorkspaceSwitcherMobile` (un trigger único
+ * que abre un sheet con pestañas). El cambio es puramente CSS
+ * (`hidden sm:flex` / `sm:hidden`), sin `useIsMobile()`: los dos existen en
+ * el árbol y el breakpoint decide cuál se ve, sin parpadeo de hidratación.
+ *
  * No se queda fija con `sticky`: quien tiene el scroll es el panel de contenido, así que
  * esta barra está quieta por construcción. Con `sticky` se pegaría al borde de la ventana y
  * no al del panel —que con `variant="inset"` está dos píxeles más adentro—, y se vería
@@ -44,13 +51,19 @@ export function AppTopbar({ user, scope }: AppTopbarProps) {
 
       {scope.kind !== "operator" && (
         <>
-          <OrgSwitcher user={user} scope={scope} />
-          {scope.kind === "tenant" && (
-            <>
-              <span className="text-muted-foreground/50 text-sm">/</span>
-              <TenantSwitcher user={user} tenantId={scope.tenantId} />
-            </>
-          )}
+          <div className="hidden min-w-0 items-center gap-1 sm:flex">
+            <OrgSwitcher user={user} scope={scope} />
+            {scope.kind === "tenant" && (
+              <>
+                <span className="text-muted-foreground/50 text-sm">/</span>
+                <TenantSwitcher user={user} tenantId={scope.tenantId} />
+              </>
+            )}
+          </div>
+
+          <div className="min-w-0 sm:hidden">
+            <WorkspaceSwitcherMobile user={user} scope={scope} />
+          </div>
         </>
       )}
 
