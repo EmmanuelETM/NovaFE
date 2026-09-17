@@ -13,4 +13,6 @@ public interface ITenantRepository
     Task<bool> RncExistsAsync(string rnc, CancellationToken ct = default);
 
     Task AddAsync(Tenant tenant, CancellationToken ct = default);
+
+    Task UpdateAsync(Tenant tenant, CancellationToken ct = default);
 }

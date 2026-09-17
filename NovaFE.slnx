@@ -22,6 +22,7 @@
     <File Path="docs/fiscal.md" />
     <File Path="docs/human-auth.md" />
     <File Path="docs/local-e2e.md" />
+    <File Path="docs/multi-tenancy-hierarchy.md" />
     <File Path="docs/multi-tenancy.md" />
     <File Path="docs/observability.md" />
     <File Path="docs/pricing.md" />

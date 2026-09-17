@@ -42,6 +42,14 @@ public sealed class Tenant : Entity<Guid>, IAuditableEntity, ISoftDeletable
 
     public TenantStatus Status { get; private set; } = null!;
 
+    /// <summary>
+    /// La organización que agrupa a este contribuyente en la jerarquía
+    /// <c>User -&gt; Organization -&gt; Tenant</c>. Nullable durante la
+    /// transición (Fase 1): un tenant existente todavía sin backfillear no
+    /// tiene organización hasta que se le asigne una.
+    /// </summary>
+    public Guid? OrganizationId { get; private set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public string? CreatedBy { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
@@ -66,4 +74,7 @@ public sealed class Tenant : Entity<Guid>, IAuditableEntity, ISoftDeletable
     public void Activate() => Status = TenantStatus.Active;
 
     public void Suspend() => Status = TenantStatus.Suspended;
+
+    /// <summary>Asigna (o reasigna) la organización dueña de este contribuyente.</summary>
+    public void AssignToOrganization(Guid organizationId) => OrganizationId = organizationId;
 }

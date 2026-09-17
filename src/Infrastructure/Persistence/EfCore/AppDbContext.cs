@@ -3,6 +3,7 @@ using NovaFE.Application.Common.Interfaces;
 using NovaFE.Domain.Certificates;
 using NovaFE.Domain.Common.Entities;
 using NovaFE.Domain.Ecf;
+using NovaFE.Domain.Organizations;
 using NovaFE.Domain.Sequences;
 using NovaFE.Domain.Tenants;
 using NovaFE.Domain.Users;
@@ -26,6 +27,15 @@ public class AppDbContext(
     ICurrentTenant currentTenant) : DbContext(options)
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
+
+    /// <summary>Organizaciones (tabla <c>organizations</c>). Operator-managed, sin RLS: agrupan tenants.</summary>
+    public DbSet<Organization> Organizations => Set<Organization>();
+
+    /// <summary>Membresías usuario↔organización (tabla <c>organization_members</c>). Sin RLS.</summary>
+    public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
+
+    /// <summary>Membresías usuario↔tenant (tabla <c>tenant_members</c>). Sin RLS; ver <see cref="TenantMember"/>.</summary>
+    public DbSet<TenantMember> TenantMembers => Set<TenantMember>();
 
     public DbSet<EmitterProfile> EmitterProfiles => Set<EmitterProfile>();
 

@@ -42,6 +42,9 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             .HasMaxLength(20)
             .IsRequired();
 
+        // Nullable durante la transición: ver el comentario de Tenant.OrganizationId.
+        builder.HasIndex(t => t.OrganizationId);
+
         builder.Property(t => t.CreatedBy).HasMaxLength(256);
         builder.Property(t => t.UpdatedBy).HasMaxLength(256);
         builder.Property(t => t.DeletedBy).HasMaxLength(256);

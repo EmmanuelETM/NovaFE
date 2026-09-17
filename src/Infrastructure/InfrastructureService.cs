@@ -14,6 +14,7 @@ using NovaFE.Infrastructure.Audit.Sql;
 using NovaFE.Infrastructure.Caching;
 using NovaFE.Infrastructure.Notifications;
 using NovaFE.Application.Notifications;
+using NovaFE.Application.Organizations.Interfaces;
 using NovaFE.Infrastructure.Certificates.EfCore;
 using NovaFE.Infrastructure.Certificates.Sql;
 using Dapper;
@@ -28,6 +29,8 @@ using NovaFE.Infrastructure.Persistence;
 using NovaFE.Infrastructure.Persistence.Audit;
 using NovaFE.Infrastructure.Persistence.EfCore;
 using NovaFE.Infrastructure.Ops.Sql;
+using NovaFE.Infrastructure.Organizations.EfCore;
+using NovaFE.Infrastructure.Organizations.Sql;
 using NovaFE.Infrastructure.Representation;
 using NovaFE.Infrastructure.Persistence.Idempotency;
 using NovaFE.Infrastructure.Persistence.Sql;
@@ -190,6 +193,10 @@ public static class InfrastructureService
         // ==========================================
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<ITenantReadRepository, TenantReadRepository>();
+        services.AddScoped<ITenantMemberRepository, TenantMemberRepository>();
+        services.AddScoped<IOrganizationRepository, OrganizationRepository>();
+        services.AddScoped<IOrganizationReadRepository, OrganizationReadRepository>();
+        services.AddScoped<IOrganizationMemberRepository, OrganizationMemberRepository>();
         services.AddScoped<IEmitterProfileRepository, EmitterProfileRepository>();
         services.AddScoped<IEmitterProfileReadRepository, EmitterProfileReadRepository>();
         services.AddScoped<IApiKeyRepository, ApiKeyRepository>();
