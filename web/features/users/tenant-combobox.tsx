@@ -44,7 +44,7 @@ export function TenantCombobox({ value, onChange }: TenantComboboxProps) {
         <span className="truncate">
           {selected
             ? `${selected.legalName} · ${selected.rnc}`
-            : "Elegí un contribuyente…"}
+            : "Elige un contribuyente…"}
         </span>
         <ChevronsUpDown className="opacity-50" aria-hidden />
       </PopoverTrigger>

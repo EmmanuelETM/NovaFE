@@ -47,7 +47,7 @@ export function ForgotPasswordForm() {
   if (sentTo) {
     return (
       <AuthCard
-        title="Revisá tu correo"
+        title="Revisa tu correo"
         description="Si esa cuenta existe, ya le enviamos un enlace."
       >
         <p className="text-center text-sm">

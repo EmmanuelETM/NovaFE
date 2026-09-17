@@ -28,7 +28,7 @@ const schema = z
     password: z
       .string()
       .min(10, "La contraseña debe tener al menos 10 caracteres."),
-    confirmPassword: z.string().min(1, "Confirmá la contraseña."),
+    confirmPassword: z.string().min(1, "Confirma la contraseña."),
   })
   .refine((values) => values.password === values.confirmPassword, {
     message: "Las contraseñas no coinciden.",
@@ -79,10 +79,10 @@ export function SignupForm({ next }: SignupFormProps) {
 
   if (awaitingVerification) {
     return (
-      <AuthCard title="Revisá tu correo" description="Ya casi terminás.">
+      <AuthCard title="Revisa tu correo" description="Ya casi terminas.">
         <p className="text-center text-sm">
           Te enviamos un enlace de verificación a{" "}
-          <span className="font-medium">{awaitingVerification}</span>. Abrilo
+          <span className="font-medium">{awaitingVerification}</span>. Ábrelo
           para activar tu cuenta.
         </p>
         <Link
@@ -97,8 +97,8 @@ export function SignupForm({ next }: SignupFormProps) {
 
   return (
     <AuthCard
-      title="Creá tu cuenta"
-      description="Usá el correo con el que te dieron de alta en NovaFE."
+      title="Crea tu cuenta"
+      description="Usa el correo con el que te dieron de alta en NovaFE."
     >
       <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
         <Field>
@@ -131,7 +131,7 @@ export function SignupForm({ next }: SignupFormProps) {
 
         <Field>
           <FieldLabel htmlFor="confirmPassword">
-            Confirmá la contraseña
+            Confirma la contraseña
           </FieldLabel>
           <Input
             id="confirmPassword"
@@ -148,12 +148,12 @@ export function SignupForm({ next }: SignupFormProps) {
       </form>
 
       <p className="text-muted-foreground text-center text-sm">
-        ¿Ya tenés cuenta?{" "}
+        ¿Ya tienes cuenta?{" "}
         <Link
           href="/login"
           className="text-foreground underline underline-offset-4"
         >
-          Iniciá sesión
+          Inicia sesión
         </Link>
       </p>
     </AuthCard>

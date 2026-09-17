@@ -22,7 +22,7 @@ const schema = z
     newPassword: z
       .string()
       .min(10, "La contraseña debe tener al menos 10 caracteres."),
-    confirmPassword: z.string().min(1, "Confirmá la contraseña."),
+    confirmPassword: z.string().min(1, "Confirma la contraseña."),
   })
   .refine((values) => values.newPassword === values.confirmPassword, {
     message: "Las contraseñas no coinciden.",
@@ -46,7 +46,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       form.setError("confirmPassword", {
         message:
           result.error.message ??
-          "No se pudo restablecer la contraseña. Pedí un enlace nuevo.",
+          "No se pudo restablecer la contraseña. Pide un enlace nuevo.",
       });
       return;
     }
@@ -56,7 +56,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
   return (
     <AuthCard
-      title="Elegí una contraseña nueva"
+      title="Elige una contraseña nueva"
       description="Tiene que tener al menos 10 caracteres."
     >
       <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
@@ -73,7 +73,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
         <Field>
           <FieldLabel htmlFor="confirmPassword">
-            Confirmá la contraseña
+            Confirma la contraseña
           </FieldLabel>
           <Input
             id="confirmPassword"

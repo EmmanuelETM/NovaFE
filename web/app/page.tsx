@@ -48,7 +48,7 @@ export default async function RootPage() {
   return (
     <AccessScreen
       status={0}
-      message="Todavía no tenés acceso a ninguna organización. Contactá a quien te invitó."
+      message="Todavía no tienes acceso a ninguna organización. Contacta a quien te invitó."
     />
   );
 }

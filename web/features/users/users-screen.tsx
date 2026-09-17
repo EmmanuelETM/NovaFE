@@ -90,7 +90,7 @@ function TenantUsersView({
 
       {tenantId === null ? (
         <p className="text-muted-foreground text-sm">
-          Elegí un contribuyente para ver y administrar sus usuarios.
+          Elige un contribuyente para ver y administrar sus usuarios.
         </p>
       ) : (
         <UserTable

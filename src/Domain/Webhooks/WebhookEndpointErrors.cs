@@ -46,7 +46,7 @@ public static class WebhookEndpointErrors
 
     public static Error UnknownEventType(string value) => Error.Validation(
         code: "WebhookEndpoint.UnknownEventType",
-        description: $"'{value}' no es un evento válido. Usá un tipo exacto (p. ej. 'ecf.accepted'), 'ecf.*' o '*'.");
+        description: $"'{value}' no es un evento válido. Usa un tipo exacto (p. ej. 'ecf.accepted'), 'ecf.*' o '*'.");
 
     public static Error NothingToUpdate => Error.Validation(
         code: "WebhookEndpoint.NothingToUpdate",

@@ -109,8 +109,8 @@ export function EmpresaScreen() {
   if (notConfigured) {
     return (
       <p className="text-muted-foreground text-sm">
-        Todavía no tenés un perfil de emisor configurado. Escribile a Nemus para
-        darlo de alta.
+        Todavía no tienes un perfil de emisor configurado. Escríbele a Nemus
+        para darlo de alta.
       </p>
     );
   }

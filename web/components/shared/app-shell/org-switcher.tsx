@@ -195,7 +195,7 @@ export function OrgSwitcher({ user, scope }: OrgSwitcherProps) {
       ) : (
         <span className="text-muted-foreground flex h-full items-center gap-1.5 px-2.5 text-xs">
           <Building2 className="size-3.5 shrink-0" aria-hidden />
-          Elegí una organización
+          Elige una organización
         </span>
       )}
 

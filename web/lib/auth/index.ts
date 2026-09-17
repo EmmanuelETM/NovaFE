@@ -44,8 +44,8 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       await sendEmail({
         to: user.email,
-        subject: "Restablecé tu contraseña — NovaFE",
-        html: `<p>Pediste restablecer tu contraseña. Entrá a <a href="${url}">este enlace</a> para elegir una nueva.</p><p>Si no fuiste vos, ignorá este correo.</p>`,
+        subject: "Restablece tu contraseña - NovaFE",
+        html: `<p>Pediste restablecer tu contraseña. Entra a <a href="${url}">este enlace</a> para elegir una nueva.</p><p>Si no fuiste tú, ignora este correo.</p>`,
       });
     },
   },
@@ -56,8 +56,8 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       await sendEmail({
         to: user.email,
-        subject: "Verificá tu correo — NovaFE",
-        html: `<p>Confirmá tu correo entrando a <a href="${url}">este enlace</a>.</p>`,
+        subject: "Verifica tu correo - NovaFE",
+        html: `<p>Confirma tu correo entrando a <a href="${url}">este enlace</a>.</p>`,
       });
     },
   },

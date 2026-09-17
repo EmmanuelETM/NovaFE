@@ -25,7 +25,7 @@ export default async function AuthErrorPage({
       <p className="text-muted-foreground text-sm">
         {detail === "access_denied"
           ? "Cancelaste el acceso desde el proveedor."
-          : "El proveedor de identidad rechazó la solicitud. Probá de nuevo; si sigue fallando, avisá al equipo."}
+          : "El proveedor de identidad rechazó la solicitud. Prueba de nuevo; si sigue fallando, avisa al equipo."}
       </p>
       <Link href="/login" className={buttonVariants()}>
         Volver a intentar

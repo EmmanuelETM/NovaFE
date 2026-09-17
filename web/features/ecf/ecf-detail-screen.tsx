@@ -123,7 +123,7 @@ export function EcfDetailScreen({ ecfId }: { ecfId: string }) {
                     <li key={index}>
                       {[message.code, message.value]
                         .filter(Boolean)
-                        .join(" — ")}
+                        .join(": ")}
                     </li>
                   ))}
                 </ul>

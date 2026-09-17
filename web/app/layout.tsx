@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s · NovaFE",
   },
   description:
-    "Panel de administración de NovaFE — facturación electrónica (e-CF) para la DGII.",
+    "Panel de administración de NovaFE: facturación electrónica (e-CF) para la DGII.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

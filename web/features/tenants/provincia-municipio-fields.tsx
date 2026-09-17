@@ -61,7 +61,7 @@ export function ProvinciaMunicipioFields<TFieldValues extends FieldValues>({
           }}
           getValue={(p) => p.code}
           getLabel={(p) => p.name}
-          placeholder="Elegí una provincia…"
+          placeholder="Elige una provincia…"
           searchPlaceholder="Buscar provincia…"
           emptyText="Sin resultados."
         />
@@ -77,8 +77,8 @@ export function ProvinciaMunicipioFields<TFieldValues extends FieldValues>({
           getLabel={(m) => m.name}
           placeholder={
             selectedProvincia
-              ? "Elegí un municipio…"
-              : "Elegí una provincia primero"
+              ? "Elige un municipio…"
+              : "Elige una provincia primero"
           }
           searchPlaceholder="Buscar municipio…"
           emptyText="Sin resultados."

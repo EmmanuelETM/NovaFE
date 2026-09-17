@@ -122,7 +122,7 @@ export function ApiKeysScreen() {
       emptyState={{
         title: "Sin API keys acuñadas.",
         description:
-          "Tu ERP necesita una para emitir contra NovaFE — creá la primera.",
+          "Tu ERP necesita una para emitir contra NovaFE. Crea la primera.",
       }}
       toolbarActions={<CreateApiKeyDialog />}
       getRowId={(key) => key.id}

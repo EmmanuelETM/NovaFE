@@ -11,7 +11,7 @@ public static class OrganizationErrors
 {
     public static Error NotAllowed => Error.Forbidden(
         code: "Organization.NotAllowed",
-        description: "No tenés permiso para administrar los miembros de esta organización.");
+        description: "No tienes permiso para administrar los miembros de esta organización.");
 
     public static Error NotFound(Guid id) => Error.NotFound(
         code: "Organization.NotFound",
@@ -47,7 +47,7 @@ public static class OrganizationErrors
 
     public static Error CannotRemoveLastOwner => Error.Conflict(
         code: "Organization.CannotRemoveLastOwner",
-        description: "No podés quitar o degradar al último owner de la organización.");
+        description: "No puedes quitar o degradar al último owner de la organización.");
 
     public static Error MemberUserNotFound(string email) => Error.NotFound(
         code: "Organization.MemberUserNotFound",

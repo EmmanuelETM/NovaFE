@@ -63,7 +63,7 @@ export default async function OrganizationLayout({
     return (
       <AccessScreen
         status={403}
-        message="No encontramos esa organización, o no tenés acceso."
+        message="No encontramos esa organización, o no tienes acceso."
       />
     );
   }

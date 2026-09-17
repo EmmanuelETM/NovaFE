@@ -102,11 +102,11 @@ export function LoginForm({ providers, next, justReset }: LoginFormProps) {
   return (
     <AuthCard
       title="Entrar a NovaFE"
-      description="Usá la cuenta con la que te dieron de alta."
+      description="Usa la cuenta con la que te dieron de alta."
     >
       {justReset && (
         <p className="text-center text-sm text-emerald-600 dark:text-emerald-400">
-          Contraseña actualizada. Iniciá sesión con tu contraseña nueva.
+          Contraseña actualizada. Inicia sesión con tu contraseña nueva.
         </p>
       )}
 
@@ -166,12 +166,12 @@ export function LoginForm({ providers, next, justReset }: LoginFormProps) {
       </form>
 
       <p className="text-muted-foreground text-center text-sm">
-        ¿No tenés cuenta?{" "}
+        ¿No tienes cuenta?{" "}
         <Link
           href="/signup"
           className="text-foreground underline underline-offset-4"
         >
-          Creá una
+          Crea una
         </Link>
       </p>
 

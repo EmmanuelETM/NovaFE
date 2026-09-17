@@ -56,10 +56,10 @@ export function AccessScreen({ status, message }: AccessScreenProps) {
 
         <p className="text-muted-foreground text-sm">
           {sinSesion
-            ? "Iniciá sesión para entrar al panel."
+            ? "Inicia sesión para entrar al panel."
             : sinAlta
-              ? "Tu cuenta todavía no está dada de alta. Pedile a un administrador que te registre con este correo."
-              : "El servidor no respondió. Si vuelve a pasar, avisale al equipo."}
+              ? "Tu cuenta todavía no está dada de alta. Pídele a un administrador que te registre con este correo."
+              : "El servidor no respondió. Si vuelve a pasar, avísale al equipo."}
         </p>
       </div>
 

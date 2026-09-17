@@ -48,7 +48,7 @@ export default async function PlanPage({
     return (
       <AccessScreen
         status={403}
-        message="No encontramos esa organización, o no tenés acceso."
+        message="No encontramos esa organización, o no tienes acceso."
       />
     );
   }
@@ -70,8 +70,8 @@ export default async function PlanPage({
       </div>
 
       <p className="text-muted-foreground text-sm">
-        ¿Necesitás cambiar de plan? Escribile a tu contacto en Nemus Systems por
-        ahora — el autoservicio de facturación todavía no está construido.
+        ¿Necesitas cambiar de plan? Escríbele a tu contacto en Nemus Systems por
+        ahora; el autoservicio de facturación todavía no está construido.
       </p>
     </div>
   );

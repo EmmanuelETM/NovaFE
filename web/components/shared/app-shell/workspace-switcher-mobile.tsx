@@ -53,7 +53,7 @@ export function WorkspaceSwitcherMobile({
   const nombre =
     scope.kind === "tenant"
       ? (user.tenantName ?? "Tu contribuyente")
-      : (active?.organizationName ?? "Elegí una organización");
+      : (active?.organizationName ?? "Elige una organización");
 
   return (
     <Drawer open={open} onOpenChange={setOpen} showSwipeHandle>
@@ -94,7 +94,7 @@ export function WorkspaceSwitcherMobile({
         <DrawerHeader className="sr-only">
           <DrawerTitle>Cambiar de espacio de trabajo</DrawerTitle>
           <DrawerDescription>
-            Elegí un tenant o una organización.
+            Elige un tenant o una organización.
           </DrawerDescription>
         </DrawerHeader>
 

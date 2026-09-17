@@ -60,13 +60,13 @@ export default async function OrganizacionesPage() {
             Organizaciones
           </h1>
           <p className="text-muted-foreground text-sm">
-            Todas las organizaciones a las que tenés acceso.
+            Todas las organizaciones a las que tienes acceso.
           </p>
         </div>
 
         {user.organizations.length === 0 ? (
           <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed p-10 text-center text-sm">
-            Todavía no pertenecés a ninguna organización.
+            Todavía no perteneces a ninguna organización.
           </div>
         ) : (
           <div className="flex flex-col gap-2">

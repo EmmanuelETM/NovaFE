@@ -34,7 +34,7 @@ public sealed class EcfPreviewController(
     DevEcfSigner devSigner) : ApiController
 {
     private const string SignedNote =
-        "Firmado con un certificado autofirmado efímero — la DGII no aceptaría esta firma.";
+        "Firmado con un certificado autofirmado efímero. La DGII no aceptaría esta firma.";
 
     /// <summary>Lista los ejemplos disponibles (uno por tipo de comprobante).</summary>
     [HttpGet("samples")]

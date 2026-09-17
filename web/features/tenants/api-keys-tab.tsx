@@ -235,7 +235,7 @@ function CreateApiKeyDialog({ tenantId }: { tenantId: string }) {
               <DialogTitle>Nueva API key</DialogTitle>
               <DialogDescription>
                 Requiere certificado activo y un rango de e-NCF para el ambiente
-                elegido — si falta alguno, la petición lo dice.
+                elegido. Si falta alguno, la petición lo dice.
               </DialogDescription>
             </DialogHeader>
 

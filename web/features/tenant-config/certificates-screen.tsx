@@ -93,7 +93,7 @@ export function CertificatesScreen() {
       emptyState={{
         title: "Sin certificados cargados.",
         description:
-          "Necesitás uno vigente para firmar y emitir — subí el .p12 de tu contribuyente.",
+          "Necesitas uno vigente para firmar y emitir. Sube el .p12 de tu contribuyente.",
       }}
       toolbarActions={<UploadCertificateDialog />}
       getRowId={(certificate) => certificate.id}

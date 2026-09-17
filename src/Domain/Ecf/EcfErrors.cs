@@ -111,7 +111,7 @@ public static class EcfErrors
 
     public static Error Norma1007NotApplicable(int documentType) => Error.Validation(
         code: "Ecf.Norma1007NotApplicable",
-        description: $"El Indicador Norma 10-07 solo aplica en el tipo {documentType} para descuentos globales sobre la tasa 1 (18 %) — y solo en los tipos 31/32/33/34/45.");
+        description: $"El Indicador Norma 10-07 solo aplica en el tipo {documentType} para descuentos globales sobre la tasa 1 (18 %), y solo en los tipos 31/32/33/34/45.");
 
     public static Error InvalidAdditionalTaxCode(int lineNumber) => Error.Validation(
         code: "Ecf.InvalidAdditionalTaxCode",
