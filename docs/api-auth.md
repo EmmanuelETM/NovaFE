@@ -1,14 +1,18 @@
 # Autenticación de la API (Módulo 14)
 
-**Estado: implementado (API keys + ambiente + rol en la key + auditoría).** La
-API distingue dos audiencias y las autentica por separado. La auditoría
-inmutable (RF-14.4) tiene su propio doc: `docs/audit-log.md`.
+**Estado: implementado (API keys + ambiente + rol en la key + auditoría +
+login humano).** La API distingue **tres** audiencias y las autentica por
+separado. La auditoría inmutable (RF-14.4) tiene su propio doc:
+`docs/audit-log.md`.
 
 | Audiencia | Recursos | Credencial |
 |---|---|---|
-| **Cliente** (contribuyente) | `POST /api/v1/ecf`, secuencias, certificados, `GET /dgii/connection` | API key — header `X-API-Key` |
-| **Operador** del SaaS | `/api/v1/tenants/**` (alta de contribuyentes, perfil de emisor, API keys) | Clave estática — header `X-Admin-Key` contra `Security:AdminApiKey` |
+| **Cliente** (contribuyente, máquina a máquina) | `POST /api/v1/ecf`, secuencias, certificados, `GET /dgii/connection` | API key — header `X-API-Key` |
+| **Humano** (operador o empleado de un contribuyente, vía el dashboard) | Todo lo self-service del tenant/organización activos, más `/nemus/**` si es operador | Sesión de Better Auth → el BFF reenvía `X-Internal-Key` + `X-Acting-*` — ver `docs/human-auth.md` |
+| **Operador** del SaaS (rompe-cristal, sin sesión) | `/api/v1/tenants/**` estructural (alta de contribuyentes), `/api/v1/organizations/**` estructural | Clave estática — header `X-Admin-Key` contra `Security:AdminApiKey` |
 
+Un humano y una API key llegan a las **mismas** políticas (`TenantConfig` /
+`EcfIssue` / `EcfRead`) — ver "RBAC" más abajo, ninguna distingue el origen.
 Health, `/openapi`, `/scalar` quedan anónimos. Los controllers `dev/**`
 (`SandboxController`, `EcfPreviewController`) solo existen en Development.
 
@@ -51,11 +55,15 @@ Health, `/openapi`, `/scalar` quedan anónimos. Los controllers `dev/**`
 
 ## RBAC (RF-14.5)
 
-El rol también vive en la API key — no hay usuarios/login todavía, así que el
-permiso se asigna por credencial, igual que el ambiente. `ApiKeyRole`
-(`src/Domain/Tenants/ApiKeyRole.cs`) tiene los 3 roles de contribuyente del Plan
-Técnico (`admin_sistema`, el cuarto rol, es exclusivo del operador y usa otro
-esquema de auth por completo):
+Escrito cuando todavía no había login humano — **ya no es así**: desde el
+corte de auth humana (`docs/human-auth.md`) sí hay usuarios/login, con su
+propio rol resuelto en cada sesión. Para una API key el rol sigue viviendo
+en la credencial (no hay "sesión" que resolver); para un humano, el rol
+efectivo sale de `tenant_members`/`organization_members`, no de la key.
+`ApiKeyRole` (`src/Domain/Tenants/ApiKeyRole.cs`) tiene los 3 roles de
+contribuyente del Plan Técnico (`admin_sistema`, el cuarto rol, es exclusivo
+del operador/humano y usa otro esquema de auth por completo — es
+`PlatformRole`, un enum **separado**, ver `docs/human-auth.md`):
 
 | Rol | Puede |
 |---|---|
@@ -68,23 +76,41 @@ esquema de auth por completo):
   valor válido aquí (es del operador).
 - El handler de API key publica el rol como `ClaimTypes.Role`; las 3 políticas
   (`TenantConfig`, `EcfIssue`, `EcfRead` en `SecuritySchemes.cs`) exigen tenant +
-  uno de los roles permitidos vía `RequireRole(...)`. `CertificatesController`,
-  `SequencesController` y `DgiiController` usan `TenantConfig` a nivel de clase;
-  `EcfController` mezcla `EcfIssue` (emitir, `retry`) y `EcfRead` (el resto) por
-  acción.
+  uno de los roles permitidos vía `RequireRole(...)`. `DgiiController` y
+  `AuditLogController` usan `TenantConfig` a nivel de clase (o de la única
+  acción); `CertificatesController`, `SequencesController` y
+  `ApiKeysController` la ponen **por acción**, porque cada una mezcla
+  acciones self-service (`TenantConfig`) con las `...ForTenant` de operador
+  (`Operator`) **en el mismo controller** (rutas reescritas con `~/api/v.../tenants/{tenantid}/...`).
+  `EcfController` mezcla `EcfIssue` (emitir, `retry`) y `EcfRead` (el resto)
+  por acción.
 - El camino `X-Tenant-Id` de Development (`DevTenantHeaderAuthenticationHandler`)
   publica siempre `admin_tenant` — es un atajo de confianza que solo existe ahí,
   no tiene sentido replicar el RBAC de las keys reales.
 - Para cambiar el rol de una key existente: se revoca y se acuña otra (mismo
   patrón que cambiar de ambiente).
 
-### Endpoints (operador)
+### Endpoints
+
+Acuñar, listar y revocar una API key, y leer el propio audit log, son
+**self-service** desde el corte operador/cliente
+(`docs/multi-tenancy-hierarchy.md`, Fase 2) — el operador ya no es un cuello
+de botella para esto. El operador conserva las rutas equivalentes
+`~/tenants/{id}/...` para soporte, mismo patrón dual que
+`CertificatesController`.
 
 ```
-POST   /api/v1/tenants/{id}/api-keys            → 201 { key: {...}, token: "sk_nfe_test_…" }
-GET    /api/v1/tenants/{id}/api-keys            → 200 [ { id, prefix, label, environment, role, … } ]  (sin tokens)
-DELETE /api/v1/tenants/{id}/api-keys/{keyid}    → 204                                            (revoca; deja de autenticar ya)
-GET    /api/v1/tenants/{id}/audit-log           → 200 { items: [...], totalCount, page, pageSize } (RF-14.4, ver docs/audit-log.md)
+# Self-service (política TenantConfig, humano o API key admin_tenant)
+POST   /api/v1/api-keys                          → 201 { key: {...}, token: "sk_nfe_test_…" }
+GET    /api/v1/api-keys                          → 200 [ { id, prefix, label, environment, role, … } ]  (sin tokens)
+DELETE /api/v1/api-keys/{keyid}                  → 204                                            (revoca; deja de autenticar ya)
+GET    /api/v1/audit-log                         → 200 { items: [...], totalCount, page, pageSize } (RF-14.4, ver docs/audit-log.md)
+
+# Operador (soporte / onboarding antes de la primera key)
+POST   /api/v1/tenants/{id}/api-keys             → igual forma que arriba
+GET    /api/v1/tenants/{id}/api-keys
+DELETE /api/v1/tenants/{id}/api-keys/{keyid}
+GET    /api/v1/tenants/{id}/audit-log            → el de cualquier contribuyente
 ```
 
 Cuerpo del `POST` (`role` obligatorio, el resto opcional):

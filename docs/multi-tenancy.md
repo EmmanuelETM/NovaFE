@@ -18,17 +18,33 @@ public sealed class Certificate : Entity<Guid>, ITenantOwned, IAuditableEntity
 ```
 
 `Tenant` **no** es `ITenantOwned` — es la raíz. Vive en el esquema compartido y
-lo administra el operador del SaaS.
+lo administra el operador del SaaS. Por encima de `Tenant` está `Organization`
+(la jerarquía `User -> Organization -> Tenant`, ver
+`docs/multi-tenancy-hierarchy.md`): tampoco es `ITenantOwned` — un tenant
+pertenece a una organización, no al revés, así que no tendría sentido
+filtrarla por `tenant_id`. `organizations` vive sin RLS, igual que `tenants`.
 
 ## 2. La resolución del tenant en cada petición
 
-`ICurrentTenant` (Application) expone el tenant de la petición. Lo llena
-`TenantResolutionMiddleware` (Service). **Hoy** lee el header `X-Tenant-Id`;
-**mañana**, cuando exista autenticación por API key, lo resolverá de la key sin
-tocar nada más — igual que `ICurrentUser` ya funciona sin autenticación.
+`ICurrentTenant` (Application) expone el tenant de la petición, ya resuelto.
+Lo llena `TenantResolutionMiddleware` (Service) leyendo el claim `tenant_id`
+del principal autenticado — **no le importa qué esquema lo puso ahí**, corre
+después de `UseAuthentication` y solo copia el claim a `ICurrentTenant`:
+
+- **API key** (`X-API-Key`, RF-14.5): el tenant es el de la key, fijo.
+- **Humano vía el dashboard** (`X-Internal-Key`/`InternalKeyAuthenticationHandler`):
+  el tenant se resuelve contra `tenant_members`/`organization_members` en
+  cada login — un usuario puede tener acceso a varios, y cuál es "el activo"
+  lo decide `X-Acting-Tenant-Id` (o un default si no lo manda). El detalle de
+  esa resolución vive en `docs/human-auth.md`, no se repite acá: para esta
+  capa de aislamiento **da igual** cómo se decidió el tenant, el claim ya
+  viene resuelto cuando llega este middleware.
+- **`X-Tenant-Id` sin credencial**: solo en Development
+  (`DevTenantHeaderAuthenticationHandler`), para probar sin una API key real.
 
 Fuera de una petición con tenant (health checks, endpoints de operador como
-`TenantsController`, jobs de fondo) `ICurrentTenant.TenantId` es `null`.
+`TenantsController`/`OrganizationsController`, jobs de fondo)
+`ICurrentTenant.TenantId` es `null`.
 
 ## 3. Las tres capas de aislamiento
 
