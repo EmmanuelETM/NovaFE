@@ -1,23 +1,33 @@
-import Link from "next/link";
-import { Building } from "lucide-react";
+import { cookies } from "next/headers";
 
-import { NavUser } from "@/components/shared/app-shell";
+import {
+  AppSidebar,
+  AppSidebarProvider,
+  AppTopbar,
+  CommandPalette,
+} from "@/components/shared/app-shell";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { AccessScreen } from "@/features/auth/access-screen";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
-
-export const dynamic = "force-dynamic";
-
-const TABS = [
-  { href: "", label: "General" },
-  { href: "/miembros", label: "Miembros" },
-  { href: "/plan", label: "Plan" },
-] as const;
+import type { Scope } from "@/lib/navigation";
 
 /**
- * El shell de una organización (Fase 3) — sin sidebar de tenant: acá no hay
- * un tenant activo, es la organización la que agrupa varios.
+ * El nombre de la cookie donde `SidebarProvider` guarda si está abierto o colapsado.
+ * Duplicado del componente generado a propósito — ver el mismo comentario en
+ * `app/tenant/[tenantId]/layout.tsx`.
+ */
+const SIDEBAR_COOKIE = "sidebar_state";
+
+/** Depende de quién está mirando (`GET /users/me`), así que no se prerrenderiza. */
+export const dynamic = "force-dynamic";
+
+/**
+ * El esqueleto de las pantallas de una organización (Fase 4) — mismo shell
+ * compartido que `/tenant/[tenantId]` y `/nemus/**` (`AppSidebarProvider` +
+ * `AppSidebar` + `AppTopbar`), parametrizado con `scope: { kind: "organization" }`
+ * en vez de un header a mano con pestañas planas.
  *
  * `params.orgSlug` se resuelve contra `UserProfileDto.organizations` (ya lo
  * trae `/users/me`, sin pegarle de nuevo al backend por id) — no existe un
@@ -58,34 +68,21 @@ export default async function OrganizationLayout({
     );
   }
 
+  const store = await cookies();
+  const scope: Scope = { kind: "organization", orgSlug };
+
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-        <div className="bg-muted text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg">
-          <Building className="size-4" aria-hidden />
-        </div>
-        <span className="truncate text-sm font-medium">
-          {org.organizationName}
-        </span>
+    <AppSidebarProvider
+      defaultOpen={store.get(SIDEBAR_COOKIE)?.value !== "false"}
+    >
+      <AppSidebar user={user} scope={scope} />
 
-        <nav className="ml-6 flex items-center gap-1">
-          {TABS.map((tab) => (
-            <Link
-              key={tab.label}
-              href={`/org/${orgSlug}${tab.href}`}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg px-3 py-1.5 text-sm transition-colors"
-            >
-              {tab.label}
-            </Link>
-          ))}
-        </nav>
+      <SidebarInset className="min-w-0 overflow-hidden">
+        <AppTopbar user={user} scope={scope} />
+        <CommandPalette user={user} scope={scope} />
 
-        <div className="ml-auto">
-          <NavUser user={user} />
-        </div>
-      </header>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-    </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+      </SidebarInset>
+    </AppSidebarProvider>
   );
 }

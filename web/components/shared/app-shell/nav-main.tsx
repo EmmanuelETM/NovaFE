@@ -15,20 +15,20 @@ import {
 import {
   NAVIGATION,
   findNavItem,
-  tenantHref,
+  scopedHref,
   visibleNavItems,
   type NavItem,
+  type Scope,
 } from "@/lib/navigation";
 
 interface NavMainProps {
   /** Nivel del usuario, resuelto en el servidor. */
   role: number;
   /**
-   * El tenant activo (Fase 3), o `undefined` en `/nemus/**` (sin tenant). No
-   * es solo para armar los `href`: decide **qué ámbito** de `NAVIGATION` se
-   * pinta — con tenant, las secciones de tenant; sin él, solo "Nemus Admin".
+   * El contexto activo. No es solo para armar los `href`: decide **qué
+   * ámbito** de `NAVIGATION` se pinta — tenant, organización, u operador.
    */
-  tenantId?: string;
+  scope: Scope;
 }
 
 /**
@@ -39,7 +39,7 @@ interface NavMainProps {
  * primero los enlaces de todos y luego se irían los que no corresponden, y un menú que se
  * reacomoda medio segundo después se siente como un fallo.
  */
-export function NavMain({ role, tenantId }: NavMainProps) {
+export function NavMain({ role, scope }: NavMainProps) {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
 
@@ -48,11 +48,7 @@ export function NavMain({ role, tenantId }: NavMainProps) {
   return (
     <>
       {NAVIGATION.filter(
-        (section) =>
-          !section.hideFromSidebar &&
-          (tenantId
-            ? section.scope !== "operator"
-            : section.scope === "operator"),
+        (section) => (section.scope ?? "tenant") === scope.kind,
       ).map((section) => {
         const visibles = visibleNavItems(section.items, role);
 
@@ -68,15 +64,11 @@ export function NavMain({ role, tenantId }: NavMainProps) {
                 <SidebarMenuItem key={item.href}>
                   {item.ready ? (
                     <SidebarMenuButton
-                      isActive={item.href === actual?.href}
+                      isActive={item === actual}
                       tooltip={item.label}
                       render={
                         <Link
-                          href={
-                            tenantId
-                              ? tenantHref(tenantId, item.href)
-                              : item.href
-                          }
+                          href={scopedHref(scope, item.href)}
                           onClick={() => setOpenMobile(false)}
                         />
                       }

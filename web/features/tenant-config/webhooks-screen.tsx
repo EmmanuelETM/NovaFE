@@ -111,7 +111,11 @@ export function WebhooksScreen() {
       state={STATIC_TABLE_STATE}
       onStateChange={() => {}}
       searchable={false}
-      emptyState={{ title: "Sin webhooks registrados." }}
+      emptyState={{
+        title: "Sin webhooks registrados.",
+        description:
+          "Registrá un endpoint para que te avisemos en tiempo real del ciclo de vida de tus e-CF.",
+      }}
       toolbarActions={<CreateWebhookDialog />}
       getRowId={(webhook) => webhook.id}
     />

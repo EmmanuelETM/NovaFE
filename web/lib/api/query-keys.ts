@@ -104,6 +104,12 @@ export const queryKeys = {
     list: (tenantId: string) => ["webhooks", tenantId, "list"] as const,
   },
 
+  /** `GET /api-keys`: API keys del contribuyente actual (self-service). */
+  myApiKeys: {
+    all: (tenantId: string) => ["my-api-keys", tenantId] as const,
+    list: (tenantId: string) => ["my-api-keys", tenantId, "list"] as const,
+  },
+
   /** `GET /emitter-profile`: perfil fiscal del emisor del contribuyente actual (self-service). */
   myEmitterProfile: (tenantId: string) =>
     ["my-emitter-profile", tenantId] as const,

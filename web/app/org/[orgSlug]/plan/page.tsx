@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 
+import { PageHeader } from "@/components/shared/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { AccessScreen } from "@/features/auth/access-screen";
 import { PLAN_OPTIONS } from "@/features/tenants/options";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
+import { orgHref } from "@/lib/navigation";
 
 export const metadata: Metadata = {
   title: "Plan",
@@ -53,15 +55,9 @@ export default async function PlanPage({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Plan</h1>
-        <p className="text-muted-foreground text-sm">
-          Tu plan de NovaFE, consolidado para todos los tenants de esta
-          organización.
-        </p>
-      </header>
+      <PageHeader href={orgHref(orgSlug, "/plan")} />
 
-      <div className="bg-card flex items-center justify-between rounded-2xl border p-6">
+      <div className="bg-card border-border/60 flex items-center justify-between rounded-2xl border p-6 shadow-xs">
         <div className="flex flex-col gap-1">
           <span className="text-lg font-semibold">{planLabel(org.plan)}</span>
           <span className="text-muted-foreground text-sm">

@@ -165,9 +165,9 @@ public sealed class OrganizationsController(
         => (await assignTenant.Execute(new AssignTenantToOrganizationCommand(id, tenantId), ct))
             .Match(_ => NoContent(), Problem);
 
-    /// <summary>Los contribuyentes (tenants/"proyectos") de la organización.</summary>
+    /// <summary>Los contribuyentes (tenants/"proyectos") de la organización. Self-service para cualquier miembro (o el operador).</summary>
     [HttpGet("{id:guid}/tenants")]
-    [Authorize(Policy = SecurityPolicies.Operator)]
+    [Authorize(Policy = SecurityPolicies.Authenticated)]
     [ProducesResponseType(typeof(PagedResult<TenantSummaryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ListTenants(

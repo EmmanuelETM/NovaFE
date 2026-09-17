@@ -71,14 +71,18 @@ public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : Inte
     [RequiresDockerFact]
     public async Task Assign_tenant_then_list_shows_it()
     {
-        var orgId = await RegisterOrganizationAsync("Acme", "acme-tenants");
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-tenants", ownerEmail: "owner@acme-tenants.do");
         var tenantId = await RegisterTenantAsync("130444555");
 
         var assign = await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}", null);
         assign.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
-        var tenants = await LeerAsync<PagedResponse<TenantSummaryResponse>>(
-            await Client.GetAsync($"/api/v1/organizations/{orgId}/tenants"));
+        // Self-service: el listado lo pide un miembro autenticado, no el operador implícito.
+        ActAsHuman("auth-owner", "owner@acme-tenants.do");
+        var list = await Client.GetAsync($"/api/v1/organizations/{orgId}/tenants");
+        list.StatusCode.ShouldBe(HttpStatusCode.OK, await list.Content.ReadAsStringAsync());
+
+        var tenants = await LeerAsync<PagedResponse<TenantSummaryResponse>>(list);
 
         tenants!.Items.ShouldHaveSingleItem().Id.ShouldBe(tenantId);
     }
@@ -128,6 +132,34 @@ public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : Inte
         var allowed = await Client.PostAsJsonAsync(
             $"/api/v1/organizations/{orgId}/members", new { email = "third@acme.do", role = "member" });
         allowed.StatusCode.ShouldBe(HttpStatusCode.Created);
+    }
+
+    [RequiresDockerFact]
+    public async Task A_member_can_list_the_organizations_tenants_but_an_outsider_cannot()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-tenants-self-service", ownerEmail: "owner@acme.do");
+        await RegisterOrganizationAsync("Other", "other-org-member", ownerEmail: "member@acme.do");
+        await RegisterOrganizationAsync("Third", "other-org-outsider", ownerEmail: "outsider@acme.do");
+        var tenantId = await RegisterTenantAsync("130444556");
+
+        ActAsHuman("auth-owner", "owner@acme.do");
+        var assign = await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}", null);
+        assign.StatusCode.ShouldBe(HttpStatusCode.NoContent, await assign.Content.ReadAsStringAsync());
+        var addMember = await Client.PostAsJsonAsync(
+            $"/api/v1/organizations/{orgId}/members", new { email = "member@acme.do", role = "member" });
+        addMember.StatusCode.ShouldBe(HttpStatusCode.Created, await addMember.Content.ReadAsStringAsync());
+
+        // Un miembro cualquiera (no solo owner/admin) puede listar los tenants de su organización.
+        ActAsHuman("auth-member", "member@acme.do");
+        var asMember = await Client.GetAsync($"/api/v1/organizations/{orgId}/tenants");
+        asMember.StatusCode.ShouldBe(HttpStatusCode.OK, await asMember.Content.ReadAsStringAsync());
+        (await LeerAsync<PagedResponse<TenantSummaryResponse>>(asMember))!
+            .Items.ShouldHaveSingleItem().Id.ShouldBe(tenantId);
+
+        // Alguien sin membresía en esta organización no puede.
+        ActAsHuman("auth-outsider", "outsider@acme.do");
+        (await Client.GetAsync($"/api/v1/organizations/{orgId}/tenants"))
+            .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     private sealed record OrganizationDetailResponse(Guid Id, string Name, string Slug, string Plan, string Status);

@@ -3,13 +3,25 @@
 Backlog vivo del refactor `User -> Organization -> Tenant` (el prompt original lo
 llamaba `User -> Organization -> Project`; `Tenant` **es** el "Project", por
 eso la tabla de membresía se llama `tenant_members`, no `project_members`).
-Estado al 2026-09-17: **Fases 1, 2 y 3 completas** (backend compila, 677
-unitarias + 202 de integración en verde; frontend con `typecheck`/`lint`
-limpios). Ver "Estado de la base de datos" más abajo — **la rama `dev` de
-Neon ya tiene el esquema de Fase 1 aplicado** (sin querer, detalle abajo);
-Fase 2 se sumó ahí como migración nueva hacia adelante. Fase 3 no agregó
-columnas nuevas (solo expone `slug`/`plan`/`status` de `organizations`, que
-ya existían, en `/users/me`).
+Estado al 2026-09-17: **Fases 1, 2, 3 y 4 completas** (backend compila, 677
+unitarias + 203 de integración en verde; frontend con `typecheck`/`lint`/
+`format:check` limpios). Ver "Estado de la base de datos" más abajo — **la
+rama `dev` de Neon ya tiene el esquema de Fase 1 aplicado** (sin querer,
+detalle abajo); Fase 2 se sumó ahí como migración nueva hacia adelante.
+Fase 3 no agregó columnas nuevas (solo expone `slug`/`plan`/`status` de
+`organizations`, que ya existían, en `/users/me`). **Fase 4 tampoco agregó
+columnas ni tablas** — un solo cambio de autorización (`GET
+/organizations/{id}/tenants` pasa de operador a self-service, mismo patrón
+que `ListOrganizationMembersUseCase`) y, del lado del frontend, la
+reestructuración completa de la UI al estándar Supabase: breadcrumb con
+`OrgSwitcher`/`TenantSwitcher` encadenados en el topbar (reemplazan al viejo
+`NavTenant`, que mezclaba cambiar de contexto con administración — un
+antipatrón corregido en esta fase), sidebar de tenant categorizado
+(Operativo / Configuración fiscal / Desarrolladores & integración /
+Ajustes), sidebar de organización real (ya no pestañas planas), paleta de
+comandos `⌘K` (navegación pura, sin buscador de datos) y grid de tenants en
+`/org/[orgSlug]`. Detalle completo en memoria del proyecto
+(`multi-tenancy-hierarchy-fase1.md`).
 
 ## Decisiones de Fase 0 (confirmadas)
 

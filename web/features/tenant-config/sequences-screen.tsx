@@ -121,7 +121,11 @@ export function SequencesScreen() {
       state={STATIC_TABLE_STATE}
       onStateChange={() => {}}
       searchable={false}
-      emptyState={{ title: "Sin secuencias registradas." }}
+      emptyState={{
+        title: "Sin secuencias registradas.",
+        description:
+          "Necesitás un rango de e-NCF autorizado por la DGII para poder emitir.",
+      }}
       toolbarActions={<RegisterSequenceDialog />}
       getRowId={(sequence) => sequence.id}
     />

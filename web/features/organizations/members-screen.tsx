@@ -53,7 +53,7 @@ import {
 } from "@/components/shared/data-table";
 import { applyFieldErrors } from "@/lib/api/form-errors";
 import { selectItems } from "@/lib/select-items";
-import { formatCalendarDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 
 import { ORGANIZATION_ROLE_OPTIONS, organizationRoleLabel } from "./types";
 import type { OrganizationMember } from "./types";
@@ -96,7 +96,7 @@ export function MembersScreen({
     }),
     ch.accessor("createdAt", {
       header: "Desde",
-      cell: (cell) => formatCalendarDate(cell.getValue()),
+      cell: (cell) => formatDate(cell.getValue()),
     }),
     ...(canManage
       ? [

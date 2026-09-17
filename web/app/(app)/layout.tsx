@@ -4,12 +4,14 @@ import {
   AppSidebar,
   AppSidebarProvider,
   AppTopbar,
+  CommandPalette,
 } from "@/components/shared/app-shell";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { AccessScreen } from "@/features/auth/access-screen";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
+import type { Scope } from "@/lib/navigation";
 
 /**
  * El nombre de la cookie donde `SidebarProvider` guarda si está abierto o colapsado.
@@ -65,6 +67,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   }
 
   const store = await cookies();
+  const scope: Scope = { kind: "operator" };
 
   return (
     /* El alto fijo y la excepción del punto de venta viven en `AppSidebarProvider`: las
@@ -72,13 +75,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <AppSidebarProvider
       defaultOpen={store.get(SIDEBAR_COOKIE)?.value !== "false"}
     >
-      <AppSidebar user={user} />
+      <AppSidebar user={user} scope={scope} />
 
       {/* El scroll vive aquí y no en el documento: así la barra superior y el sidebar se
           quedan quietos sin `sticky`, y el redondeado del panel recorta lo que pasa por
           debajo en vez de dejarlo asomar por la esquina. */}
       <SidebarInset className="min-w-0 overflow-hidden">
-        <AppTopbar user={user} />
+        <AppTopbar user={user} scope={scope} />
+        <CommandPalette user={user} scope={scope} />
 
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </SidebarInset>

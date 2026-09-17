@@ -1,6 +1,11 @@
 import type { components } from "@/lib/api/schema";
 
-export type { Certificate, NcfSequence } from "@/features/tenants/types";
+export type {
+  ApiKey,
+  ApiKeyCreated,
+  Certificate,
+  NcfSequence,
+} from "@/features/tenants/types";
 
 /** Un endpoint de webhook (`WebhookEndpointDto`). Nunca incluye el `secret`. */
 export type WebhookEndpoint = components["schemas"]["WebhookEndpointDto"];

@@ -90,7 +90,11 @@ export function CertificatesScreen() {
       state={STATIC_TABLE_STATE}
       onStateChange={() => {}}
       searchable={false}
-      emptyState={{ title: "Sin certificados cargados." }}
+      emptyState={{
+        title: "Sin certificados cargados.",
+        description:
+          "Necesitás uno vigente para firmar y emitir — subí el .p12 de tu contribuyente.",
+      }}
       toolbarActions={<UploadCertificateDialog />}
       getRowId={(certificate) => certificate.id}
     />

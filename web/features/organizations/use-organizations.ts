@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/problem";
 import { queryKeys } from "@/lib/api/query-keys";
+import type { TenantPage } from "@/features/tenants/types";
 
 import type { OrganizationMember } from "./types";
 
@@ -19,6 +20,22 @@ export function organizationErrorMessage(error: unknown): string {
     return error.message;
   }
   return "No se pudo completar la acción.";
+}
+
+/**
+ * Los tenants ("proyectos"/RNCs) de la organización. Self-service desde
+ * Fase 4: `GET /organizations/{id}/tenants` ya no es operator-only —
+ * cualquier miembro de la organización puede verlos.
+ */
+export function useOrganizationTenants(organizationId: string) {
+  return useQuery({
+    queryKey: queryKeys.organizations.tenants(organizationId),
+    queryFn: () =>
+      api.get<TenantPage>(`/organizations/${organizationId}/tenants`, {
+        page: 1,
+        pageSize: 100,
+      }),
+  });
 }
 
 /** Los miembros de la organización. Self-service: cualquier miembro puede verlos. */

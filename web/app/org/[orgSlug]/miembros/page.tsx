@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 
+import { PageHeader } from "@/components/shared/app-shell";
 import { AccessScreen } from "@/features/auth/access-screen";
 import type { CurrentUser } from "@/features/auth/use-current-user";
 import { MembersScreen } from "@/features/organizations/members-screen";
 import { ApiError } from "@/lib/api/problem";
 import { apiFetch } from "@/lib/api/server";
+import { orgHref } from "@/lib/navigation";
 
 export const metadata: Metadata = {
-  title: "Miembros",
+  title: "Equipo",
 };
 
 export default async function MiembrosPage({
@@ -44,12 +46,7 @@ export default async function MiembrosPage({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Miembros</h1>
-        <p className="text-muted-foreground text-sm">
-          Quién puede entrar a esta organización y con qué rol.
-        </p>
-      </header>
+      <PageHeader href={orgHref(orgSlug, "/miembros")} />
 
       <MembersScreen
         organizationId={org.organizationId}
