@@ -53,7 +53,8 @@ internal sealed class AuditLoggingMiddleware(RequestDelegate next)
             StatusCode: context.Response.StatusCode,
             Succeeded: context.Response.StatusCode < 400,
             TraceId: context.Items["TraceId"]?.ToString(),
-            DurationMs: (int)stopwatch.ElapsedMilliseconds);
+            DurationMs: (int)stopwatch.ElapsedMilliseconds,
+            ImpersonatedBy: context.User.FindFirstValue(SecuritySchemes.ImpersonatedByClaim));
 
         // CancellationToken.None a propósito: si el cliente se desconectó justo al
         // terminar la petición, igual queremos que quede el registro.

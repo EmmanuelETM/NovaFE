@@ -34,4 +34,7 @@ internal sealed class AuditLogRow
     public string? TraceId { get; private set; }
 
     public int? DurationMs { get; private set; }
+
+    /// <summary>Fase 5: presente solo si la petición fue una impersonación — el <c>user:{id}</c> del operador real.</summary>
+    public string? ImpersonatedBy { get; private set; }
 }

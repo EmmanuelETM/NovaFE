@@ -16,4 +16,5 @@ public sealed record AuditLogEntry(
     int StatusCode,
     bool Succeeded,
     string? TraceId,
-    int? DurationMs);
+    int? DurationMs,
+    string? ImpersonatedBy = null);

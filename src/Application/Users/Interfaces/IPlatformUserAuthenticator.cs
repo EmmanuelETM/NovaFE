@@ -26,6 +26,18 @@ public interface IPlatformUserAuthenticator
         string email,
         Guid? actingTenantId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Resuelve la identidad de <paramref name="targetUserId"/> para que un
+    /// operador la impersone (Fase 5, soporte). <c>null</c> si el usuario no
+    /// existe, está revocado, es otro operador (no tiene sentido impersonar a
+    /// otro <c>admin_sistema</c>), o <paramref name="actingTenantId"/> vino
+    /// explícito y el usuario no tiene acceso ahí.
+    /// </summary>
+    Task<PlatformUserIdentity?> ImpersonateAsync(
+        Guid targetUserId,
+        Guid? actingTenantId,
+        CancellationToken ct = default);
 }
 
 /// <summary>Identidad resuelta de un usuario humano de la plataforma.</summary>

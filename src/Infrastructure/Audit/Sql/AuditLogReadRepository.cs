@@ -26,7 +26,8 @@ internal sealed class AuditLogReadRepository(IDbSession session) : IAuditLogRead
                    status_code  AS "StatusCode",
                    succeeded    AS "Succeeded",
                    trace_id     AS "TraceId",
-                   duration_ms  AS "DurationMs"
+                   duration_ms  AS "DurationMs",
+                   impersonated_by AS "ImpersonatedBy"
             FROM audit_log
             WHERE tenant_id = @tenantId
             ORDER BY occurred_at DESC

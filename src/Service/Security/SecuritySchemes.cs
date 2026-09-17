@@ -33,8 +33,23 @@ internal static class SecuritySchemes
     /// </summary>
     public const string ActingTenantHeader = "X-Acting-Tenant-Id";
 
+    /// <summary>
+    /// Fase 5: un operador (<c>admin_sistema</c>) pide ver la API como otro
+    /// usuario — soporte. Solo el esquema <see cref="InternalKey"/> lo mira, y
+    /// solo si el actor ya autenticado es operador; ver
+    /// <c>InternalKeyAuthenticationHandler</c>.
+    /// </summary>
+    public const string ImpersonateUserHeader = "X-Impersonate-User-Id";
+
     /// <summary>Claim que lleva el id del contribuyente en el principal autenticado.</summary>
     public const string TenantClaim = "tenant_id";
+
+    /// <summary>
+    /// Presente solo durante una impersonación: el <c>NameIdentifier</c> del
+    /// operador real detrás del principal publicado. Su sola presencia es la
+    /// señal que <c>ImpersonationReadOnlyFilter</c> usa para bloquear escrituras.
+    /// </summary>
+    public const string ImpersonatedByClaim = "impersonated_by";
 
     /// <summary>Claim con el ambiente de la DGII de la API key (<c>Test</c> / <c>Cert</c> / <c>Production</c>).</summary>
     public const string EnvironmentClaim = "dgii_environment";

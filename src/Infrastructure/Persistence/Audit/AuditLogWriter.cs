@@ -20,10 +20,10 @@ internal sealed class AuditLogWriter(IDbSession session) : IAuditLogWriter
             """
             INSERT INTO audit_log
                 (id, occurred_at, tenant_id, actor, actor_role, ip_address,
-                 http_method, path, status_code, succeeded, trace_id, duration_ms)
+                 http_method, path, status_code, succeeded, trace_id, duration_ms, impersonated_by)
             VALUES
                 (@id, @occurredAt, @tenantId, @actor, @actorRole, @ipAddress,
-                 @httpMethod, @path, @statusCode, @succeeded, @traceId, @durationMs)
+                 @httpMethod, @path, @statusCode, @succeeded, @traceId, @durationMs, @impersonatedBy)
             """,
             new
             {
@@ -39,6 +39,7 @@ internal sealed class AuditLogWriter(IDbSession session) : IAuditLogWriter
                 succeeded = entry.Succeeded,
                 traceId = entry.TraceId,
                 durationMs = entry.DurationMs,
+                impersonatedBy = entry.ImpersonatedBy,
             },
             session.Transaction, cancellationToken: ct));
     }

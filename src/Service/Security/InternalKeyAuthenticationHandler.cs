@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using NovaFE.Application.Users.Interfaces;
+using NovaFE.Domain.Users;
 using NovaFE.Service.Configuration;
 
 namespace NovaFE.Service.Security;
@@ -21,6 +22,13 @@ namespace NovaFE.Service.Security;
 /// (<c>tenant_id</c> + rol), así que las políticas de M14 no distinguen el origen.
 /// El id del <see cref="Domain.Users.PlatformUser"/> va en
 /// <c>NameIdentifier</c> como <c>user:{id}</c>.
+/// </para>
+/// <para>
+/// Fase 5: si el actor ya autenticado es <c>admin_sistema</c> y trae
+/// <c>X-Impersonate-User-Id</c>, los claims publicados son los del usuario
+/// impersonado, no los del operador — más <c>impersonated_by</c> con el id
+/// real. <c>ImpersonationReadOnlyFilter</c> usa ese claim para bloquear
+/// escrituras; no es solo una anotación de auditoría.
 /// </para>
 /// </summary>
 internal sealed class InternalKeyAuthenticationHandler(
@@ -67,6 +75,21 @@ internal sealed class InternalKeyAuthenticationHandler(
         if (identity is null)
             return AuthenticateResult.Fail("El usuario no está dado de alta, fue revocado, o no tiene acceso a ese tenant.");
 
+        Guid? impersonatedBy = null;
+
+        // Fase 5: un operador puede pedir ver la API como otro usuario, para
+        // soporte — solo si el actor real ya autenticó como admin_sistema.
+        if (string.Equals(identity.Role, PlatformRole.AdminSistema.Name, StringComparison.Ordinal)
+            && Guid.TryParse(Header(SecuritySchemes.ImpersonateUserHeader), out var targetUserId))
+        {
+            var impersonated = await authenticator.ImpersonateAsync(targetUserId, actingTenantId, Context.RequestAborted);
+            if (impersonated is null)
+                return AuthenticateResult.Fail("El usuario a impersonar no existe, fue revocado, es otro operador, o no tiene acceso a ese tenant.");
+
+            impersonatedBy = identity.UserId;
+            identity = impersonated;
+        }
+
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, $"user:{identity.UserId}"),
@@ -76,6 +99,9 @@ internal sealed class InternalKeyAuthenticationHandler(
 
         if (identity.TenantId is { } tenantId)
             claims.Add(new Claim(SecuritySchemes.TenantClaim, tenantId.ToString()));
+
+        if (impersonatedBy is { } operatorId)
+            claims.Add(new Claim(SecuritySchemes.ImpersonatedByClaim, $"user:{operatorId}"));
 
         var ticket = new AuthenticationTicket(
             new ClaimsPrincipal(new ClaimsIdentity(claims, SecuritySchemes.InternalKey)),

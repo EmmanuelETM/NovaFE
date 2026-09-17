@@ -82,4 +82,31 @@ internal sealed class PlatformUserAuthenticator(
             defaultAccess?.Role ?? PlatformRole.Consultor.Name,
             lookup.Email);
     }
+
+    public async Task<PlatformUserIdentity?> ImpersonateAsync(
+        Guid targetUserId, Guid? actingTenantId, CancellationToken ct = default)
+    {
+        var target = await readRepository.FindByIdAsync(targetUserId, ct);
+        if (target is null || !target.IsActive)
+            return null;
+
+        // Impersonar a otro operador no tiene un caso de uso de soporte real.
+        if (string.Equals(target.Role, PlatformRole.AdminSistema.Name, StringComparison.Ordinal))
+            return null;
+
+        if (actingTenantId is { } tenantId)
+        {
+            var access = await readRepository.ResolveTenantAccessAsync(target.Id, tenantId, ct);
+            return access is null
+                ? null
+                : new PlatformUserIdentity(target.Id, access.TenantId, access.Role, target.Email);
+        }
+
+        var defaultAccess = await readRepository.ResolveDefaultTenantAccessAsync(target.Id, ct);
+        return new PlatformUserIdentity(
+            target.Id,
+            defaultAccess?.TenantId,
+            defaultAccess?.Role ?? PlatformRole.Consultor.Name,
+            target.Email);
+    }
 }

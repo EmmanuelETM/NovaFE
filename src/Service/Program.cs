@@ -18,6 +18,7 @@ using NovaFE.Service.DevTools;
 using NovaFE.Service.Extensions;
 using NovaFE.Service.Maintenance;
 using NovaFE.Service.Middlewares;
+using NovaFE.Service.Security;
 using NovaFE.Service.Workers;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
@@ -227,6 +228,10 @@ try
             // Fuera de Development, los controllers [DevelopmentOnly] no existen.
             if (!builder.Environment.IsDevelopment())
                 options.Conventions.Add(new RemoveDevelopmentOnlyConvention());
+
+            // Fase 5: un operador impersonando solo puede leer, sin importar el
+            // controller — un único punto de corte, ver ImpersonationReadOnlyFilter.
+            options.Filters.Add<ImpersonationReadOnlyFilter>();
         })
         .AddJsonOptions(options =>
         {

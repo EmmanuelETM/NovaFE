@@ -18,6 +18,7 @@ internal sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLogR
         builder.Property(r => r.HttpMethod).HasMaxLength(10).IsRequired();
         builder.Property(r => r.Path).HasMaxLength(256).IsRequired();
         builder.Property(r => r.TraceId).HasMaxLength(64);
+        builder.Property(r => r.ImpersonatedBy).HasMaxLength(100);
 
         // El listado por tenant pagina por occurred_at descendente.
         builder.HasIndex(r => new { r.TenantId, r.OccurredAt });
