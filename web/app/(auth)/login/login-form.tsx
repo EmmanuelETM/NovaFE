@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth/client";
 import { SOCIAL_PROVIDER_LABELS, type SocialProvider } from "@/lib/auth/social";
+import { Loader2 } from "lucide-react";
 
 import { AuthCard } from "../auth-card";
 import { ProviderMark } from "./provider-mark";
@@ -28,10 +29,8 @@ interface LoginFormProps {
 }
 
 const schema = z.object({
-  email: z
-    .string()
-    .min(1, "El correo es obligatorio.")
-    .email("Correo inválido."),
+  email: z.email("Correo inválido."),
+
   password: z.string().min(1, "La contraseña es obligatoria."),
 });
 
@@ -104,6 +103,40 @@ export function LoginForm({ providers, next, justReset }: LoginFormProps) {
       title="Entrar a NovaFE"
       description="Usa la cuenta con la que te dieron de alta."
     >
+      {providers.length > 0 && (
+        <>
+          <div className="flex flex-row items-center justify-between gap-3">
+            {providers.map((provider) => (
+              <Button
+                key={provider}
+                variant="outline"
+                size="icon"
+                className="h-10 flex-1"
+                disabled={pendingProvider !== null}
+                onClick={() => void signInWithProvider(provider)}
+                aria-label={`Continuar con ${SOCIAL_PROVIDER_LABELS[provider]}`}
+              >
+                {pendingProvider === provider ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ProviderMark provider={provider} />
+                )}
+              </Button>
+            ))}
+          </div>
+
+          {oauthError && (
+            <p className="text-destructive text-center text-sm" role="alert">
+              {oauthError}
+            </p>
+          )}
+
+          <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card my-1">
+            O continuar con
+          </FieldSeparator>
+        </>
+      )}
+
       {justReset && (
         <p className="text-center text-sm text-emerald-600 dark:text-emerald-400">
           Contraseña actualizada. Inicia sesión con tu contraseña nueva.
@@ -174,35 +207,6 @@ export function LoginForm({ providers, next, justReset }: LoginFormProps) {
           Crea una
         </Link>
       </p>
-
-      {providers.length > 0 && (
-        <>
-          <FieldSeparator>o</FieldSeparator>
-
-          <div className="flex flex-col gap-3">
-            {providers.map((provider) => (
-              <Button
-                key={provider}
-                variant="outline"
-                className="w-full justify-center gap-2.5"
-                disabled={pendingProvider !== null}
-                onClick={() => void signInWithProvider(provider)}
-              >
-                <ProviderMark provider={provider} />
-                {pendingProvider === provider
-                  ? "Redirigiendo…"
-                  : `Continuar con ${SOCIAL_PROVIDER_LABELS[provider]}`}
-              </Button>
-            ))}
-          </div>
-
-          {oauthError && (
-            <p className="text-destructive text-center text-sm" role="alert">
-              {oauthError}
-            </p>
-          )}
-        </>
-      )}
     </AuthCard>
   );
 }

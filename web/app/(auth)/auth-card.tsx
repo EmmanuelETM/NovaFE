@@ -23,7 +23,7 @@ export function AuthCard({ title, description, children }: AuthCardProps) {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="items-center text-center">
-        <div className="bg-primary text-primary-foreground mb-2 flex size-11 items-center justify-center rounded-xl">
+        <div className="bg-primary text-primary-foreground mx-auto mb-2 flex size-12 items-center justify-center rounded-xl pb-2">
           <Boxes className="size-6" aria-hidden />
         </div>
         <CardTitle className="text-lg">{title}</CardTitle>
