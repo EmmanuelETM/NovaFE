@@ -30,7 +30,7 @@ public class SetEmitterProfileUseCaseTests : UseCaseTestBase
         new(LoggerFactory, new SetEmitterProfileCommandValidator(), _currentTenant, _tenants, _profiles);
 
     private static SetEmitterProfileCommand Command() => new(
-        "Av. 27 de Febrero 100", "010100", "01",
+        "Av. 27 de Febrero 100", "010100", "010000",
         ["809-555-0100"], "facturacion@acme.do", "Comercio", "Test");
 
     [Fact]
@@ -86,5 +86,15 @@ public class SetEmitterProfileUseCaseTests : UseCaseTestBase
 
         result.IsError.ShouldBeTrue();
         result.Errors.ShouldContain(e => e.Type == ErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task Rejects_a_province_code_that_is_not_in_the_dgii_catalog()
+    {
+        var result = await Sut().Execute(Command() with { Province = "999999" });
+
+        result.IsError.ShouldBeTrue();
+        result.Errors.ShouldContain(e => e.Type == ErrorType.Validation);
+        await _profiles.DidNotReceive().AddAsync(Arg.Any<EmitterProfile>(), Arg.Any<CancellationToken>());
     }
 }

@@ -21,7 +21,7 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
     {
         address,
         municipality = "010100",
-        province = "01",
+        province = "010000",
         phones = new[] { "809-555-0100", "809-555-0101" },
         email = "facturacion@acme.do",
         economicActivity = "Comercio al por menor",
@@ -90,6 +90,42 @@ public sealed class EmitterProfileEndpointsTests(DatabaseFixture database) : Int
             $"/api/v1/tenants/{tenantId}/emitter-profile", ProfileBody(address: ""));
 
         put.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [RequiresDockerFact]
+    public async Task Put_rejects_a_province_code_that_is_not_in_the_dgii_catalog_with_400()
+    {
+        var tenantId = await RegisterTenantAsync();
+
+        var put = await Client.PutAsJsonAsync(
+            $"/api/v1/tenants/{tenantId}/emitter-profile",
+            new
+            {
+                address = "Av. 27 de Febrero 100",
+                municipality = "010100",
+                province = "999999",
+                defaultEnvironment = "Test",
+            });
+
+        put.StatusCode.ShouldBe(HttpStatusCode.BadRequest, await put.Content.ReadAsStringAsync());
+    }
+
+    [RequiresDockerFact]
+    public async Task Put_rejects_a_municipality_code_that_is_not_in_the_dgii_catalog_with_400()
+    {
+        var tenantId = await RegisterTenantAsync();
+
+        var put = await Client.PutAsJsonAsync(
+            $"/api/v1/tenants/{tenantId}/emitter-profile",
+            new
+            {
+                address = "Av. 27 de Febrero 100",
+                municipality = "999999",
+                province = "010000",
+                defaultEnvironment = "Test",
+            });
+
+        put.StatusCode.ShouldBe(HttpStatusCode.BadRequest, await put.Content.ReadAsStringAsync());
     }
 
     private sealed record EmitterProfileResponse(

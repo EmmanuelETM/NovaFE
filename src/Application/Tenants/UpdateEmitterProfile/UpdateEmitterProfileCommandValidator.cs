@@ -17,10 +17,14 @@ public sealed class UpdateEmitterProfileCommandValidator : AbstractValidator<Upd
             .MaximumLength(100).WithMessage("La dirección no puede exceder 100 caracteres.");
 
         RuleFor(x => x.Municipality)
-            .MaximumLength(10).WithMessage("El municipio es un código de la Tabla III (máx. 10 caracteres).");
+            .MaximumLength(10).WithMessage("El municipio es un código de la Tabla III (máx. 10 caracteres).")
+            .Must(ProvinciaMunicipioCatalog.IsValid)
+            .WithMessage("El municipio no es un código válido de la Tabla III de la DGII.");
 
         RuleFor(x => x.Province)
-            .MaximumLength(10).WithMessage("La provincia es un código de la Tabla III (máx. 10 caracteres).");
+            .MaximumLength(10).WithMessage("La provincia es un código de la Tabla III (máx. 10 caracteres).")
+            .Must(ProvinciaMunicipioCatalog.IsValid)
+            .WithMessage("La provincia no es un código válido de la Tabla III de la DGII.");
 
         RuleFor(x => x.Email)
             .MaximumLength(100).WithMessage("El correo no puede exceder 100 caracteres.")
