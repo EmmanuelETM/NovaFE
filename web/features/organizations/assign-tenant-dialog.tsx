@@ -57,7 +57,11 @@ export function AssignTenantDialog({
     { page: 1, pageSize: PAGE_SIZE, search: debouncedQuery },
     searching,
   );
-  const results = data?.items ?? [];
+  const allResults = data?.items ?? [];
+  // Solo tenants huérfanos: el backend rechaza asociar uno que ya tiene
+  // dueño, así que ni se ofrece como opción.
+  const results = allResults.filter((tenant) => !tenant.organizationId);
+  const allOwnedElsewhere = allResults.length > 0 && results.length === 0;
 
   function close() {
     setOpen(false);
@@ -80,8 +84,9 @@ export function AssignTenantDialog({
         <DialogHeader>
           <DialogTitle>Asociar un tenant existente</DialogTitle>
           <DialogDescription>
-            Busca por RNC o razón social. Si el tenant ya pertenece a otra
-            organización, se reasigna a esta.
+            Busca por RNC o razón social. Solo se pueden asociar tenants sin
+            organización — para mover uno que ya tiene una, primero hay que
+            quitarlo desde la pestaña Tenants de esa organización.
           </DialogDescription>
         </DialogHeader>
 
@@ -98,7 +103,11 @@ export function AssignTenantDialog({
             {!searching ? (
               <CommandEmpty>Escribe al menos 2 caracteres.</CommandEmpty>
             ) : results.length === 0 && !isPending ? (
-              <CommandEmpty>Sin resultados.</CommandEmpty>
+              <CommandEmpty>
+                {allOwnedElsewhere
+                  ? "Todos los resultados ya pertenecen a otra organización."
+                  : "Sin resultados."}
+              </CommandEmpty>
             ) : (
               <CommandGroup>
                 {results.map((tenant) => (

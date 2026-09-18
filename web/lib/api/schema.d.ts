@@ -5448,6 +5448,7 @@ export interface components {
             tenantId: null | string;
             tenantName: null | string;
             organizations: components["schemas"]["UserOrganizationDto"][];
+            directTenants: components["schemas"]["UserOrganizationTenantDto"][];
         };
         ValidateEcfResultDto: {
             /** Format: int32 */

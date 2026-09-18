@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Boxes, Building2, ChevronRight } from "lucide-react";
+import { Boxes, Building, Building2, ChevronRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { AccessScreen } from "@/features/auth/access-screen";
@@ -60,41 +60,76 @@ export default async function OrganizacionesPage() {
           </p>
         </div>
 
-        {user.organizations.length === 0 ? (
+        {user.organizations.length === 0 && user.directTenants.length === 0 ? (
           <div className="border-border/60 text-muted-foreground rounded-2xl border border-dashed p-10 text-center text-sm">
             Todavía no perteneces a ninguna organización.
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {user.organizations.map((org) => (
-              <Link
-                key={org.organizationId}
-                href={`/org/${org.organizationSlug}`}
-                className="bg-card border-border/60 hover:bg-muted/50 flex items-center gap-3 rounded-2xl border p-4 shadow-xs transition-colors"
-              >
-                <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
-                  <Building2 className="size-4" aria-hidden />
-                </div>
-                <div className="flex flex-1 flex-col gap-0.5">
-                  <span className="text-sm font-medium">
-                    {org.organizationName}
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    {org.tenants.length} tenant
-                    {org.tenants.length === 1 ? "" : "s"} · tu rol acá:{" "}
-                    {org.role}
-                  </span>
-                </div>
-                <Badge variant="outline" className="font-normal">
-                  {planLabel(org.plan)}
-                </Badge>
-                <ChevronRight
-                  className="text-muted-foreground size-4"
-                  aria-hidden
-                />
-              </Link>
-            ))}
-          </div>
+          <>
+            {user.organizations.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {user.organizations.map((org) => (
+                  <Link
+                    key={org.organizationId}
+                    href={`/org/${org.organizationSlug}`}
+                    className="bg-card border-border/60 hover:bg-muted/50 flex items-center gap-3 rounded-2xl border p-4 shadow-xs transition-colors"
+                  >
+                    <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
+                      <Building2 className="size-4" aria-hidden />
+                    </div>
+                    <div className="flex flex-1 flex-col gap-0.5">
+                      <span className="text-sm font-medium">
+                        {org.organizationName}
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        {org.tenants.length} tenant
+                        {org.tenants.length === 1 ? "" : "s"} · tu rol acá:{" "}
+                        {org.role}
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="font-normal">
+                      {planLabel(org.plan)}
+                    </Badge>
+                    <ChevronRight
+                      className="text-muted-foreground size-4"
+                      aria-hidden
+                    />
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {user.directTenants.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Acceso directo
+                </h2>
+                {user.directTenants.map((tenant) => (
+                  <Link
+                    key={tenant.tenantId}
+                    href={`/tenant/${tenant.tenantId}`}
+                    className="bg-card border-border/60 hover:bg-muted/50 flex items-center gap-3 rounded-2xl border p-4 shadow-xs transition-colors"
+                  >
+                    <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
+                      <Building className="size-4" aria-hidden />
+                    </div>
+                    <div className="flex flex-1 flex-col gap-0.5">
+                      <span className="text-sm font-medium">
+                        {tenant.tenantName}
+                      </span>
+                      <span className="text-muted-foreground text-xs">
+                        Sin organización · tu rol acá: {tenant.role}
+                      </span>
+                    </div>
+                    <ChevronRight
+                      className="text-muted-foreground size-4"
+                      aria-hidden
+                    />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

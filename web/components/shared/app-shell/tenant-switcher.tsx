@@ -88,21 +88,38 @@ export function TenantPickerList({
   // El acceso directo a un tenant (`tenant_members`) es independiente de la
   // membresía de organización — es el caso más común, no una excepción (un
   // empleado dado de alta con "Agregar usuario" nunca pasa por
-  // `organization_members`). Antes esto devolvía `null` y el popover se
-  // veía vacío; ahora al menos se ve el tenant activo, sin pretender que
-  // hay una organización de por medio.
+  // `organization_members`). Si el tenant activo no está cubierto por
+  // ninguna organización, viene en `user.directTenants` — se lista igual
+  // que el bloque de abajo, para poder saltar a cualquier otro tenant de
+  // acceso directo sin quedar varado en uno solo.
   if (!currentOrg) {
     return (
       <Command>
+        <CommandInput placeholder="Buscar tenant…" />
         <CommandList>
-          <CommandGroup heading="Sin organización">
-            <CommandItem disabled>
-              <Building aria-hidden />
-              <span className="flex-1 truncate">
-                {user.tenantName ?? "Tu contribuyente"}
-              </span>
-              <Check aria-hidden className="size-4 opacity-100" />
-            </CommandItem>
+          <CommandEmpty>No encontramos nada.</CommandEmpty>
+          <CommandGroup heading="Acceso directo">
+            {user.directTenants.map((tenant) => (
+              <CommandItem
+                key={tenant.tenantId}
+                onSelect={() =>
+                  rememberAndGo(
+                    withTenant(pathname, tenant.tenantId),
+                    tenant.tenantId,
+                  )
+                }
+              >
+                <Building aria-hidden />
+                <span className="flex-1 truncate">{tenant.tenantName}</span>
+                <Check
+                  aria-hidden
+                  className={cn(
+                    "size-4",
+                    tenant.tenantId === tenantId ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              </CommandItem>
+            ))}
           </CommandGroup>
         </CommandList>
       </Command>

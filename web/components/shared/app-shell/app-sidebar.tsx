@@ -38,7 +38,7 @@ export function AppSidebar({ user, scope }: AppSidebarProps) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <Brand />
+            <Brand user={user} scope={scope} />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
