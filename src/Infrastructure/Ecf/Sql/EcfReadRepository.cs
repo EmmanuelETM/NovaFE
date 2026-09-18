@@ -34,6 +34,10 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
              ELSE NULL
         END                    AS "ToleranceWarning",
         signed_during_contingency AS "SignedDuringContingency",
+        monto_total            AS "MontoTotal",
+        buyer_rnc              AS "BuyerRnc",
+        buyer_name             AS "BuyerName",
+        document_hash          AS "DocumentHash",
         track_id               AS "TrackId",
         submitted_at           AS "SubmittedAt",
         dgii_processed_at      AS "DgiiProcessedAt",

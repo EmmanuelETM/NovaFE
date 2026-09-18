@@ -250,6 +250,10 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   "qrUrl": "https://ecf.dgii.gov.do/testecf/consultatimbre?rncemisor=...",
   "submitsRfce": false,
   "internalNumber": "FAC-2026-00042",
+  "montoTotal": 2360.00,
+  "buyerRnc": "131880681",
+  "buyerName": "Mi Cliente SRL",
+  "documentHash": "3f8a1c9e2b7d4f60a5c8e1d2b3a4f5061c7e8d9f0a1b2c3d4e5f60718293a4b5",
   "toleranceWarning": null,
   "signedDuringContingency": false,
   "dgii": {
@@ -282,8 +286,10 @@ en la respuesta y la DGII probablemente devuelva "aceptado condicional".
   | `submitted` | enviado, hay `dgii.trackId`, la DGII sigue procesando — el worker termina |
   | `signed` | la DGII no respondió dentro del presupuesto — el worker enviará y hará polling |
 
-- **La respuesta es identidad fiscal + estado + el intercambio con la DGII.** El
-  detalle comercial (comprador, líneas, montos, retenciones) vive en el **XML
+- **La respuesta es identidad fiscal + resumen comercial + estado + el intercambio
+  con la DGII.** `montoTotal`, `buyerRnc`, `buyerName` y `documentHash` son el mismo
+  resumen que ya trae la fila del listado (`GET /ecf`); el desglose por línea
+  (retenciones, ITBIS por línea, descuentos…) sigue viviendo solo en el **XML
   firmado** — `links.xml` (`GET /ecf/{id}/xml`); `links.rfceXml` trae el `<RFCE>`
   cuando `submitsRfce` es `true`; `links.representation` es la **Representación
   Impresa en PDF** (`GET /ecf/{id}/representation`, ver `docs/representation.md`).

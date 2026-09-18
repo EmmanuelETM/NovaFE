@@ -21,6 +21,10 @@ internal static class EcfDtoAssembler
         QrUrl: ecf.QrUrl,
         SubmitsRfce: ecf.SubmitsRfce,
         InternalNumber: ecf.InternalInvoiceNumber,
+        MontoTotal: ecf.MontoTotal,
+        BuyerRnc: ecf.BuyerRnc,
+        BuyerName: ecf.BuyerName,
+        DocumentHash: ecf.DocumentHash,
         ToleranceWarning: ecf.ExpectedConditionalAcceptance
             ? "Los montos declarados no cuadran dentro de la tolerancia; la DGII podría aceptar el comprobante de forma condicional."
             : null,

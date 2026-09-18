@@ -333,5 +333,6 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
     private static EcfDto StubDto(Guid id) => new(
         id, "signed", "E310000000001", 31, "Test", null, new DateOnly(2026, 1, 10),
         new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 1, 10, 0, 0, 0, TimeSpan.Zero),
-        "aB3xZ9", "https://x", false, null, null, false);
+        "aB3xZ9", "https://x", false, null, null, false, 2360m, "131880681", "Mi Cliente SRL",
+        "3f8a1c9e2b7d4f60a5c8e1d2b3a4f5061c7e8d9f0a1b2c3d4e5f60718293a4b5");
 }

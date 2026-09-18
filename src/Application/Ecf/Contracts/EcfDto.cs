@@ -5,9 +5,10 @@ namespace NovaFE.Application.Ecf.Contracts;
 
 /// <summary>
 /// Vista de un comprobante emitido (respuesta de <c>POST /ecf</c> y <c>GET /ecf/{id}</c>).
-/// El detalle comercial (comprador, líneas, montos) vive en el XML firmado, que se
-/// sirve por <c>GET /ecf/{id}/xml</c>; aquí solo va la identidad fiscal del
-/// comprobante, su estado y el resultado del intercambio con la DGII (<see cref="Dgii"/>).
+/// Trae la identidad fiscal, el resumen comercial (comprador, monto total —
+/// igual que <see cref="EcfSummaryDto"/>) y el resultado del intercambio con
+/// la DGII (<see cref="Dgii"/>). El desglose por línea y el resto del detalle
+/// comercial siguen viviendo solo en el XML firmado (<c>GET /ecf/{id}/xml</c>).
 /// </summary>
 public sealed record EcfDto(
     Guid Id,
@@ -25,6 +26,10 @@ public sealed record EcfDto(
     string? InternalNumber,
     string? ToleranceWarning,
     bool SignedDuringContingency,
+    decimal MontoTotal,
+    string? BuyerRnc,
+    string? BuyerName,
+    string DocumentHash,
     // --- Módulo 4: intercambio con la DGII ---
     // Estos entran planos (Dapper / el ensamblador) pero salen agrupados en `dgii`.
     [property: JsonIgnore] string? TrackId = null,

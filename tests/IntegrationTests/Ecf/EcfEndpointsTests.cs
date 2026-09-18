@@ -81,7 +81,12 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
 
         var get = await Client.GetAsync($"/api/v1/ecf/{issued.Id}");
         get.StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await LeerAsync<EcfResponse>(get))!.Encf.ShouldBe("E310000000001");
+        var fetched = await LeerAsync<EcfResponse>(get);
+        fetched!.Encf.ShouldBe("E310000000001");
+        fetched.MontoTotal.ShouldBe(2360m);
+        fetched.BuyerRnc.ShouldBe("131880681");
+        fetched.BuyerName.ShouldBe("Mi Cliente SRL");
+        fetched.DocumentHash.ShouldNotBeNullOrWhiteSpace();
 
         var xml = await (await Client.GetAsync($"/api/v1/ecf/{issued.Id}/xml")).Content.ReadAsStringAsync();
         xml.ShouldContain("<TipoeCF>31</TipoeCF>");
@@ -191,9 +196,9 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
         var xml = await (await Client.GetAsync($"/api/v1/ecf/{issued!.Id}/xml")).Content.ReadAsStringAsync();
         var totales = XDocument.Parse(xml).Descendants("Totales").Single();
 
-        totales.Element("MontoGravadoI1")!.Value.ShouldBe("1000");   // sin el ISC
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("1000.00");   // sin el ISC
         totales.Element("TotalITBIS")!.Value.ShouldBe("294.12");     // (1000 + 634) * 0.18
-        totales.Element("MontoImpuestoAdicional")!.Value.ShouldBe("634");
+        totales.Element("MontoImpuestoAdicional")!.Value.ShouldBe("634.00");
         totales.Element("MontoTotal")!.Value.ShouldBe("1928.12");    // 1000 + 294.12 + 634
     }
 
@@ -212,7 +217,17 @@ public sealed class EcfEndpointsTests(DatabaseFixture database) : IntegrationTes
     }
 
     private sealed record EcfResponse(
-        Guid Id, string Status, string Encf, int Type, bool SubmitsRfce, string QrUrl, LinksResponse Links);
+        Guid Id,
+        string Status,
+        string Encf,
+        int Type,
+        bool SubmitsRfce,
+        string QrUrl,
+        decimal MontoTotal,
+        string? BuyerRnc,
+        string? BuyerName,
+        string DocumentHash,
+        LinksResponse Links);
 
     private sealed record LinksResponse(string Self, string Xml, string? RfceXml, string Representation);
 
