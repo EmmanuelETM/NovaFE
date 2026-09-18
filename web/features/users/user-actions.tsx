@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, MoreHorizontal } from "lucide-react";
+import {
+  Eye,
+  MoreHorizontal,
+  ShieldCheck,
+  ShieldOff,
+  UserCog,
+} from "lucide-react";
 
 import {
   AlertDialog,
@@ -84,7 +90,7 @@ export function UserActions({
               }}
               disabled={busy}
             >
-              Cambiar rol
+              <UserCog aria-hidden /> Cambiar rol
             </DropdownMenuItem>
           )}
           {tenantId !== null && active && (
@@ -97,11 +103,19 @@ export function UserActions({
                 />
               }
             >
-              <Eye /> Ver como
+              <Eye aria-hidden /> Ver como
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={() => setConfirm(true)} disabled={busy}>
-            {active ? "Revocar acceso" : "Reactivar acceso"}
+            {active ? (
+              <>
+                <ShieldOff aria-hidden /> Revocar acceso
+              </>
+            ) : (
+              <>
+                <ShieldCheck aria-hidden /> Reactivar acceso
+              </>
+            )}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

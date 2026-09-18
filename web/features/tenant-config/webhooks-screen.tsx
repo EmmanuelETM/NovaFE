@@ -4,7 +4,18 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Check, Copy, ListOrdered, MoreHorizontal, Plus } from "lucide-react";
+import {
+  Check,
+  Copy,
+  ListOrdered,
+  MoreHorizontal,
+  Plus,
+  Power,
+  PowerOff,
+  RefreshCw,
+  Trash2,
+  Zap,
+} from "lucide-react";
 
 import {
   AlertDialog,
@@ -182,13 +193,13 @@ function WebhookActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={onViewDeliveries}>
-            <ListOrdered /> Ver entregas
+            <ListOrdered aria-hidden /> Ver entregas
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={busy}
             onClick={() => ping.mutate(webhook.id)}
           >
-            Probar (ping)
+            <Zap aria-hidden /> Probar (ping)
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={busy}
@@ -196,7 +207,15 @@ function WebhookActions({
               update.mutate({ id: webhook.id, enabled: !webhook.enabled })
             }
           >
-            {webhook.enabled ? "Deshabilitar" : "Habilitar"}
+            {webhook.enabled ? (
+              <>
+                <PowerOff aria-hidden /> Deshabilitar
+              </>
+            ) : (
+              <>
+                <Power aria-hidden /> Habilitar
+              </>
+            )}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={busy}
@@ -205,13 +224,14 @@ function WebhookActions({
               setRotatedSecret(result.secret);
             }}
           >
-            Rotar secret
+            <RefreshCw aria-hidden /> Rotar secret
           </DropdownMenuItem>
           <DropdownMenuItem
+            variant="destructive"
             disabled={busy}
             onClick={() => setConfirmDelete(true)}
           >
-            Eliminar
+            <Trash2 aria-hidden /> Eliminar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

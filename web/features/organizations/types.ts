@@ -1,3 +1,5 @@
+import { Crown, ShieldCheck, UserRound } from "lucide-react";
+
 import type { components } from "@/lib/api/schema";
 
 /** Una organización del usuario (`UserOrganizationDto`, de `/users/me`). */
@@ -25,9 +27,9 @@ export type OrganizationTenantPage =
 
 /** Roles de organización, en el orden en que se ofrecen al invitar. */
 export const ORGANIZATION_ROLE_OPTIONS = [
-  { value: "member", label: "Member" },
-  { value: "admin", label: "Admin" },
-  { value: "owner", label: "Owner" },
+  { value: "member", label: "Member", icon: UserRound },
+  { value: "admin", label: "Admin", icon: ShieldCheck },
+  { value: "owner", label: "Owner", icon: Crown },
 ] as const;
 
 export function organizationRoleLabel(role: string): string {

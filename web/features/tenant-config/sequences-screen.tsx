@@ -4,7 +4,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useController, useForm } from "react-hook-form";
 import { z } from "zod";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, PowerOff } from "lucide-react";
 
 import {
   DataTable,
@@ -197,7 +197,7 @@ function SequenceActions({ sequence }: { sequence: NcfSequence }) {
           disabled={deactivate.isPending}
           onClick={() => deactivate.mutate(sequence.id)}
         >
-          Desactivar
+          <PowerOff aria-hidden /> Desactivar
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

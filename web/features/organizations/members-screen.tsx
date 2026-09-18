@@ -4,7 +4,7 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useController, useForm } from "react-hook-form";
 import { z } from "zod";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, UserMinus } from "lucide-react";
 
 import {
   AlertDialog,
@@ -171,7 +171,7 @@ function MemberActions({
                   })
                 }
               >
-                {option.label}
+                <option.icon aria-hidden /> {option.label}
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
@@ -180,7 +180,7 @@ function MemberActions({
             disabled={busy}
             onClick={() => setConfirmRemove(true)}
           >
-            Quitar de la organización
+            <UserMinus aria-hidden /> Quitar de la organización
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
