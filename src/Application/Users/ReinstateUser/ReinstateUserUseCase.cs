@@ -4,17 +4,17 @@ using NovaFE.Application.Common;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Application.Users.Interfaces;
 using NovaFE.Domain.Common;
+using NovaFE.Domain.Tenants;
 using NovaFE.Domain.Users;
 
 namespace NovaFE.Application.Users.ReinstateUser;
 
 /// <summary>
-/// Reactiva a un usuario del dashboard. Recurso de operador. La idempotencia
-/// estricta (reactivar a uno no revocado → conflicto) la aplica el dominio. Un
-/// usuario fuera del <see cref="ReinstateUserCommand.TenantScope"/> (sin fila
-/// de <see cref="Domain.Tenants.TenantMember"/> ahí) se reporta como no
-/// encontrado — espejo de <c>RevokeUserUseCase</c>, misma salvedad sobre el
-/// alcance global de <see cref="PlatformUser.RevokedAt"/>.
+/// Reactiva a un usuario. Recurso de operador. La idempotencia estricta
+/// (reactivar a uno no revocado → conflicto) la aplica el dominio. Espejo
+/// exacto de <c>RevokeUserUseCase</c>: con <see cref="ReinstateUserCommand.TenantScope"/>
+/// reactiva la fila de <see cref="TenantMember"/> de ese tenant puntual; sin
+/// él (ruta de operador), reactiva <see cref="PlatformUser.RevokedAt"/> global.
 /// </summary>
 public sealed class ReinstateUserUseCase(
     ILoggerFactory loggerFactory,
@@ -30,11 +30,21 @@ public sealed class ReinstateUserUseCase(
         if (user is null)
             return PlatformUserErrors.NotFound(request.UserId);
 
-        var authorized = request.TenantScope is { } tenantScope
-            ? await tenantMembers.GetAsync(tenantScope, user.Id, ct) is not null
-            : user.TenantId is null; // ruta de operador: TenantScope nulo
+        if (request.TenantScope is { } tenantScope)
+        {
+            var member = await tenantMembers.GetAsync(tenantScope, user.Id, ct);
+            if (member is null)
+                return PlatformUserErrors.NotFound(request.UserId);
 
-        if (!authorized)
+            var reinstatedMember = member.Reinstate();
+            if (reinstatedMember.IsError)
+                return reinstatedMember.Errors;
+
+            await tenantMembers.UpdateAsync(member, ct);
+            return Result.Success;
+        }
+
+        if (user.TenantId is not null) // ruta de operador, pero el usuario es de un tenant
             return PlatformUserErrors.NotFound(request.UserId);
 
         var reinstated = user.Reinstate();

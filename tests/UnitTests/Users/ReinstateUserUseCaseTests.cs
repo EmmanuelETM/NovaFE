@@ -3,6 +3,7 @@ using NSubstitute;
 using NovaFE.Application.Tenants.Interfaces;
 using NovaFE.Application.Users.Interfaces;
 using NovaFE.Application.Users.ReinstateUser;
+using NovaFE.Domain.Tenants;
 using NovaFE.Domain.Users;
 using NovaFE.UnitTests.Common;
 
@@ -59,19 +60,21 @@ public class ReinstateUserUseCaseTests : UseCaseTestBase
     public async Task Reinstates_a_tenant_user_scoped_by_their_membership_not_by_the_vestigial_tenant_id()
     {
         var tenantId = Guid.CreateVersion7();
-        var user = NovaFE.Domain.Users.PlatformUser.CreateTenantUser(
+        var user = PlatformUser.CreateTenantUser(
             "multi@cliente.do", Guid.CreateVersion7(), PlatformRole.Consultor).Value;
-        user.Revoke(Clock.GetUtcNow());
-        var member = NovaFE.Domain.Tenants.TenantMember.Create(tenantId, user.Id, PlatformRole.Consultor).Value;
+        var member = TenantMember.Create(tenantId, user.Id, PlatformRole.Consultor).Value;
+        member.Revoke(Clock.GetUtcNow());
         _users.GetAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
         _tenantMembers.GetAsync(tenantId, user.Id, Arg.Any<CancellationToken>()).Returns(member);
 
         // El tenant que se pide es distinto de PlatformUser.TenantId (vestigial,
         // del primer tenant al que se dio de alta) — igual debe alcanzar por
-        // tener una fila de TenantMember ahí.
+        // tener una fila de TenantMember ahí. La revocación fue de esa fila
+        // (por tenant), no de la cuenta global.
         var result = await Sut().Execute(new ReinstateUserCommand(user.Id, tenantId));
 
         result.IsError.ShouldBeFalse();
-        user.IsUsable.ShouldBeTrue();
+        member.IsUsable.ShouldBeTrue();
+        await _users.DidNotReceive().UpdateAsync(Arg.Any<PlatformUser>(), Arg.Any<CancellationToken>());
     }
 }

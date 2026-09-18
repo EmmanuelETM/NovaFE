@@ -52,7 +52,7 @@ tenant en la petición, y un operador no tiene tenant).
 | `auth_user_id` | id opaco de Better Auth. `null` hasta el primer login. Único parcial. |
 | `tenant_id` | **vestigial** para un usuario de contribuyente desde el refactor de organizaciones (ver más abajo); `null` = operador del SaaS. |
 | `role` | `PlatformRole`: `admin_sistema` / `admin_tenant` / `emisor` / `consultor`. **Vestigial** para un usuario de contribuyente, mismo motivo. |
-| `revoked_at` | `null` = vigente. |
+| `revoked_at` | `null` = vigente. **Global**: bloquea el login en cualquier tenant. Para revocar de un tenant puntual sin afectar el resto ver `tenant_members.revoked_at` más abajo. |
 
 `PlatformRole` es un enum **separado** de `ApiKeyRole` (que tiene solo 3, sin
 `admin_sistema` — ninguna API key de máquina puede representar al operador). Los 4
@@ -83,6 +83,21 @@ resuelven en cada login contra `tenant_members`/`organization_members`:
 Un `admin_tenant` puede serlo por dos caminos distintos y el login no los
 distingue de cara al resto del sistema: una fila explícita en
 `tenant_members`, o ser `owner`/`admin` de la organización dueña del tenant.
+
+### Revocación: global vs. por tenant
+
+Una persona puede tener acceso directo a varios tenants (una fila de
+`tenant_members` por cada uno, con su propio rol). `DELETE
+/tenants/{id}/users/{userId}` revoca **solo** la fila de ese tenant
+(`tenant_members.revoked_at`) — el resto de sus accesos, y su capacidad de
+loguearse, quedan intactos. `ResolveTenantAccessAsync`/
+`ResolveDefaultTenantAccessAsync` ignoran una fila con `revoked_at` no nulo
+(salvo que la persona además llegue heredado, como `owner`/`admin` de la
+organización dueña — esa vía no depende de `tenant_members`).
+
+`DELETE /operator-users/{userId}` es distinto: revoca
+`PlatformUser.RevokedAt`, que sí es global — correcto ahí porque un operador
+no tiene tenants que aislar.
 
 ### Provisioning por correo
 
@@ -115,9 +130,9 @@ Todos son recurso de **operador** (política `Operator`).
 
 | Método | Ruta | |
 | --- | --- | --- |
-| `POST` | `/api/v1/tenants/{id}/users` | alta de un empleado del contribuyente (`{ email, role }`). También crea la fila en `tenant_members` — sin eso el usuario queda con identidad pero sin acceso real a ese tenant. |
-| `GET` | `/api/v1/tenants/{id}/users` | los usuarios de ese contribuyente. |
-| `DELETE` | `/api/v1/tenants/{id}/users/{userId}` | revoca (idempotencia estricta: dos veces → 409). |
+| `POST` | `/api/v1/tenants/{id}/users` | alta de un empleado del contribuyente (`{ email, role }`). Si el correo ya es `PlatformUser` (empleado de otro tenant, o de una organización) reusa esa cuenta y solo agrega la fila de `tenant_members` — un correo puede tener acceso a varios tenants. Crea esa fila siempre: sin eso el usuario queda con identidad pero sin acceso real a ese tenant. |
+| `GET` | `/api/v1/tenants/{id}/users` | los usuarios de ese contribuyente (vía `tenant_members`, no `platform_users.tenant_id` — vestigial, ver arriba). |
+| `DELETE` | `/api/v1/tenants/{id}/users/{userId}` | revoca de **este** tenant (idempotencia estricta: dos veces → 409). Ver "Revocación: global vs. por tenant". |
 | `POST` | `/api/v1/operator-users` | alta de un operador (`{ email }`, rol fijo `admin_sistema`). |
 | `GET` | `/api/v1/operator-users` | los operadores. |
 | `DELETE` | `/api/v1/operator-users/{userId}` | revoca un operador. |

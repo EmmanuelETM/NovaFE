@@ -50,10 +50,21 @@ public sealed class TenantMember : Entity<Guid>, IAuditableEntity
     /// <summary>Rol del usuario en este tenant. Nunca <c>admin_sistema</c> (exclusivo del operador).</summary>
     public PlatformRole Role { get; private set; } = null!;
 
+    /// <summary>
+    /// Revocado de <b>este</b> tenant puntual — no toca <see cref="PlatformUser.RevokedAt"/>
+    /// (global) ni el acceso de la persona a ningún otro tenant. La revocación global
+    /// de la cuenta sigue siendo <see cref="PlatformUser.Revoke"/>, para operadores o
+    /// para sacar a alguien de la plataforma entera.
+    /// </summary>
+    public DateTimeOffset? RevokedAt { get; private set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public string? CreatedBy { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
     public string? UpdatedBy { get; set; }
+
+    /// <summary>Vigente en este tenant: no revocado acá.</summary>
+    public bool IsUsable => RevokedAt is null;
 
     /// <summary>Rechaza <c>admin_sistema</c>: ese rol es exclusivo del operador, nunca de un tenant.</summary>
     public static ErrorOr<TenantMember> Create(Guid tenantId, Guid platformUserId, PlatformRole role)
@@ -75,6 +86,26 @@ public sealed class TenantMember : Entity<Guid>, IAuditableEntity
             return PlatformUserErrors.InvalidRoleForTenant;
 
         Role = newRole;
+        return Result.Success;
+    }
+
+    /// <summary>Revoca el acceso a este tenant puntual. Idempotencia estricta (espejo de <see cref="PlatformUser.Revoke"/>).</summary>
+    public ErrorOr<Success> Revoke(DateTimeOffset at)
+    {
+        if (RevokedAt is not null)
+            return TenantMemberErrors.AlreadyRevoked;
+
+        RevokedAt = at;
+        return Result.Success;
+    }
+
+    /// <summary>Reactiva el acceso a este tenant. Idempotencia estricta: reactivar uno vigente es un error.</summary>
+    public ErrorOr<Success> Reinstate()
+    {
+        if (RevokedAt is null)
+            return TenantMemberErrors.NotRevoked;
+
+        RevokedAt = null;
         return Result.Success;
     }
 }

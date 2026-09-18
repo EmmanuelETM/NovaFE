@@ -56,14 +56,16 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
         // Acceso directo (tenant_members) o heredado: owner/admin de la
         // organización dueña del tenant actúa como admin_tenant ahí, sin fila
         // explícita. Ninguno de los dos si el tenant o su organización están
-        // suspendidos.
+        // suspendidos. Una fila de tenant_members revocada (por tenant, no
+        // global) no cuenta como acceso directo — pero si la persona además
+        // es owner/admin de la organización, esa vía heredada sigue viva.
         const string sql =
             """
             SELECT t.id                              AS "TenantId",
                    coalesce(tm.role, 'admin_tenant')  AS "Role"
             FROM tenants t
             LEFT JOIN tenant_members tm
-                ON tm.tenant_id = t.id AND tm.platform_user_id = @platformUserId
+                ON tm.tenant_id = t.id AND tm.platform_user_id = @platformUserId AND tm.revoked_at IS NULL
             LEFT JOIN organization_members om
                 ON om.organization_id = t.organization_id
                AND om.platform_user_id = @platformUserId
@@ -97,6 +99,7 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
                 FROM tenant_members tm
                 JOIN tenants t ON t.id = tm.tenant_id
                 WHERE tm.platform_user_id = @platformUserId
+                  AND tm.revoked_at IS NULL
                   AND t.is_deleted = false AND t.status = 'Active'
                   AND NOT EXISTS (
                       SELECT 1 FROM organizations o
@@ -157,9 +160,11 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
                   OR EXISTS (
                         SELECT 1 FROM tenant_members tm2
                         WHERE tm2.tenant_id = t.id AND tm2.platform_user_id = @platformUserId
+                          AND tm2.revoked_at IS NULL
                      )
                    )
-            LEFT JOIN tenant_members tm ON tm.tenant_id = t.id AND tm.platform_user_id = @platformUserId
+            LEFT JOIN tenant_members tm
+                ON tm.tenant_id = t.id AND tm.platform_user_id = @platformUserId AND tm.revoked_at IS NULL
             WHERE om.platform_user_id = @platformUserId
             ORDER BY o.created_at, t.created_at
             """;
@@ -194,6 +199,7 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
             FROM tenant_members tm
             JOIN tenants t ON t.id = tm.tenant_id
             WHERE tm.platform_user_id = @platformUserId
+              AND tm.revoked_at IS NULL
               AND t.is_deleted = false AND t.status = 'Active'
               AND NOT EXISTS (
                   SELECT 1 FROM organizations o
@@ -248,8 +254,12 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
         // vestigial y solo refleja el PRIMER tenant al que se dio de alta a
         // alguien — un usuario con acceso a varios tenants (Fase 2) no
         // aparecería en el resto. Role/TenantId salen de la fila de
-        // membresía (específicos de este tenant); Email/AuthLinked/RevokedAt
-        // de la identidad global.
+        // membresía (específicos de este tenant); Email/AuthLinked de la
+        // identidad global. RevokedAt combina las dos revocaciones posibles
+        // (global, de PlatformUser; o de este tenant puntual, de
+        // TenantMember) — cualquiera de las dos deja a la persona sin acceso
+        // acá, y no se filtran las filas revocadas: el operador necesita
+        // verlas para poder reactivarlas.
         const string sql =
             """
             SELECT pu.id        AS "Id",
@@ -257,7 +267,7 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
                    tm.role      AS "Role",
                    tm.tenant_id AS "TenantId",
                    (pu.auth_user_id IS NOT NULL) AS "AuthLinked",
-                   pu.revoked_at AS "RevokedAt",
+                   coalesce(pu.revoked_at, tm.revoked_at) AS "RevokedAt",
                    tm.created_at AS "CreatedAt"
             FROM tenant_members tm
             JOIN platform_users pu ON pu.id = tm.platform_user_id AND pu.is_deleted = false

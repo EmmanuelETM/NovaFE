@@ -66,8 +66,38 @@ public sealed class PlatformUserProvisioningTests(DatabaseFixture database) : In
         (await Client.DeleteAsync($"/api/v1/tenants/{tenantId}/users/{created.Id}"))
             .StatusCode.ShouldBe(HttpStatusCode.Conflict);
 
-        // Y ya no autentica.
+        // La revocación es de ESTE tenant (TenantMember), no global
+        // (PlatformUser) — la persona sigue pudiendo autenticar (no queda
+        // "borrada" de la plataforma), pero sin tenant activo no puede
+        // operar acá.
         ActAsHuman("auth-nuevo", "nuevo.empleado@cliente.do");
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [RequiresDockerFact]
+    public async Task Revoking_a_user_from_one_tenant_does_not_affect_their_access_to_another()
+    {
+        var tenantA = await OnboardTenantAsync();
+        var tenantB = await OnboardTenantAsync();
+        const string email = "multi@cliente.do";
+
+        (await Client.PostAsJsonAsync($"/api/v1/tenants/{tenantA}/users", new { email, role = "emisor" }))
+            .StatusCode.ShouldBe(HttpStatusCode.Created);
+        var provisionB = await Client.PostAsJsonAsync($"/api/v1/tenants/{tenantB}/users", new { email, role = "consultor" });
+        var userB = await LeerAsync<UserView>(provisionB);
+
+        AsOperator();
+        (await Client.DeleteAsync($"/api/v1/tenants/{tenantA}/users/{userB!.Id}"))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        // Sigue activo en B — la revocación de A no se filtró.
+        ActAsHuman("auth-multi", email);
+        Client.DefaultRequestHeaders.Add("X-Acting-Tenant-Id", tenantB.ToString());
+        (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Pero ya no en A.
+        Client.DefaultRequestHeaders.Remove("X-Acting-Tenant-Id");
+        Client.DefaultRequestHeaders.Add("X-Acting-Tenant-Id", tenantA.ToString());
         (await Client.GetAsync("/api/v1/ecf")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
