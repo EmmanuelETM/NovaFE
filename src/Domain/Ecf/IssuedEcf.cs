@@ -36,6 +36,7 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
         string? internalInvoiceNumber,
         string? buyerRnc,
         string? buyerName,
+        string? modifiedNcf,
         EcfStatus status,
         EcfTotalsSnapshot totals,
         decimal montoTotal,
@@ -59,6 +60,7 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
         InternalInvoiceNumber = internalInvoiceNumber;
         BuyerRnc = buyerRnc;
         BuyerName = buyerName;
+        ModifiedNcf = modifiedNcf;
         Status = status;
         Totals = totals;
         MontoTotal = montoTotal;
@@ -96,6 +98,13 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
 
     /// <summary>Razón social del comprador — snapshot desnormalizado.</summary>
     public string? BuyerName { get; private set; }
+
+    /// <summary>
+    /// <c>&lt;NCFModificado&gt;</c> — el e-NCF (o NCF de papel) que este comprobante
+    /// modifica. Solo Notas de Crédito/Débito y reemplazos. Se guarda para poder
+    /// correlacionar sin parsear <see cref="EcfXml"/> (p. ej. el módulo de finanzas).
+    /// </summary>
+    public string? ModifiedNcf { get; private set; }
 
     public EcfStatus Status { get; private set; } = null!;
 
@@ -220,6 +229,7 @@ public sealed class IssuedEcf : Entity<Guid>, ITenantOwned, IAuditableEntity, IS
             header.Issuer.InternalInvoiceNumber,
             header.Buyer.Rnc?.Value,
             header.Buyer.Name,
+            document.Reference?.ModifiedNcf,
             EcfStatus.Signed,
             EcfTotalsSnapshot.From(document.Totals),
             document.Totals.MontoTotal,

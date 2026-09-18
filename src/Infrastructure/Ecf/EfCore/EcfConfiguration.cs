@@ -44,6 +44,7 @@ internal sealed class EcfConfiguration : IEntityTypeConfiguration<IssuedEcf>
         builder.Property(e => e.InternalInvoiceNumber).HasMaxLength(20);
         builder.Property(e => e.BuyerRnc).HasMaxLength(11);
         builder.Property(e => e.BuyerName).HasMaxLength(150);
+        builder.Property(e => e.ModifiedNcf).HasMaxLength(20);
 
         builder.Property(e => e.MontoTotal).HasPrecision(18, 2);
 
