@@ -4523,6 +4523,11 @@ export interface components {
             internalNumber: null | string;
             toleranceWarning: null | string;
             signedDuringContingency: boolean;
+            /** Format: double */
+            montoTotal: number | string;
+            buyerRnc: null | string;
+            buyerName: null | string;
+            documentHash: string;
             dgii?: components["schemas"]["EcfDgiiExchange"];
             links?: components["schemas"]["EcfLinks"];
         };

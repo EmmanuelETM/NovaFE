@@ -76,3 +76,28 @@ export function ecfStatusVariant(
 export function isRetriable(status: string): boolean {
   return status === "failed" || status === "review";
 }
+
+/**
+ * Etiquetas de ambiente, mismos 3 valores que `DgiiEnvironment.Name` en
+ * `src/Domain/Common/DgiiEnvironment.cs`.
+ */
+const ECF_ENVIRONMENT_LABELS: Record<string, string> = {
+  Test: "Prueba",
+  Cert: "Certificación",
+  Production: "Producción",
+};
+
+/** La etiqueta de un ambiente; el propio valor si no se reconoce. */
+export function ecfEnvironmentLabel(environment: string): string {
+  return ECF_ENVIRONMENT_LABELS[environment] ?? environment;
+}
+
+/**
+ * Clases extra sobre `<Badge variant="outline">` para acentuar Producción —
+ * Test/Cert se quedan con el outline gris por defecto, sin clases extra.
+ */
+export function ecfEnvironmentBadgeClassName(environment: string): string {
+  return environment === "Production"
+    ? "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+    : "";
+}
