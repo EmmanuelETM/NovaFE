@@ -27,12 +27,14 @@ import { PLAN_OPTIONS } from "@/features/tenants/options";
 import { selectItems } from "@/lib/select-items";
 
 import { AssignTenantDialog } from "./assign-tenant-dialog";
+import { OrganizationAuditLogTab } from "./audit-log-tab";
 import { MembersScreen } from "./members-screen";
 import { TenantsGrid } from "./tenants-grid";
 import {
   useActivateOrganization,
   useOrganization,
   useSuspendOrganization,
+  useUnassignTenantFromOrganization,
   useUpdateOrganizationPlan,
 } from "./use-organizations";
 
@@ -97,6 +99,7 @@ export function OrganizationDetailScreen({
         <TabsList>
           <TabsTrigger value="miembros">Miembros</TabsTrigger>
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
+          <TabsTrigger value="auditoria">Auditoría</TabsTrigger>
         </TabsList>
 
         <TabsContent value="miembros">
@@ -107,13 +110,30 @@ export function OrganizationDetailScreen({
           <div className="flex justify-end">
             <AssignTenantDialog organizationId={organizationId} />
           </div>
-          <TenantsGrid
-            organizationId={organizationId}
-            linkTo={(tenantId) => `/nemus/tenants/${tenantId}`}
-          />
+          <OrganizationTenantsGrid organizationId={organizationId} />
+        </TabsContent>
+
+        <TabsContent value="auditoria">
+          <OrganizationAuditLogTab organizationId={organizationId} />
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function OrganizationTenantsGrid({
+  organizationId,
+}: {
+  organizationId: string;
+}) {
+  const unassign = useUnassignTenantFromOrganization(organizationId);
+
+  return (
+    <TenantsGrid
+      organizationId={organizationId}
+      linkTo={(tenantId) => `/nemus/tenants/${tenantId}`}
+      onUnassign={(tenantId) => unassign.mutate(tenantId)}
+    />
   );
 }
 

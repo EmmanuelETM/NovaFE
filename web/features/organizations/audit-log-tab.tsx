@@ -3,12 +3,19 @@
 import { AuditLogTable } from "@/components/shared/audit-log-table";
 import { useTableSearchParams } from "@/components/shared/data-table";
 
-import { useAuditLog } from "./use-audit-log";
+import { useOrganizationAuditLog } from "./use-organization-audit-log";
 
-/** El registro de auditoría del tenant activo: quién hizo qué, y cuándo. */
-export function AuditLogScreen() {
+/** Lo que tocó a esta organización (plan, estado, miembros, tenants). */
+export function OrganizationAuditLogTab({
+  organizationId,
+}: {
+  organizationId: string;
+}) {
   const [state, setState] = useTableSearchParams([]);
-  const { data, isPending, isFetching, error } = useAuditLog(state);
+  const { data, isPending, isFetching, error } = useOrganizationAuditLog(
+    organizationId,
+    state,
+  );
 
   return (
     <AuditLogTable

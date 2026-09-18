@@ -147,5 +147,7 @@ export const queryKeys = {
     detail: (id: string) => ["organizations", "detail", id] as const,
     members: (id: string) => ["organizations", "members", id] as const,
     tenants: (id: string) => ["organizations", "tenants", id] as const,
+    auditLog: (id: string, filters: Filters) =>
+      ["organizations", "audit-log", id, filters] as const,
   },
 } as const;

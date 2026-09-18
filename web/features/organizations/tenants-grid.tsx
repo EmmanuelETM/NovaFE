@@ -2,10 +2,21 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Building2, ChevronRight, Search } from "lucide-react";
+import { Building2, ChevronRight, Search, X } from "lucide-react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -57,6 +68,7 @@ function matches(tenant: OrganizationTenantSummary, query: string): boolean {
 export function TenantsGrid({
   organizationId,
   linkTo = (tenantId) => `/tenant/${tenantId}`,
+  onUnassign,
 }: {
   organizationId: string;
   /**
@@ -66,6 +78,12 @@ export function TenantsGrid({
    * secuencias/API keys.
    */
   linkTo?: (tenantId: string) => string;
+  /**
+   * Si viene, cada tarjeta gana un botón "Quitar" (con confirmación) — solo
+   * el operador lo pasa. Self-service nunca puede desasociar un tenant de
+   * su propia organización.
+   */
+  onUnassign?: (tenantId: string) => void;
 }) {
   const { data, isPending, error } = useOrganizationTenants(organizationId);
   const [query, setQuery] = useState("");
@@ -134,23 +152,28 @@ export function TenantsGrid({
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {tenants.map((tenant) => (
-            <Link
+            <div
               key={tenant.id}
-              href={linkTo(tenant.id)}
-              className="bg-card border-border/60 hover:bg-muted/50 flex items-center gap-3 rounded-2xl border p-4 shadow-xs transition-colors"
+              className="bg-card border-border/60 hover:bg-muted/50 relative flex items-center gap-3 rounded-2xl border p-4 shadow-xs transition-colors"
             >
-              <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
+              <Link
+                href={linkTo(tenant.id)}
+                className="absolute inset-0 rounded-2xl"
+                aria-label={tenant.legalName}
+              />
+
+              <div className="bg-muted text-muted-foreground pointer-events-none flex size-9 shrink-0 items-center justify-center rounded-lg">
                 <Building2 className="size-4" aria-hidden />
               </div>
 
-              <div className="flex flex-1 flex-col gap-0.5">
+              <div className="pointer-events-none flex flex-1 flex-col gap-0.5">
                 <span className="text-sm font-medium">{tenant.legalName}</span>
                 <span className="text-muted-foreground font-mono text-xs">
                   {tenant.rnc}
                 </span>
               </div>
 
-              <div className="flex flex-col items-end gap-1">
+              <div className="pointer-events-none flex flex-col items-end gap-1">
                 <Badge
                   variant={tenant.status === "Active" ? "outline" : "secondary"}
                 >
@@ -169,14 +192,72 @@ export function TenantsGrid({
                 )}
               </div>
 
-              <ChevronRight
-                className="text-muted-foreground size-4 shrink-0"
-                aria-hidden
-              />
-            </Link>
+              {onUnassign ? (
+                <UnassignButton
+                  tenant={tenant}
+                  onConfirm={() => onUnassign(tenant.id)}
+                />
+              ) : (
+                <ChevronRight
+                  className="text-muted-foreground pointer-events-none size-4 shrink-0"
+                  aria-hidden
+                />
+              )}
+            </div>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+function UnassignButton({
+  tenant,
+  onConfirm,
+}: {
+  tenant: OrganizationTenantSummary;
+  onConfirm: () => void;
+}) {
+  const [confirm, setConfirm] = useState(false);
+
+  return (
+    <>
+      <Button
+        size="icon-sm"
+        variant="ghost"
+        className="relative z-10 shrink-0"
+        aria-label={`Quitar ${tenant.legalName} de la organización`}
+        onClick={(event) => {
+          event.preventDefault();
+          setConfirm(true);
+        }}
+      >
+        <X className="text-muted-foreground size-4" aria-hidden />
+      </Button>
+
+      <AlertDialog open={confirm} onOpenChange={setConfirm}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Quitar de la organización</AlertDialogTitle>
+            <AlertDialogDescription>
+              «{tenant.legalName}» queda huérfano — sin organización dueña,
+              hasta que se le asigne otra. No afecta su facturación ni sus
+              datos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirm(false);
+                onConfirm();
+              }}
+            >
+              Quitar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

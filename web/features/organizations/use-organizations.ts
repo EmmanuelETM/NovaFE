@@ -168,6 +168,23 @@ export function useAssignTenantToOrganization(organizationId: string) {
   });
 }
 
+/** Desasocia un tenant de la organización — vuelve a quedar huérfano. Operador. */
+export function useUnassignTenantFromOrganization(organizationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (tenantId: string) =>
+      api.delete<void>(`/organizations/${organizationId}/tenants/${tenantId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.tenants(organizationId),
+      });
+      toast.success("Tenant quitado de la organización");
+    },
+    onError: (error) => toast.error(organizationErrorMessage(error)),
+  });
+}
+
 /** Los miembros de la organización. Self-service: cualquier miembro puede verlos. */
 export function useOrganizationMembers(organizationId: string) {
   return useQuery({
