@@ -45,6 +45,16 @@ public interface IPlatformUserReadRepository
     /// <summary>Las organizaciones del usuario y, dentro de cada una, los tenants a los que tiene acceso.</summary>
     Task<IReadOnlyList<OrganizationMembershipLookup>> ListOrganizationMembershipsAsync(
         Guid platformUserId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Los tenants a los que el usuario llega por <c>tenant_members</c> directo,
+    /// sin pasar por ninguna organización — para no dejarlos invisibles cuando
+    /// el tenant no está cubierto por ninguna de sus organizaciones. El listado
+    /// completo, no un solo "default": si hay más de uno, todos deben ser
+    /// alcanzables desde el dashboard.
+    /// </summary>
+    Task<IReadOnlyList<OrganizationTenantLookup>> ListDirectTenantAccessAsync(
+        Guid platformUserId, CancellationToken ct = default);
 }
 
 /// <summary>Lo mínimo para autenticar y resolver el tenant/rol de un humano.</summary>

@@ -11,13 +11,21 @@ namespace NovaFE.Application.Users.Contracts;
 /// tiene acceso — para el switcher del dashboard (Fase 3). Vacío para
 /// identidades sin <c>PlatformUser</c> detrás (API key, header de dev, operador).
 /// </param>
+/// <param name="DirectTenants">
+/// Los tenants a los que llega por <c>tenant_members</c> directo y que
+/// <b>no</b> están ya cubiertos por <see cref="Organizations"/> — el acceso
+/// directo a un tenant es independiente de la membresía de organización, y
+/// sin este campo esos tenants quedan invisibles en el dashboard cuando su
+/// organización cambia o el usuario no es miembro de ella.
+/// </param>
 public sealed record UserProfileDto(
     string Id,
     string? Email,
     string Role,
     Guid? TenantId,
     string? TenantName,
-    IReadOnlyList<UserOrganizationDto> Organizations);
+    IReadOnlyList<UserOrganizationDto> Organizations,
+    IReadOnlyList<UserOrganizationTenantDto> DirectTenants);
 
 /// <summary>Una organización del usuario y su rol ahí (<c>owner</c>/<c>admin</c>/<c>member</c>).</summary>
 public sealed record UserOrganizationDto(

@@ -28,4 +28,8 @@ public static class TenantErrors
     public static Error NotOwnedByOrganization(Guid tenantId, Guid organizationId) => Error.Conflict(
         code: "Tenant.NotOwnedByOrganization",
         description: $"El contribuyente '{tenantId}' no pertenece a la organización '{organizationId}'.");
+
+    public static Error AlreadyAssignedToOrganization(Guid tenantId, Guid organizationId) => Error.Conflict(
+        code: "Tenant.AlreadyAssignedToOrganization",
+        description: $"El contribuyente '{tenantId}' ya pertenece a otra organización. Desasócialo primero.");
 }

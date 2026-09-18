@@ -53,12 +53,15 @@ public sealed class GetCurrentUserUseCase(
             if (user is null || !user.IsActive)
                 return PlatformUserErrors.NotFound(userId);
 
+            var organizations = await OrganizationsAsync(userId, ct);
+            var directTenants = await DirectTenantsAsync(userId, organizations, ct);
+
             return new UserProfileDto(
-                userId.ToString(), user.Email, role, tenantId, tenantName, await OrganizationsAsync(userId, ct));
+                userId.ToString(), user.Email, role, tenantId, tenantName, organizations, directTenants);
         }
 
         // API key / X-Tenant-Id de dev / operador: no hay PlatformUser detrás.
-        return new UserProfileDto(principalId, currentUser.UserName, role, tenantId, tenantName, []);
+        return new UserProfileDto(principalId, currentUser.UserName, role, tenantId, tenantName, [], []);
     }
 
     private async Task<IReadOnlyList<UserOrganizationDto>> OrganizationsAsync(Guid userId, CancellationToken ct)
@@ -77,4 +80,25 @@ public sealed class GetCurrentUserUseCase(
 
     private async Task<string?> TenantNameAsync(Guid? tenantId, CancellationToken ct)
         => tenantId is { } id ? (await tenants.GetByIdAsync(id, ct))?.LegalName : null;
+
+    /// <summary>
+    /// El acceso directo, menos lo que ya sale bajo <paramref name="organizations"/>
+    /// — si alguien tiene fila propia en <c>tenant_members</c> para un tenant del
+    /// que además es owner/admin de la organización dueña, no hace falta listarlo
+    /// dos veces.
+    /// </summary>
+    private async Task<IReadOnlyList<UserOrganizationTenantDto>> DirectTenantsAsync(
+        Guid userId, IReadOnlyList<UserOrganizationDto> organizations, CancellationToken ct)
+    {
+        var alreadyListed = organizations
+            .SelectMany(o => o.Tenants)
+            .Select(t => t.TenantId)
+            .ToHashSet();
+
+        var direct = await platformUsers.ListDirectTenantAccessAsync(userId, ct);
+
+        return [.. direct
+            .Where(t => !alreadyListed.Contains(t.TenantId))
+            .Select(t => new UserOrganizationTenantDto(t.TenantId, t.TenantName, t.Role))];
+    }
 }

@@ -25,6 +25,9 @@ public sealed class AssignTenantToOrganizationUseCase(
         if (tenant is null)
             return TenantErrors.NotFound(request.TenantId);
 
+        if (tenant.OrganizationId is { } currentOrgId && currentOrgId != request.OrganizationId)
+            return TenantErrors.AlreadyAssignedToOrganization(tenant.Id, currentOrgId);
+
         tenant.AssignToOrganization(request.OrganizationId);
         await tenants.UpdateAsync(tenant, ct);
 

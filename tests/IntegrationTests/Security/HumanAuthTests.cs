@@ -244,6 +244,55 @@ public sealed class HumanAuthTests(DatabaseFixture database) : IntegrationTestBa
     }
 
     [RequiresDockerFact]
+    public async Task Users_me_lists_a_directly_accessible_tenant_outside_any_organization()
+    {
+        var tenantId = await OnboardTenantAsync();
+        await ProvisionTenantUserAsync(tenantId, "directo@cliente.do", PlatformRole.AdminTenant);
+
+        ActAsHuman("auth-directo", "directo@cliente.do");
+        var me = await LeerAsync<ProfileResponse>(await Client.GetAsync("/api/v1/users/me"));
+
+        me!.DirectTenants.ShouldHaveSingleItem().TenantId.ShouldBe(tenantId);
+    }
+
+    [RequiresDockerFact]
+    public async Task Users_me_does_not_duplicate_a_tenant_already_covered_by_organization_membership()
+    {
+        var register = await Client.PostAsJsonAsync(
+            "/api/v1/organizations",
+            new { name = "Acme", slug = "acme-direct-and-org", plan = "Developer", ownerEmail = "owner@acme-direct.do" });
+        register.StatusCode.ShouldBe(HttpStatusCode.Created, await register.Content.ReadAsStringAsync());
+        var orgId = (await LeerAsync<IdResponse>(register))!.Id;
+
+        ActAsHuman("auth-owner-direct", "owner@acme-direct.do");
+        var members = await LeerAsync<OrganizationMemberResponse[]>(
+            await Client.GetAsync($"/api/v1/organizations/{orgId}/members"));
+        var ownerId = members!.ShouldHaveSingleItem().PlatformUserId;
+
+        // Asociar el tenant es una acción de operador — vuelve al atajo de
+        // dev (sin cabeceras de identidad) antes de llamarla.
+        foreach (var h in new[] { "X-API-Key", "X-Tenant-Id", "X-Internal-Key", "X-Acting-User", "X-Acting-Email" })
+            Client.DefaultRequestHeaders.Remove(h);
+
+        var tenantId = await OnboardTenantAsync();
+        (await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}", null))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        // El dueño de la organización, además, tiene una fila directa para
+        // ese mismo tenant — no debería listarse dos veces.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var tenantMembers = scope.ServiceProvider.GetRequiredService<ITenantMemberRepository>();
+            await tenantMembers.AddAsync(TenantMember.Create(tenantId, ownerId, PlatformRole.AdminTenant).Value);
+        }
+
+        ActAsHuman("auth-owner-direct", "owner@acme-direct.do");
+        var me = await LeerAsync<ProfileResponse>(await Client.GetAsync("/api/v1/users/me"));
+
+        me!.DirectTenants.ShouldBeEmpty();
+    }
+
+    [RequiresDockerFact]
     public async Task Users_me_synthesizes_a_profile_for_the_dev_header()
     {
         var tenantId = await OnboardTenantAsync();
@@ -259,5 +308,15 @@ public sealed class HumanAuthTests(DatabaseFixture database) : IntegrationTestBa
 
     private sealed record SandboxResponse(Guid TenantId, string ApiKey);
 
-    private sealed record ProfileResponse(string Id, string? Email, string Role, Guid? TenantId, string? TenantName);
+    private sealed record ProfileResponse(
+        string Id,
+        string? Email,
+        string Role,
+        Guid? TenantId,
+        string? TenantName,
+        IReadOnlyList<TenantEntryResponse> DirectTenants);
+
+    private sealed record TenantEntryResponse(Guid TenantId, string TenantName, string Role);
+
+    private sealed record OrganizationMemberResponse(Guid PlatformUserId, string Email, string Role);
 }

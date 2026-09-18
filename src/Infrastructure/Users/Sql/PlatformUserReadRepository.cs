@@ -182,6 +182,34 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
                     .Select(r => new OrganizationTenantLookup(r.TenantId!.Value, r.TenantName!, r.TenantRole!))]))];
     }
 
+    public async Task<IReadOnlyList<OrganizationTenantLookup>> ListDirectTenantAccessAsync(
+        Guid platformUserId, CancellationToken ct = default)
+    {
+        // La misma rama de acceso directo que ya arma la parte "tenant_members"
+        // de ResolveDefaultTenantAccessAsync, pero sin LIMIT 1: acá se necesitan
+        // todos, no solo el que gana la prioridad de default.
+        const string sql =
+            """
+            SELECT t.id AS "TenantId", t.legal_name AS "TenantName", tm.role AS "Role"
+            FROM tenant_members tm
+            JOIN tenants t ON t.id = tm.tenant_id
+            WHERE tm.platform_user_id = @platformUserId
+              AND t.is_deleted = false AND t.status = 'Active'
+              AND NOT EXISTS (
+                  SELECT 1 FROM organizations o
+                  WHERE o.id = t.organization_id AND o.status = 'Suspended'
+              )
+            ORDER BY tm.created_at
+            """;
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        var rows = await connection.QueryAsync<OrganizationTenantLookup>(
+            new CommandDefinition(sql, new { platformUserId }, session.Transaction, cancellationToken: ct));
+
+        return [.. rows];
+    }
+
     private sealed record MembershipRow(
         Guid OrganizationId,
         string OrganizationName,

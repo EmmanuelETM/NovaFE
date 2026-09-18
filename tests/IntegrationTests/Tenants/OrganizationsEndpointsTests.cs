@@ -107,6 +107,21 @@ public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : Inte
     }
 
     [RequiresDockerFact]
+    public async Task Assigning_an_already_owned_tenant_to_another_organization_is_a_409()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-move-a");
+        var otherOrgId = await RegisterOrganizationAsync("Other", "acme-move-b");
+        var tenantId = await RegisterTenantAsync("130444558");
+
+        (await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}", null))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var move = await Client.PostAsync($"/api/v1/organizations/{otherOrgId}/tenants/{tenantId}", null);
+
+        move.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+    }
+
+    [RequiresDockerFact]
     public async Task Unassigning_a_tenant_from_the_wrong_organization_is_a_409()
     {
         var orgId = await RegisterOrganizationAsync("Acme", "acme-unassign-wrong");
