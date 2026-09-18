@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   DataTable,
   createAppColumnHelper,
-  useTableSearchParams,
   type DataTableFilter,
+  type DataTableSearchState,
   type PagedResult,
 } from "@/components/shared/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -103,10 +103,15 @@ function toPage(
   };
 }
 
-export function EcfTable() {
+interface EcfTableProps {
+  /** Estado del listado — lo maneja `EcfScreen`, que también filtra el resumen de arriba por el mismo rango de fechas. */
+  state: DataTableSearchState;
+  onStateChange: (patch: Partial<DataTableSearchState>) => void;
+}
+
+export function EcfTable({ state, onStateChange }: EcfTableProps) {
   const router = useRouter();
   const tenantId = useTenantId();
-  const [state, setState] = useTableSearchParams(["type", "status"]);
   const { data, isPending, isFetching, error } = useEcfList(state);
 
   return (
@@ -117,7 +122,7 @@ export function EcfTable() {
       isFetching={isFetching}
       error={error}
       state={state}
-      onStateChange={setState}
+      onStateChange={onStateChange}
       filters={FILTERS}
       searchPlaceholder="e-NCF, RNC o razón social…"
       emptyState={{ title: "No hay comprobantes emitidos todavía." }}

@@ -5,7 +5,6 @@ import {
   Building2,
   CreditCard,
   Key,
-  Landmark,
   LayoutDashboard,
   ListOrdered,
   Receipt,
@@ -92,17 +91,8 @@ export const NAVIGATION: readonly NavSection[] = [
         href: "/comprobantes",
         label: "Comprobantes",
         description:
-          "Los e-CF emitidos, su estado y su intercambio con la DGII",
+          "Resumen fiscal e historial de los e-CF emitidos, con su estado y su intercambio con la DGII",
         icon: Receipt,
-        minRole: ROLE.consultor,
-        ready: true,
-      },
-      {
-        href: "/finanzas",
-        label: "Finanzas",
-        description:
-          "Total facturado, ITBIS, retenciones y notas de crédito/débito",
-        icon: Landmark,
         minRole: ROLE.consultor,
         ready: true,
       },

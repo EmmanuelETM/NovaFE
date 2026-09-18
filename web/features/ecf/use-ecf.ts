@@ -9,14 +9,16 @@ import { api } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/problem";
 import { queryKeys } from "@/lib/api/query-keys";
 
-import type { Ecf, EcfPage } from "./types";
+import type { Ecf, EcfPage, FiscalSummary } from "./types";
 
 /**
  * Comprobantes emitidos del contribuyente actual, paginado en el servidor.
  * El endpoint no acepta `sort` — siempre viene en orden de emisión más
  * reciente. El filtro `type` necesita ser numérico, así que la consulta se
  * arma a mano en vez de con `toApiQuery` (misma razón que documenta
- * `use-tenants.ts` para `search` vs. `filter`).
+ * `use-tenants.ts` para `search` vs. `filter`). `from`/`to` son el mismo
+ * rango de fechas que ya filtra el resumen fiscal de arriba de la pantalla
+ * — una sola fuente de verdad (`EcfScreen`), no dos filtros de fecha.
  */
 export function useEcfList(state: DataTableSearchState) {
   const tenantId = useTenantId();
@@ -34,9 +36,26 @@ export function useEcfList(state: DataTableSearchState) {
           search: state.search.trim() || undefined,
           type: type ? Number(type) : undefined,
           status: status ?? undefined,
+          from: state.filters.from ?? undefined,
+          to: state.filters.to ?? undefined,
         },
         tenantId,
       ),
+  });
+}
+
+/**
+ * Resumen fiscal del contribuyente actual entre `from` y `to` (días locales
+ * `YYYY-MM-DD`, inclusive) — el mismo formato que produce `DateRangePicker`.
+ * El endpoint toma `DateOnly`, no un instante: no pasa por `dayRange()`.
+ */
+export function useFiscalSummary(from: string, to: string) {
+  const tenantId = useTenantId();
+
+  return useQuery({
+    queryKey: queryKeys.finance.summary(tenantId, from, to),
+    queryFn: () =>
+      api.get<FiscalSummary>("/finance/summary", { from, to }, tenantId),
   });
 }
 

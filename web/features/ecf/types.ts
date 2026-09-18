@@ -8,6 +8,13 @@ export type EcfSummary = components["schemas"]["EcfSummaryDto"];
 
 export type EcfPage = components["schemas"]["PagedResultOfEcfSummaryDto"];
 
+/** El resumen fiscal de un rango de fechas (`GET /finance/summary`). */
+export type FiscalSummary = components["schemas"]["FiscalSummaryDto"];
+
+/** Los totales de un tipo de e-CF dentro del resumen. */
+export type FiscalSummaryByType =
+  components["schemas"]["FiscalSummaryByTypeDto"];
+
 /**
  * Etiqueta corta por tipo de e-CF, para una columna de tabla — el
  * `DisplayName` completo del backend ("Factura de Crédito Fiscal
