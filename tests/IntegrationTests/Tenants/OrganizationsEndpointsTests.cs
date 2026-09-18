@@ -135,6 +135,27 @@ public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : Inte
     }
 
     [RequiresDockerFact]
+    public async Task Inviting_a_brand_new_email_provisions_the_user_in_the_same_step()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-auto-provision", ownerEmail: "owner@acme-auto.do");
+
+        ActAsHuman("auth-owner", "owner@acme-auto.do");
+        var invite = await Client.PostAsJsonAsync(
+            $"/api/v1/organizations/{orgId}/members",
+            new { email = "nunca-antes-visto@acme-auto.do", role = "member" });
+
+        invite.StatusCode.ShouldBe(HttpStatusCode.Created, await invite.Content.ReadAsStringAsync());
+
+        var member = await LeerAsync<OrganizationMemberResponse>(invite);
+        member!.Email.ShouldBe("nunca-antes-visto@acme-auto.do");
+        member.Role.ShouldBe("member");
+
+        // Ya puede autenticarse como cualquier otro usuario de la plataforma.
+        ActAsHuman("auth-nuevo", "nunca-antes-visto@acme-auto.do");
+        (await Client.GetAsync($"/api/v1/organizations/{orgId}/members")).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [RequiresDockerFact]
     public async Task A_member_can_list_the_organizations_tenants_but_an_outsider_cannot()
     {
         var orgId = await RegisterOrganizationAsync("Acme", "acme-tenants-self-service", ownerEmail: "owner@acme.do");

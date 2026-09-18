@@ -48,9 +48,4 @@ public static class OrganizationErrors
     public static Error CannotRemoveLastOwner => Error.Conflict(
         code: "Organization.CannotRemoveLastOwner",
         description: "No puedes quitar o degradar al último owner de la organización.");
-
-    public static Error MemberUserNotFound(string email) => Error.NotFound(
-        code: "Organization.MemberUserNotFound",
-        description: $"No existe un usuario de la plataforma con el correo '{email}'. " +
-            "Da de alta al usuario antes de invitarlo a la organización.");
 }
