@@ -20,6 +20,13 @@ namespace NovaFE.Application.Users.ProvisionTenantUser;
 /// desde <c>tenant_members</c>. Sin esta fila, el usuario quedaría dado de alta
 /// pero sin poder entrar a ningún tenant.
 /// </para>
+/// <para>
+/// Un correo que ya es <see cref="PlatformUser"/> (empleado de otro tenant, o
+/// miembro de alguna organización) no se rechaza: un mismo usuario puede tener
+/// acceso a varios tenants, cada uno con su propio rol — se le agrega la fila
+/// de <see cref="TenantMember"/> a la cuenta existente. Solo se rechaza si ya
+/// tenía acceso a <b>este</b> tenant puntual.
+/// </para>
 /// </summary>
 public sealed class ProvisionTenantUserUseCase(
     ILoggerFactory loggerFactory,
@@ -37,24 +44,39 @@ public sealed class ProvisionTenantUserUseCase(
             return TenantErrors.NotFound(request.TenantId);
 
         var email = request.Email.Trim().ToLowerInvariant();
-
-        if (await users.GetByEmailAsync(email, ct) is not null)
-            return PlatformUserErrors.EmailAlreadyProvisioned(email);
-
         var role = PlatformRole.FromName(request.Role.Trim());
 
-        var created = PlatformUser.CreateTenantUser(request.Email, request.TenantId, role);
-        if (created.IsError)
-            return created.Errors;
+        var userResult = await FindOrCreateUserAsync(email, request.TenantId, role, ct);
+        if (userResult.IsError)
+            return userResult.Errors;
 
-        await users.AddAsync(created.Value, ct);
+        var user = userResult.Value;
 
-        var member = TenantMember.Create(request.TenantId, created.Value.Id, role);
+        if (await tenantMembers.GetAsync(request.TenantId, user.Id, ct) is not null)
+            return TenantMemberErrors.AlreadyMember(email);
+
+        var member = TenantMember.Create(request.TenantId, user.Id, role);
         if (member.IsError)
             return member.Errors;
 
         await tenantMembers.AddAsync(member.Value, ct);
 
-        return UserDtoMapper.ToDto(created.Value);
+        return UserDtoMapper.ToDto(user);
+    }
+
+    /// <summary>Mismo criterio que <c>AddOrganizationMemberUseCase</c>: un correo desconocido se da de alta en el mismo paso.</summary>
+    private async Task<ErrorOr<PlatformUser>> FindOrCreateUserAsync(
+        string email, Guid tenantId, PlatformRole role, CancellationToken ct)
+    {
+        var existing = await users.GetByEmailAsync(email, ct);
+        if (existing is not null)
+            return existing;
+
+        var created = PlatformUser.CreateTenantUser(email, tenantId, role);
+        if (created.IsError)
+            return created.Errors;
+
+        await users.AddAsync(created.Value, ct);
+        return created.Value;
     }
 }

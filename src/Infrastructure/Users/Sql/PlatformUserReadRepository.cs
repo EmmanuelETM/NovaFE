@@ -244,18 +244,25 @@ internal sealed class PlatformUserReadRepository(IDbSession session) : IPlatform
 
     public async Task<IReadOnlyList<PlatformUserDto>> ListByTenantAsync(Guid tenantId, CancellationToken ct = default)
     {
+        // Vía tenant_members, no platform_users.tenant_id: ese campo es
+        // vestigial y solo refleja el PRIMER tenant al que se dio de alta a
+        // alguien — un usuario con acceso a varios tenants (Fase 2) no
+        // aparecería en el resto. Role/TenantId salen de la fila de
+        // membresía (específicos de este tenant); Email/AuthLinked/RevokedAt
+        // de la identidad global.
         const string sql =
             """
-            SELECT id           AS "Id",
-                   email        AS "Email",
-                   role         AS "Role",
-                   tenant_id    AS "TenantId",
-                   (auth_user_id IS NOT NULL) AS "AuthLinked",
-                   revoked_at   AS "RevokedAt",
-                   created_at   AS "CreatedAt"
-            FROM platform_users
-            WHERE tenant_id = @tenantId AND is_deleted = false
-            ORDER BY created_at DESC
+            SELECT pu.id        AS "Id",
+                   pu.email     AS "Email",
+                   tm.role      AS "Role",
+                   tm.tenant_id AS "TenantId",
+                   (pu.auth_user_id IS NOT NULL) AS "AuthLinked",
+                   pu.revoked_at AS "RevokedAt",
+                   tm.created_at AS "CreatedAt"
+            FROM tenant_members tm
+            JOIN platform_users pu ON pu.id = tm.platform_user_id AND pu.is_deleted = false
+            WHERE tm.tenant_id = @tenantId
+            ORDER BY tm.created_at DESC
             """;
 
         var connection = await session.GetConnectionAsync(ct);

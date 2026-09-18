@@ -96,6 +96,34 @@ public sealed class PlatformUserProvisioningTests(DatabaseFixture database) : In
     }
 
     [RequiresDockerFact]
+    public async Task Provisioning_the_same_email_for_a_different_tenant_succeeds()
+    {
+        var tenantA = await OnboardTenantAsync();
+        var tenantB = await OnboardTenantAsync();
+
+        var provisionA = await Client.PostAsJsonAsync(
+            $"/api/v1/tenants/{tenantA}/users",
+            new { email = "multi@cliente.do", role = "admin_tenant" });
+        provisionA.StatusCode.ShouldBe(HttpStatusCode.Created, await provisionA.Content.ReadAsStringAsync());
+        var userA = await LeerAsync<UserView>(provisionA);
+
+        var provisionB = await Client.PostAsJsonAsync(
+            $"/api/v1/tenants/{tenantB}/users",
+            new { email = "multi@cliente.do", role = "consultor" });
+        provisionB.StatusCode.ShouldBe(HttpStatusCode.Created, await provisionB.Content.ReadAsStringAsync());
+        var userB = await LeerAsync<UserView>(provisionB);
+
+        // Misma cuenta (mismo PlatformUser), con acceso a los dos tenants.
+        userB!.Id.ShouldBe(userA!.Id);
+
+        var listA = await LeerAsync<UserView[]>(await Client.GetAsync($"/api/v1/tenants/{tenantA}/users"));
+        listA!.ShouldContain(u => u.Id == userA.Id);
+
+        var listB = await LeerAsync<UserView[]>(await Client.GetAsync($"/api/v1/tenants/{tenantB}/users"));
+        listB!.ShouldContain(u => u.Id == userA.Id);
+    }
+
+    [RequiresDockerFact]
     public async Task Provisioning_for_an_unknown_tenant_is_not_found()
     {
         var response = await Client.PostAsJsonAsync(
