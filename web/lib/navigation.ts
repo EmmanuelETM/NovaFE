@@ -343,7 +343,7 @@ export function scopedHref(scope: Scope, href: string): string {
 }
 
 /** Quita el prefijo `/tenant/[id]` u `/org/[slug]` de un pathname, si lo tiene. */
-function stripScopePrefix(pathname: string): string {
+export function stripScopePrefix(pathname: string): string {
   const sinPrefijo = pathname.replace(/^\/(tenant|org)\/[^/]+/, "");
   return sinPrefijo === "" ? "/" : sinPrefijo;
 }
@@ -398,4 +398,19 @@ export function findNavItem(pathname: string): NavItem | undefined {
   }
 
   return mejor;
+}
+
+/**
+ * A dónde vuelve una pantalla que no es la raíz de su `NavItem` — el detalle
+ * de un tenant vuelve al listado de tenants, un comprobante puntual vuelve a
+ * `/comprobantes`. `undefined` si `href` ya es esa raíz: `PageHeader` no
+ * pinta el botón ahí, no hay a dónde ir.
+ */
+export function backHref(href: string): string | undefined {
+  const item = findNavItem(href);
+  if (!item) return undefined;
+  if (stripScopePrefix(href) === item.href) return undefined;
+
+  const prefix = /^\/(tenant|org)\/[^/]+/.exec(href)?.[0] ?? "";
+  return item.href === "/" ? prefix || "/" : `${prefix}${item.href}`;
 }
