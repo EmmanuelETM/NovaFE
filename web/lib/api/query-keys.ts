@@ -93,6 +93,12 @@ export const queryKeys = {
       ["ecf", tenantId, "detail", id] as const,
   },
 
+  /** `GET /finance/summary`: resumen fiscal del contribuyente actual, por rango de fechas. */
+  finance: {
+    summary: (tenantId: string, from: string, to: string) =>
+      ["finance", tenantId, "summary", from, to] as const,
+  },
+
   /** `GET /certificates`: certificados del contribuyente actual (self-service). */
   myCertificates: {
     all: (tenantId: string) => ["my-certificates", tenantId] as const,

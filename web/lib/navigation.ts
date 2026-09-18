@@ -5,6 +5,7 @@ import {
   Building2,
   CreditCard,
   Key,
+  Landmark,
   LayoutDashboard,
   ListOrdered,
   Receipt,
@@ -93,6 +94,15 @@ export const NAVIGATION: readonly NavSection[] = [
         description:
           "Los e-CF emitidos, su estado y su intercambio con la DGII",
         icon: Receipt,
+        minRole: ROLE.consultor,
+        ready: true,
+      },
+      {
+        href: "/finanzas",
+        label: "Finanzas",
+        description:
+          "Total facturado, ITBIS, retenciones y notas de crédito/débito",
+        icon: Landmark,
         minRole: ROLE.consultor,
         ready: true,
       },

@@ -122,3 +122,16 @@ export function dayRange(
     to: `${to}T23:59:59${OFFSET}`,
   };
 }
+
+/**
+ * Un `Date` de un selector (p. ej. el calendario de rango) como día local
+ * `YYYY-MM-DD` — usa los getters locales del navegador, no `toISOString`
+ * (que convierte a UTC y puede correr el día para atrás según la hora y la
+ * zona de quien lo usa). Es lo que espera un `DateOnly` de la API.
+ */
+export function dateOnlyString(date: Date): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}

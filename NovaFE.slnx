@@ -19,6 +19,7 @@
     <File Path="docs/ecf-duplicate-detection.md" />
     <File Path="docs/ecf-xml.md" />
     <File Path="docs/expiry-monitor.md" />
+    <File Path="docs/finance.md" />
     <File Path="docs/fiscal.md" />
     <File Path="docs/human-auth.md" />
     <File Path="docs/local-e2e.md" />

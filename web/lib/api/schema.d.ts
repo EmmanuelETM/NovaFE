@@ -1159,6 +1159,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/finance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["FiscalSummaryDto"];
+                        "application/json": components["schemas"]["FiscalSummaryDto"];
+                        "text/json": components["schemas"]["FiscalSummaryDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/operator-users": {
         parameters: {
             query?: never;
@@ -4831,6 +4871,48 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: null | string;
+        };
+        FiscalSummaryByTypeDto: {
+            /** Format: int32 */
+            type: number | string;
+            typeName: string;
+            /** Format: int32 */
+            count: number | string;
+            /** Format: double */
+            totalAmount: number | string;
+            /** Format: double */
+            totalItbis: number | string;
+        };
+        FiscalSummaryDto: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: double */
+            totalInvoiced: number | string;
+            /** Format: double */
+            totalItbis: number | string;
+            /** Format: double */
+            totalItbis1: number | string;
+            /** Format: double */
+            totalItbis2: number | string;
+            /** Format: double */
+            totalItbis3: number | string;
+            /** Format: double */
+            totalExempt: number | string;
+            /** Format: double */
+            totalItbisWithheld: number | string;
+            /** Format: double */
+            totalIsrWithheld: number | string;
+            /** Format: double */
+            totalCreditNoteAmount: number | string;
+            /** Format: double */
+            totalDebitNoteAmount: number | string;
+            /** Format: double */
+            netCreditDebitEffect: number | string;
+            byType: components["schemas"]["FiscalSummaryByTypeDto"][];
         };
         /** Format: binary */
         IFormFile: string;
