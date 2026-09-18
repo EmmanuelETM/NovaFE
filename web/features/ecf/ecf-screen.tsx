@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
 
 import { DateRangePicker } from "@/components/shared/date-range-picker";
 import { useTableSearchParams } from "@/components/shared/data-table";
@@ -24,11 +24,44 @@ import { addDays, today } from "@/lib/format/date";
 import { formatCount, formatMoney } from "@/lib/format/money";
 
 import { EcfTable } from "./ecf-table";
+import { ecfTypeLabel, type FiscalSummaryByType } from "./types";
 import { useFiscalSummary } from "./use-ecf";
 
+/**
+ * Color por naturaleza fiscal del tipo de e-CF, no por tipo individual —
+ * son 10 tipos pero solo 3 categorías de flujo de dinero. `ingreso` reusa
+ * `--chart-1` (ya era el color del gráfico); `notaCredito` reusa
+ * `--destructive` (mismo rojo semántico que ya usa el resto de la app para
+ * "atención/reversa"); `egreso` no tenía token propio, se agrega uno.
+ */
 const CHART_CONFIG = {
-  totalAmount: { label: "Facturado", color: "var(--chart-1)" },
+  totalAmount: { label: "Facturado" },
+  ingreso: { label: "Ingresos", color: "var(--chart-1)" },
+  notaCredito: { label: "Notas de crédito", color: "var(--destructive)" },
+  egreso: {
+    label: "Egresos",
+    theme: { light: "#f59e0b", dark: "#fbbf24" },
+  },
 } satisfies ChartConfig;
+
+type ChartColorKey = "ingreso" | "notaCredito" | "egreso";
+
+/**
+ * 34 (Nota de Crédito) es la única deducción/anulación. 41 (Compras a
+ * informal), 43 (Gastos Menores) y 47 (Pagos al Exterior) son egresos del
+ * propio contribuyente, no ventas. El resto (31/32/33 ventas normales,
+ * 44 Regímenes Especiales, 45 Gubernamental, 46 Exportaciones) son ingresos.
+ */
+function chartColorKey(type: number): ChartColorKey {
+  if (type === 34) return "notaCredito";
+  if (type === 41 || type === 43 || type === 47) return "egreso";
+  return "ingreso";
+}
+
+/** Le suma a cada fila la etiqueta corta (`31 · Crédito Fiscal`) para el eje X — la misma que ya usa la columna "Tipo" de la tabla. */
+function chartData(byType: readonly FiscalSummaryByType[]) {
+  return byType.map((row) => ({ ...row, label: ecfTypeLabel(row.type) }));
+}
 
 const RANGE_FORMAT = new Intl.DateTimeFormat("es-DO", {
   timeZone: "UTC",
@@ -132,60 +165,78 @@ export function EcfScreen() {
             />
           </div>
 
-          {summary.byType.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Facturado por tipo de e-CF</CardTitle>
-                <CardDescription>
-                  {RANGE_FORMAT.format(new Date(`${from}T12:00:00Z`))} –{" "}
-                  {RANGE_FORMAT.format(new Date(`${to}T12:00:00Z`))}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={CHART_CONFIG} className="h-64 w-full">
-                  <BarChart data={summary.byType}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="typeName"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      fontSize={11}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value: number) => formatMoney(value)}
-                      width={90}
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          formatter={(value) => formatMoney(Number(value))}
-                        />
-                      }
-                    />
-                    <Bar
-                      dataKey="totalAmount"
-                      fill="var(--color-totalAmount)"
-                      radius={4}
-                    />
-                  </BarChart>
-                </ChartContainer>
+          <Card>
+            <CardHeader>
+              <CardTitle>Facturado por tipo de e-CF</CardTitle>
+              <CardDescription>
+                {RANGE_FORMAT.format(new Date(`${from}T12:00:00Z`))} –{" "}
+                {RANGE_FORMAT.format(new Date(`${to}T12:00:00Z`))}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={CHART_CONFIG} className="h-64 w-full">
+                <BarChart data={chartData(summary.byType)}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    fontSize={11}
+                    interval={0}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value: number) => formatMoney(value)}
+                    width={90}
+                  />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        labelKey="label"
+                        formatter={(value, _name, _item, _index, row) => {
+                          // El tipo de recharts para este 5º argumento es un
+                          // union genérico de tooltip; en este gráfico
+                          // siempre es la fila de datos del `<Cell>` activo.
+                          const { count } =
+                            row as unknown as FiscalSummaryByType;
+                          return `${formatMoney(Number(value))} (${formatCount(Number(count))} comprobantes)`;
+                        }}
+                      />
+                    }
+                  />
+                  <Bar dataKey="totalAmount" minPointSize={6} radius={4}>
+                    {summary.byType.map((row) => (
+                      <Cell
+                        key={row.type}
+                        fill={`var(--color-${chartColorKey(Number(row.type))})`}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {summary.byType.map((row) => (
-                    <Badge key={row.type} variant="outline" className="gap-1.5">
-                      {row.typeName}
-                      <span className="text-muted-foreground">
-                        {formatCount(Number(row.count))}
-                      </span>
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {summary.byType.map((row) => (
+                  <Badge key={row.type} variant="outline" className="gap-1.5">
+                    <span
+                      aria-hidden
+                      className="size-2 rounded-full"
+                      style={{
+                        backgroundColor: `var(--color-${chartColorKey(Number(row.type))})`,
+                      }}
+                    />
+                    {ecfTypeLabel(row.type)}:{" "}
+                    {formatMoney(Number(row.totalAmount))}{" "}
+                    <span className="text-muted-foreground">
+                      ({formatCount(Number(row.count))})
+                    </span>
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
 
