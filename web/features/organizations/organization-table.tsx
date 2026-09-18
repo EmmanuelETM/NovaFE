@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { planLabel } from "@/features/tenants/options";
 
+import { CreateOrganizationDialog } from "./create-organization-dialog";
 import { useOrganizations } from "./use-organizations";
 import type { OrganizationPage, OrganizationSummary } from "./types";
 
@@ -88,6 +89,7 @@ export function OrganizationTable() {
       emptyState={{ title: "No hay organizaciones dadas de alta." }}
       onRowClick={(org) => router.push(`/nemus/organizaciones/${org.id}`)}
       getRowId={(org) => org.id}
+      toolbarActions={<CreateOrganizationDialog />}
     />
   );
 }

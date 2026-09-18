@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PLAN_OPTIONS } from "@/features/tenants/options";
 import { selectItems } from "@/lib/select-items";
 
+import { AssignTenantDialog } from "./assign-tenant-dialog";
 import { MembersScreen } from "./members-screen";
 import { TenantsGrid } from "./tenants-grid";
 import {
@@ -102,7 +103,10 @@ export function OrganizationDetailScreen({
           <MembersScreen organizationId={organizationId} canManage />
         </TabsContent>
 
-        <TabsContent value="tenants">
+        <TabsContent value="tenants" className="flex flex-col gap-3">
+          <div className="flex justify-end">
+            <AssignTenantDialog organizationId={organizationId} />
+          </div>
           <TenantsGrid
             organizationId={organizationId}
             linkTo={(tenantId) => `/nemus/tenants/${tenantId}`}

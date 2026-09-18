@@ -50,6 +50,31 @@ export function useOrganization(id: string) {
   });
 }
 
+export interface RegisterOrganizationInput {
+  name: string;
+  slug: string;
+  plan: string;
+  /** Si viene, da de alta (o reusa) ese correo como `owner` en el mismo paso. */
+  ownerEmail?: string;
+}
+
+/** Da de alta una organización. Operador. */
+export function useRegisterOrganization() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: RegisterOrganizationInput) =>
+      api.post<{ id: string }>("/organizations", input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.all,
+      });
+      toast.success("Organización creada");
+    },
+    onError: (error) => toast.error(organizationErrorMessage(error)),
+  });
+}
+
 /** Suspende la organización — bloquea en cascada a todos sus tenants. Operador. */
 export function useSuspendOrganization(organizationId: string) {
   const queryClient = useQueryClient();
@@ -126,6 +151,23 @@ export function useOrganizationTenants(organizationId: string) {
   });
 }
 
+/** Asocia (o reasocia) un tenant existente a la organización. Operador. */
+export function useAssignTenantToOrganization(organizationId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (tenantId: string) =>
+      api.post<void>(`/organizations/${organizationId}/tenants/${tenantId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.organizations.tenants(organizationId),
+      });
+      toast.success("Tenant asociado");
+    },
+    onError: (error) => toast.error(organizationErrorMessage(error)),
+  });
+}
+
 /** Los miembros de la organización. Self-service: cualquier miembro puede verlos. */
 export function useOrganizationMembers(organizationId: string) {
   return useQuery({
@@ -140,7 +182,7 @@ export interface AddOrganizationMemberInput {
   role: string;
 }
 
-/** Invita a un miembro por correo. Requiere que ya exista como usuario de la plataforma. */
+/** Invita a un miembro por correo — si el correo es nuevo, se da de alta en el mismo paso. */
 export function useAddOrganizationMember(organizationId: string) {
   const queryClient = useQueryClient();
 
