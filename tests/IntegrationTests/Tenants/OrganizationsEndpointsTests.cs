@@ -88,6 +88,54 @@ public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : Inte
     }
 
     [RequiresDockerFact]
+    public async Task Unassign_tenant_then_list_no_longer_shows_it()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-unassign", ownerEmail: "owner@acme-unassign.do");
+        var tenantId = await RegisterTenantAsync("130444556");
+
+        (await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}", null))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var unassign = await Client.DeleteAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}");
+        unassign.StatusCode.ShouldBe(HttpStatusCode.NoContent, await unassign.Content.ReadAsStringAsync());
+
+        ActAsHuman("auth-owner", "owner@acme-unassign.do");
+        var list = await LeerAsync<PagedResponse<TenantSummaryResponse>>(
+            await Client.GetAsync($"/api/v1/organizations/{orgId}/tenants"));
+
+        list!.Items.ShouldBeEmpty();
+    }
+
+    [RequiresDockerFact]
+    public async Task Unassigning_a_tenant_from_the_wrong_organization_is_a_409()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-unassign-wrong");
+        var otherOrgId = await RegisterOrganizationAsync("Other", "other-unassign-wrong");
+        var tenantId = await RegisterTenantAsync("130444557");
+
+        (await Client.PostAsync($"/api/v1/organizations/{orgId}/tenants/{tenantId}", null))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var unassign = await Client.DeleteAsync($"/api/v1/organizations/{otherOrgId}/tenants/{tenantId}");
+
+        unassign.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+    }
+
+    [RequiresDockerFact]
+    public async Task The_organization_audit_log_shows_actions_taken_on_it()
+    {
+        var orgId = await RegisterOrganizationAsync("Acme", "acme-org-audit");
+
+        (await Client.PatchAsJsonAsync($"/api/v1/organizations/{orgId}/plan", new { plan = "Enterprise" }))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var log = await LeerAsync<PagedResponse<AuditLogRowResponse>>(
+            await Client.GetAsync($"/api/v1/organizations/{orgId}/audit-log"));
+
+        log!.Items.ShouldContain(row => row.Path.Contains($"{orgId}/plan") && row.HttpMethod == "PATCH");
+    }
+
+    [RequiresDockerFact]
     public async Task Suspending_the_organization_blocks_authentication_for_its_tenants()
     {
         var orgId = await RegisterOrganizationAsync("Acme", "acme-suspend");
@@ -278,4 +326,6 @@ public sealed class OrganizationsEndpointsTests(DatabaseFixture database) : Inte
     private sealed record PagedResponse<T>(IEnumerable<T> Items, int TotalCount, int Page, int PageSize);
 
     private sealed record SandboxResponse(Guid TenantId, string ApiKey);
+
+    private sealed record AuditLogRowResponse(Guid Id, string HttpMethod, string Path, int StatusCode);
 }

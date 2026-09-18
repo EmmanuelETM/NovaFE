@@ -47,4 +47,43 @@ internal sealed class AuditLogReadRepository(IDbSession session) : IAuditLogRead
 
         return new PagedResult<AuditLogEntryDto>([.. items], total, page, pageSize);
     }
+
+    public async Task<PagedResult<AuditLogEntryDto>> ListByOrganizationAsync(
+        Guid organizationId, int page, int pageSize, CancellationToken ct = default)
+    {
+        const string countSql = "SELECT count(*) FROM audit_log WHERE path ILIKE @pattern";
+        const string pageSql =
+            """
+            SELECT id           AS "Id",
+                   occurred_at  AS "OccurredAt",
+                   tenant_id    AS "TenantId",
+                   actor        AS "Actor",
+                   actor_role   AS "ActorRole",
+                   ip_address   AS "IpAddress",
+                   http_method  AS "HttpMethod",
+                   path         AS "Path",
+                   status_code  AS "StatusCode",
+                   succeeded    AS "Succeeded",
+                   trace_id     AS "TraceId",
+                   duration_ms  AS "DurationMs",
+                   impersonated_by AS "ImpersonatedBy"
+            FROM audit_log
+            WHERE path ILIKE @pattern
+            ORDER BY occurred_at DESC
+            LIMIT @take OFFSET @skip
+            """;
+
+        var skip = (Math.Max(page, 1) - 1) * pageSize;
+        var parameters = new { pattern = $"%/organizations/{organizationId}%", take = pageSize, skip };
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        var total = await connection.ExecuteScalarAsync<int>(
+            new CommandDefinition(countSql, parameters, session.Transaction, cancellationToken: ct));
+
+        var items = await connection.QueryAsync<AuditLogEntryDto>(
+            new CommandDefinition(pageSql, parameters, session.Transaction, cancellationToken: ct));
+
+        return new PagedResult<AuditLogEntryDto>([.. items], total, page, pageSize);
+    }
 }

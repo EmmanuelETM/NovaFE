@@ -7,13 +7,16 @@ using NovaFE.Application.Organizations.AssignTenant;
 using NovaFE.Application.Organizations.ChangeOrganizationMemberRole;
 using NovaFE.Application.Organizations.Contracts;
 using NovaFE.Application.Organizations.GetOrganization;
+using NovaFE.Application.Organizations.ListOrganizationAuditLog;
 using NovaFE.Application.Organizations.ListOrganizationMembers;
 using NovaFE.Application.Organizations.ListOrganizations;
 using NovaFE.Application.Organizations.ListOrganizationTenants;
 using NovaFE.Application.Organizations.RegisterOrganization;
 using NovaFE.Application.Organizations.RemoveOrganizationMember;
 using NovaFE.Application.Organizations.SuspendOrganization;
+using NovaFE.Application.Organizations.UnassignTenant;
 using NovaFE.Application.Organizations.UpdateOrganizationPlan;
+using NovaFE.Application.Audit.Contracts;
 using NovaFE.Domain.Common;
 using NovaFE.Service.Common;
 using NovaFE.Service.Security;
@@ -45,8 +48,10 @@ public sealed class OrganizationsController(
     ChangeOrganizationMemberRoleUseCase changeMemberRole,
     RemoveOrganizationMemberUseCase removeMember,
     AssignTenantToOrganizationUseCase assignTenant,
+    UnassignTenantFromOrganizationUseCase unassignTenant,
     ListOrganizationTenantsUseCase listTenants,
-    UpdateOrganizationPlanUseCase updatePlan) : ApiController
+    UpdateOrganizationPlanUseCase updatePlan,
+    ListOrganizationAuditLogUseCase listAuditLog) : ApiController
 {
     [HttpPost]
     [Authorize(Policy = SecurityPolicies.Operator)]
@@ -179,6 +184,19 @@ public sealed class OrganizationsController(
         => (await assignTenant.Execute(new AssignTenantToOrganizationCommand(id, tenantId), ct))
             .Match(_ => NoContent(), Problem);
 
+    /// <summary>Desasocia un contribuyente de la organización — vuelve a quedar huérfano.</summary>
+    [HttpDelete("{id:guid}/tenants/{tenantid:guid}")]
+    [Authorize(Policy = SecurityPolicies.Operator)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UnassignTenant(
+        Guid id,
+        [FromRoute(Name = "tenantid")] Guid tenantId,
+        CancellationToken ct)
+        => (await unassignTenant.Execute(new UnassignTenantFromOrganizationCommand(id, tenantId), ct))
+            .Match(_ => NoContent(), Problem);
+
     /// <summary>Los contribuyentes (tenants/"proyectos") de la organización. Self-service para cualquier miembro (o el operador).</summary>
     [HttpGet("{id:guid}/tenants")]
     [Authorize(Policy = SecurityPolicies.Authenticated)]
@@ -190,6 +208,23 @@ public sealed class OrganizationsController(
         [FromQuery] int pageSize,
         CancellationToken ct)
         => (await listTenants.Execute(new ListOrganizationTenantsQuery(id) { Page = page, PageSize = pageSize }, ct))
+            .Match(Ok, Problem);
+
+    /// <summary>
+    /// Lo que tocó a esta organización (plan, estado, miembros, tenants),
+    /// paginado. Solo operador: son acciones que hoy solo el operador puede
+    /// disparar.
+    /// </summary>
+    [HttpGet("{id:guid}/audit-log")]
+    [Authorize(Policy = SecurityPolicies.Operator)]
+    [ProducesResponseType(typeof(PagedResult<AuditLogEntryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAuditLog(
+        Guid id,
+        [FromQuery] int page,
+        [FromQuery] int pageSize,
+        CancellationToken ct)
+        => (await listAuditLog.Execute(new ListOrganizationAuditLogQuery(id) { Page = page, PageSize = pageSize }, ct))
             .Match(Ok, Problem);
 
     /// <summary>Cuerpo del <c>POST .../members</c>.</summary>

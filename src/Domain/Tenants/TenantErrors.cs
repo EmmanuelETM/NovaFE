@@ -24,4 +24,8 @@ public static class TenantErrors
     public static Error NotSuspended => Error.Conflict(
         code: "Tenant.NotSuspended",
         description: "El contribuyente no está suspendido, no hay nada que reactivar.");
+
+    public static Error NotOwnedByOrganization(Guid tenantId, Guid organizationId) => Error.Conflict(
+        code: "Tenant.NotOwnedByOrganization",
+        description: $"El contribuyente '{tenantId}' no pertenece a la organización '{organizationId}'.");
 }

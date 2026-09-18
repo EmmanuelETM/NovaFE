@@ -96,4 +96,7 @@ public sealed class Tenant : Entity<Guid>, IAuditableEntity, ISoftDeletable
 
     /// <summary>Asigna (o reasigna) la organización dueña de este contribuyente.</summary>
     public void AssignToOrganization(Guid organizationId) => OrganizationId = organizationId;
+
+    /// <summary>Desasocia al contribuyente de su organización dueña — vuelve a quedar huérfano.</summary>
+    public void UnassignFromOrganization() => OrganizationId = null;
 }
