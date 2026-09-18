@@ -113,6 +113,24 @@ public sealed class IssueEcfUseCase(
             return document.Errors;
         }
 
+        // RF-02.10: una nota de crédito no puede superar el monto del comprobante
+        // que modifica. Solo se puede comprobar si el original lo emitimos
+        // nosotros — un NCF de papel (pre-electrónico) no tiene contra qué
+        // comparar, y en ese caso se deja pasar (mismo criterio que la regla de
+        // los 30 días, que tampoco verifica la fecha del original contra nada).
+        if (type == EcfType.NotaCredito && document.Value.Reference is { } reference)
+        {
+            var originalTotal = await ecfReads.FindTotalByEncfAsync(tenantId, reference.ModifiedNcf, ct);
+            if (originalTotal is { } original && document.Value.Totals.MontoTotal > original)
+            {
+                Logger.LogWarning(
+                    "e-NCF {Encf} quemado: el monto ({Amount}) supera el del comprobante {ModifiedNcf} que modifica ({Original})",
+                    encf.Value, document.Value.Totals.MontoTotal, reference.ModifiedNcf, original);
+                return EcfErrors.CreditNoteExceedsOriginal(
+                    reference.ModifiedNcf, document.Value.Totals.MontoTotal, original);
+            }
+        }
+
         // Detección de duplicados por huella (comprador + tipo + monto + fecha +
         // ambiente). Exige RNC/cédula del comprador: sin identificador no hay
         // huella confiable (p. ej. consumo < DOP 250,000 con "CONSUMIDOR FINAL"

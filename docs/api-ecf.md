@@ -401,15 +401,23 @@ ya está firmado y guardado. Cada transición dispara un webhook (`docs/webhooks
 - **M11 Tipo 2/3** — contingencia por imposibilidad técnica y por caída de la
   DGII (Decreto 587-24). El Tipo 1 (falta de conectividad) ya está
   implementado — ver `docs/contingency.md` y `signedDuringContingency` (§6).
-- **RF-02.10** — validar NC ≤ `MontoTotal` del e-CF modificado (necesita el original persistido).
-- **M9 (resto)** — `GET /ecf/{id}/ri` (PDF), bitmap del QR.
+- ~~**RF-02.10** — validar NC ≤ `MontoTotal` del e-CF modificado~~ **Hecho.**
+  `IssueEcfUseCase` busca el original por `ModifiedNcf`
+  (`IEcfReadRepository.FindTotalByEncfAsync`) y rechaza con `Ecf.CreditNoteExceedsOriginal`
+  si lo supera — solo si el original lo emitimos nosotros (un NCF de papel no
+  tiene contra qué comparar, y en ese caso se deja pasar).
+- ~~**M9 (resto)** — `GET /ecf/{id}/ri` (PDF), bitmap del QR~~ **Hecho**, ver
+  `docs/representation.md` (`GET /ecf/{id}/representation`).
 - **M14** — API keys.
 - `payment.account` (`TipoCuentaPago`…) y `payment.billingPeriod` (`FechaDesde`/
   `FechaHasta`) — no existen en el dominio todavía.
 - Sucursales del emisor (`<Sucursal>`); `TablaSubDescuento`/`TablaSubRecargo` de
-  línea; derivación del ISC desde `details.alcoholDegrees`/`referenceQuantity`;
-  validación de las tablas de códigos de la DGII (un código de provincia/municipio
-  inválido en el `EmitterProfile` hoy falla el XSD post-firma con `500`).
+  línea; derivación del ISC desde `details.alcoholDegrees`/`referenceQuantity`.
+  ~~Validación del código de provincia/municipio del `EmitterProfile`~~ **Hecho**
+  — `ProvinciaMunicipioCatalog` (582 códigos de la Tabla III, mismo catálogo que
+  `web/lib/catalog/provincias-municipios.ts`) en los validadores de
+  `SetEmitterProfileCommand`/`UpdateEmitterProfileCommand`; antes un código
+  inválido llegaba sin tocar hasta el XSD post-firma y salía como `500`.
 
 ---
 

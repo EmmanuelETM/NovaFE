@@ -132,6 +132,24 @@ internal sealed class EcfReadRepository(IDbSession session) : IEcfReadRepository
         return match is null ? null : (match.Id, match.Encf);
     }
 
+    public async Task<decimal?> FindTotalByEncfAsync(Guid tenantId, string encf, CancellationToken ct = default)
+    {
+        const string sql =
+            """
+            SELECT monto_total
+            FROM issued_ecf
+            WHERE tenant_id = @tenantId
+              AND encf = @encf
+              AND is_deleted = false
+            LIMIT 1
+            """;
+
+        var connection = await session.GetConnectionAsync(ct);
+
+        return await connection.QuerySingleOrDefaultAsync<decimal?>(
+            new CommandDefinition(sql, new { tenantId, encf }, session.Transaction, cancellationToken: ct));
+    }
+
     public async Task<PagedResult<EcfSummaryDto>> ListAsync(
         Guid tenantId, EcfListFilter filter, CancellationToken ct = default)
     {

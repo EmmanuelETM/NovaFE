@@ -170,4 +170,14 @@ public static class EcfErrors
         code: "Ecf.DuplicateSuspected",
         description: $"Parece el mismo comprobante que {previousEncf}, emitido hace poco. " +
             "Si es un comprobante distinto, revise el monto o el comprador, o ajuste el modo de detección de duplicados.");
+
+    /// <summary>
+    /// RF-02.10: una nota de crédito no puede superar el <c>MontoTotal</c> del
+    /// comprobante que modifica. Solo se comprueba cuando el original lo emitimos
+    /// nosotros (un NCF de papel, pre-electrónico, no tiene contra qué comparar).
+    /// </summary>
+    public static Error CreditNoteExceedsOriginal(string modifiedNcf, decimal creditAmount, decimal originalAmount) => Error.Validation(
+        code: "Ecf.CreditNoteExceedsOriginal",
+        description: $"El monto de la nota de crédito (RD$ {creditAmount:N2}) supera el del comprobante " +
+            $"{modifiedNcf} que modifica (RD$ {originalAmount:N2}).");
 }

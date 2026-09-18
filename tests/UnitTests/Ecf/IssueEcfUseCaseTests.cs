@@ -281,6 +281,46 @@ public class IssueEcfUseCaseTests : UseCaseTestBase
     }
 
     [Fact]
+    public async Task Rejects_a_credit_note_that_exceeds_the_original_it_modifies()
+    {
+        _allocator.AllocateAsync(Arg.Any<DgiiEnvironment>(), EcfType.NotaCredito, Arg.Any<CancellationToken>())
+            .Returns(new NcfAllocation(Encf.Build('E', 34, 1), null));
+        _ecfReads.FindTotalByEncfAsync(TenantId, "E310000000001", Arg.Any<CancellationToken>())
+            .Returns(1000m);
+
+        var command = Command() with
+        {
+            Type = 34,
+            Reference = new EcfReferencePayload("E310000000001", new DateOnly(2026, 1, 5)),
+        };
+
+        var result = await Sut().Execute(command);
+
+        result.FirstError.Code.ShouldBe("Ecf.CreditNoteExceedsOriginal");
+        result.FirstError.Type.ShouldBe(ErrorType.Validation);
+        await _signer.DidNotReceive().SignAsync(Arg.Any<EcfDocument>(), Arg.Any<DgiiEnvironment>(), Arg.Any<CancellationToken>());
+        await _ecf.DidNotReceive().AddAsync(Arg.Any<IssuedEcf>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task A_credit_note_against_a_paper_ncf_is_not_checked_against_any_amount()
+    {
+        _allocator.AllocateAsync(Arg.Any<DgiiEnvironment>(), EcfType.NotaCredito, Arg.Any<CancellationToken>())
+            .Returns(new NcfAllocation(Encf.Build('E', 34, 1), null));
+        // FindTotalByEncfAsync sin configurar → null: no hay nada nuestro contra qué comparar.
+
+        var command = Command() with
+        {
+            Type = 34,
+            Reference = new EcfReferencePayload("B1500000001", new DateOnly(2026, 1, 5)),
+        };
+
+        var result = await Sut().Execute(command);
+
+        result.IsError.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task Rejects_an_invalid_payload_before_touching_the_pipeline()
     {
         var result = await Sut().Execute(Command() with { Type = 99 });

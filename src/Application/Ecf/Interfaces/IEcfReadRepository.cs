@@ -31,4 +31,12 @@ public interface IEcfReadRepository
         CancellationToken ct = default);
 
     Task<PagedResult<EcfSummaryDto>> ListAsync(Guid tenantId, EcfListFilter filter, CancellationToken ct = default);
+
+    /// <summary>
+    /// El <c>MontoTotal</c> del comprobante con este e-NCF, si lo emitimos
+    /// nosotros (RF-02.10: una nota de crédito no puede superar el monto del
+    /// comprobante que modifica). <c>null</c> si no existe — puede ser un NCF de
+    /// papel (pre-electrónico), contra el que no hay nada que comparar.
+    /// </summary>
+    Task<decimal?> FindTotalByEncfAsync(Guid tenantId, string encf, CancellationToken ct = default);
 }
