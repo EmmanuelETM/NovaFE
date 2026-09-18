@@ -11,9 +11,10 @@ namespace NovaFE.Infrastructure.Ecf;
 /// <c>using</c>). El código de serialización queda leyéndose como el árbol del XSD.
 /// <para>
 /// El formateo de montos se inyecta (<paramref name="moneyFormat"/>): el
-/// <c>&lt;ECF&gt;</c> usa <see cref="EcfXmlFormat.Money"/> (1–2 decimales); el
-/// <c>&lt;RFCE&gt;</c>, <see cref="EcfXmlFormat.Money2"/> (exactamente 2). Fechas:
-/// <see cref="EcfXmlFormat.Date"/>.
+/// <c>&lt;ECF&gt;</c> usa <see cref="EcfXmlFormat.Money"/>; el <c>&lt;RFCE&gt;</c>,
+/// <see cref="EcfXmlFormat.Money2"/> — ambos siempre a 2 decimales, la
+/// distinción queda por si el día de mañana alguno necesita otra regla.
+/// Fechas: <see cref="EcfXmlFormat.Date"/>.
 /// </para>
 /// </summary>
 internal readonly struct EcfElementWriter(XmlWriter writer, Func<decimal, string>? moneyFormat = null)

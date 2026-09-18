@@ -51,7 +51,7 @@ public sealed class EcfPreviewEndpointsTests(DatabaseFixture database) : Integra
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         var body = await LeerAsync<PreviewResponse>(response);
         body!.XsdValid.ShouldBeTrue();
-        body.Xml.ShouldContain("<MontoTotal>1680</MontoTotal>");   // 1000 + 180 ITBIS + 500 exento
+        body.Xml.ShouldContain("<MontoTotal>1680.00</MontoTotal>");   // 1000 + 180 ITBIS + 500 exento
     }
 
     [RequiresDockerFact]

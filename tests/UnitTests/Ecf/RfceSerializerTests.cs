@@ -46,7 +46,7 @@ public class RfceSerializerTests
         enc.Element("CodigoSeguridadeCF")!.Value.ShouldBe(SecurityCode);
         enc.Element("Emisor")!.Elements().Select(e => e.Name.LocalName).ShouldBe(
             ["RNCEmisor", "RazonSocialEmisor", "FechaEmision"]);
-        enc.Element("Totales")!.Element("MontoTotal")!.Value.ShouldBe("2360");
+        enc.Element("Totales")!.Element("MontoTotal")!.Value.ShouldBe("2360.00");
         enc.Element("Totales")!.Element("ITBIS1").ShouldBeNull();   // el RFCE no lleva los indicadores de tasa
     }
 

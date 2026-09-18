@@ -4,26 +4,23 @@ namespace NovaFE.Infrastructure.Ecf;
 
 /// <summary>
 /// Formato numérico y de fechas exacto que exige el XSD de la DGII: punto
-/// decimal, sin separador de miles, sin notación científica, sin ceros de más.
+/// decimal, sin separador de miles, sin notación científica. Los montos de
+/// dinero siempre llevan sus 2 decimales, incluso en cero ("153.00", nunca
+/// "153") — el resto de los números (porcentajes, precio unitario,
+/// subcantidad) sí evita ceros de más.
 /// </summary>
 internal static class EcfXmlFormat
 {
-    /// <summary>Montos, ITBIS, impuestos, descuentos en el <c>&lt;ECF&gt;</c>: hasta 2 decimales.</summary>
+    /// <summary>Montos, ITBIS, impuestos, descuentos en el <c>&lt;ECF&gt;</c>: siempre 2 decimales.</summary>
     public static string Money(decimal value) =>
-        value.ToString("0.##", CultureInfo.InvariantCulture);
+        Math.Round(value, 2, MidpointRounding.AwayFromZero).ToString("0.00", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Montos en el <c>&lt;RFCE&gt;</c>: su XSD (<c>Decimal18D2…</c>) exige
-    /// <b>exactamente</b> 2 decimales cuando hay parte fraccionaria — no acepta
-    /// "191.3", sí "191.30".
+    /// <b>exactamente</b> 2 decimales — no acepta "191.3" ni un entero sin punto.
     /// </summary>
-    public static string Money2(decimal value)
-    {
-        var rounded = Math.Round(value, 2, MidpointRounding.AwayFromZero);
-        return rounded == Math.Truncate(rounded)
-            ? rounded.ToString("0", CultureInfo.InvariantCulture)
-            : rounded.ToString("0.00", CultureInfo.InvariantCulture);
-    }
+    public static string Money2(decimal value) =>
+        Math.Round(value, 2, MidpointRounding.AwayFromZero).ToString("0.00", CultureInfo.InvariantCulture);
 
     /// <summary><c>PrecioUnitarioItem</c>, <c>TipoCambio</c>: hasta 4 decimales.</summary>
     public static string UnitPrice(decimal value) =>

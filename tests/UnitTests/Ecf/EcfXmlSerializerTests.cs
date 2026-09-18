@@ -90,15 +90,15 @@ public class EcfXmlSerializerTests
         var retencion = root.Element("DetallesItems")!.Element("Item")!.Element("Retencion")!;
         retencion.Elements().Select(e => e.Name.LocalName).ShouldBe(
             ["IndicadorAgenteRetencionoPercepcion", "MontoISRRetenido"]);
-        retencion.Element("MontoISRRetenido")!.Value.ShouldBe("13500");
+        retencion.Element("MontoISRRetenido")!.Value.ShouldBe("13500.00");
         retencion.Element("MontoITBISRetenido").ShouldBeNull();
 
         var totales = root.Element("Encabezado")!.Element("Totales")!;
         totales.Elements().Select(e => e.Name.LocalName).ShouldBe(
             ["MontoExento", "MontoTotal", "ValorPagar", "TotalISRRetencion"]);
-        totales.Element("MontoTotal")!.Value.ShouldBe("50000");
-        totales.Element("ValorPagar")!.Value.ShouldBe("36500");        // 50000 - 13500
-        totales.Element("TotalISRRetencion")!.Value.ShouldBe("13500");
+        totales.Element("MontoTotal")!.Value.ShouldBe("50000.00");
+        totales.Element("ValorPagar")!.Value.ShouldBe("36500.00");        // 50000 - 13500
+        totales.Element("TotalISRRetencion")!.Value.ShouldBe("13500.00");
         totales.Element("TotalITBISRetenido").ShouldBeNull();
     }
 
@@ -122,9 +122,9 @@ public class EcfXmlSerializerTests
         var totales = root.Element("Encabezado")!.Element("Totales")!;
         totales.Elements().Select(e => e.Name.LocalName).ShouldBe(
             ["MontoGravadoTotal", "MontoGravadoI3", "ITBIS3", "TotalITBIS3", "MontoTotal"]);
-        totales.Element("MontoGravadoI3")!.Value.ShouldBe("15000");
+        totales.Element("MontoGravadoI3")!.Value.ShouldBe("15000.00");
         totales.Element("ITBIS3")!.Value.ShouldBe("0");
-        totales.Element("MontoTotal")!.Value.ShouldBe("15000");
+        totales.Element("MontoTotal")!.Value.ShouldBe("15000.00");
         totales.Element("MontoExento").ShouldBeNull();
     }
 
@@ -144,8 +144,8 @@ public class EcfXmlSerializerTests
 
         var totales = root.Element("Encabezado")!.Element("Totales")!;
         totales.Elements().Select(e => e.Name.LocalName).ShouldBe(["MontoExento", "MontoTotal"]);
-        totales.Element("MontoExento")!.Value.ShouldBe("350");
-        totales.Element("MontoTotal")!.Value.ShouldBe("350");
+        totales.Element("MontoExento")!.Value.ShouldBe("350.00");
+        totales.Element("MontoTotal")!.Value.ShouldBe("350.00");
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public class EcfXmlSerializerTests
 
         var totales = root.Element("Encabezado")!.Element("Totales")!;
         totales.Elements().Select(e => e.Name.LocalName).ShouldBe(["MontoExento", "MontoTotal"]);
-        totales.Element("MontoExento")!.Value.ShouldBe("2000");
+        totales.Element("MontoExento")!.Value.ShouldBe("2000.00");
         totales.Element("MontoGravadoTotal").ShouldBeNull();
         totales.Element("ITBIS1").ShouldBeNull();
     }
@@ -201,7 +201,7 @@ public class EcfXmlSerializerTests
         retencion.Elements().Select(e => e.Name.LocalName).ShouldBe(
             ["IndicadorAgenteRetencionoPercepcion", "MontoITBISRetenido", "MontoISRRetenido"]);
         retencion.Element("IndicadorAgenteRetencionoPercepcion")!.Value.ShouldBe("1");
-        retencion.Element("MontoITBISRetenido")!.Value.ShouldBe("54");
+        retencion.Element("MontoITBISRetenido")!.Value.ShouldBe("54.00");
     }
 
     [Fact]
@@ -211,10 +211,10 @@ public class EcfXmlSerializerTests
                 EcfTestData.Line(unitPrice: 1000m, retention: EcfTestData.Retention(itbisWithheld: 54m, isrWithheld: 100m))))
             .Element("Encabezado")!.Element("Totales")!;
 
-        totales.Element("MontoTotal")!.Value.ShouldBe("1180");          // 1000 + 180 ITBIS
-        totales.Element("ValorPagar")!.Value.ShouldBe("1026");          // 1180 - 54 - 100
-        totales.Element("TotalITBISRetenido")!.Value.ShouldBe("54");
-        totales.Element("TotalISRRetencion")!.Value.ShouldBe("100");
+        totales.Element("MontoTotal")!.Value.ShouldBe("1180.00");          // 1000 + 180 ITBIS
+        totales.Element("ValorPagar")!.Value.ShouldBe("1026.00");          // 1180 - 54 - 100
+        totales.Element("TotalITBISRetenido")!.Value.ShouldBe("54.00");
+        totales.Element("TotalISRRetencion")!.Value.ShouldBe("100.00");
     }
 
     [Fact]
@@ -298,7 +298,7 @@ public class EcfXmlSerializerTests
             ["Version", "IdDoc", "Emisor", "Comprador", "InformacionesAdicionales", "Transporte", "Totales"]);
         var info = enc.Element("InformacionesAdicionales")!;
         info.Element("FechaEmbarque")!.Value.ShouldBe("01-03-2026");
-        info.Element("PesoBruto")!.Value.ShouldBe("1250.5");
+        info.Element("PesoBruto")!.Value.ShouldBe("1250.50");
         enc.Element("Transporte")!.Element("Placa")!.Value.ShouldBe("A123456");
     }
 
@@ -324,7 +324,7 @@ public class EcfXmlSerializerTests
 
         info.Elements().Select(e => e.Name.LocalName).ShouldBe(
             ["NumeroReferencia", "CondicionesEntrega", "TotalFob", "Seguro", "Flete", "TotalCif", "PesoBruto"]);
-        info.Element("TotalCif")!.Value.ShouldBe("16500");
+        info.Element("TotalCif")!.Value.ShouldBe("16500.00");
         var transporte = XDocument.Parse(Sut.Serialize(built, EcfTestData.SignedAt)).Root!
             .Element("Encabezado")!.Element("Transporte")!;
         transporte.Element("ViaTransporte")!.Value.ShouldBe("02");
@@ -382,13 +382,13 @@ public class EcfXmlSerializerTests
             ["Encabezado", "DetallesItems", "DescuentosORecargos", "FechaHoraFirma"]);
         var dr = root.Element("DescuentosORecargos")!.Element("DescuentoORecargo")!;
         dr.Element("TipoAjuste")!.Value.ShouldBe("D");
-        dr.Element("MontoDescuentooRecargo")!.Value.ShouldBe("1000");
+        dr.Element("MontoDescuentooRecargo")!.Value.ShouldBe("1000.00");
         dr.Element("IndicadorFacturacionDescuentooRecargo")!.Value.ShouldBe("1");
 
         var totales = root.Element("Encabezado")!.Element("Totales")!;
-        totales.Element("MontoGravadoI1")!.Value.ShouldBe("9000");
-        totales.Element("TotalITBIS")!.Value.ShouldBe("1620");
-        totales.Element("MontoTotal")!.Value.ShouldBe("10620");
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("9000.00");
+        totales.Element("TotalITBIS")!.Value.ShouldBe("1620.00");
+        totales.Element("MontoTotal")!.Value.ShouldBe("10620.00");
     }
 
     [Fact]
@@ -406,9 +406,9 @@ public class EcfXmlSerializerTests
                 EcfTestData.SignedAt)).Root!
             .Element("Encabezado")!.Element("Totales")!;
 
-        totales.Element("MontoGravadoI1")!.Value.ShouldBe("10000");   // base intacta
-        totales.Element("MontoTotal")!.Value.ShouldBe("11800");
-        totales.Element("ValorPagar")!.Value.ShouldBe("10800");       // 11800 - 1000
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("10000.00");   // base intacta
+        totales.Element("MontoTotal")!.Value.ShouldBe("11800.00");
+        totales.Element("ValorPagar")!.Value.ShouldBe("10800.00");       // 11800 - 1000
         totales.Element("DescuentoORecargo").ShouldBeNull();          // no se emite en Totales
     }
 
@@ -433,16 +433,16 @@ public class EcfXmlSerializerTests
         var impuestos = totales.Element("ImpuestosAdicionales")!.Elements("ImpuestoAdicional").ToList();
         impuestos[0].Element("TipoImpuesto")!.Value.ShouldBe("002");   // ordenado por código
         impuestos[1].Element("TipoImpuesto")!.Value.ShouldBe("014");
-        impuestos[1].Element("MontoImpuestoSelectivoConsumoEspecifico")!.Value.ShouldBe("191.3");
+        impuestos[1].Element("MontoImpuestoSelectivoConsumoEspecifico")!.Value.ShouldBe("191.30");
 
         // El ISC específico (191.30) integra la base del ITBIS: 1000 + 191.30 → * 0.18.
-        totales.Element("MontoGravadoI1")!.Value.ShouldBe("1000");     // sin el ISC
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("1000.00");     // sin el ISC
         totales.Element("TotalITBIS")!.Value.ShouldBe("214.43");
-        totales.Element("MontoImpuestoAdicional")!.Value.ShouldBe("236.3");   // 191.30 + 45.00
+        totales.Element("MontoImpuestoAdicional")!.Value.ShouldBe("236.30");   // 191.30 + 45.00
         totales.Element("MontoTotal")!.Value.ShouldBe("1450.73");      // 1000 + 214.43 + 236.30
 
         var item = root.Element("DetallesItems")!.Element("Item")!;
-        item.Element("GradosAlcohol")!.Value.ShouldBe("40");
+        item.Element("GradosAlcohol")!.Value.ShouldBe("40.00");
         item.Element("CantidadReferencia")!.Value.ShouldBe("0.75");
         item.Element("TablaImpuestoAdicional")!.Elements("ImpuestoAdicional").Select(e => e.Element("TipoImpuesto")!.Value)
             .ShouldBe(["014", "002"]);
@@ -471,12 +471,12 @@ public class EcfXmlSerializerTests
     {
         var totales = Serialize(EcfTestData.CreditoFiscal()).Element("Encabezado")!.Element("Totales")!;
 
-        totales.Element("MontoGravadoTotal")!.Value.ShouldBe("2000");
-        totales.Element("MontoGravadoI1")!.Value.ShouldBe("2000");
+        totales.Element("MontoGravadoTotal")!.Value.ShouldBe("2000.00");
+        totales.Element("MontoGravadoI1")!.Value.ShouldBe("2000.00");
         totales.Element("ITBIS1")!.Value.ShouldBe("18");
-        totales.Element("TotalITBIS")!.Value.ShouldBe("360");
-        totales.Element("TotalITBIS1")!.Value.ShouldBe("360");
-        totales.Element("MontoTotal")!.Value.ShouldBe("2360");
+        totales.Element("TotalITBIS")!.Value.ShouldBe("360.00");
+        totales.Element("TotalITBIS1")!.Value.ShouldBe("360.00");
+        totales.Element("MontoTotal")!.Value.ShouldBe("2360.00");
         totales.Element("MontoExento").ShouldBeNull();
         totales.Element("MontoNoFacturable").ShouldBeNull();
     }
@@ -491,7 +491,7 @@ public class EcfXmlSerializerTests
         item.Element("IndicadorFacturacion")!.Value.ShouldBe("1");
         item.Element("IndicadorBienoServicio")!.Value.ShouldBe("2");
         item.Element("PrecioUnitarioItem")!.Value.ShouldBe("2000");
-        item.Element("MontoItem")!.Value.ShouldBe("2000");
+        item.Element("MontoItem")!.Value.ShouldBe("2000.00");
         root.Element("Encabezado")!.Element("Emisor")!.Element("FechaEmision")!.Value.ShouldBe("21-02-2026");
         root.Element("FechaHoraFirma")!.Value.ShouldBe("21-02-2026 10:30:05");
     }
@@ -529,7 +529,7 @@ public class EcfXmlSerializerTests
                 EcfTestData.Line(rate: ItbisRate.Zero, unitPrice: 500m)))
             .Element("Encabezado")!.Element("Totales")!;
 
-        totales.Element("MontoGravadoI3")!.Value.ShouldBe("500");
+        totales.Element("MontoGravadoI3")!.Value.ShouldBe("500.00");
         totales.Element("ITBIS3")!.Value.ShouldBe("0");
         totales.Element("MontoExento").ShouldBeNull();
     }

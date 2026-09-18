@@ -99,7 +99,9 @@ La firma real, con el certificado del tenant, es `IEcfSigner` (ver `docs/signing
     equivalente y la DGII valida la forma canonicalizada. Si TesteCF muestra que
     rechaza los literales, se agrega un pase de escape final en Módulo 3.
 - **Números** (`EcfXmlFormat`): punto decimal, sin separador de miles, sin
-  notación científica, sin ceros de más. 2 decimales para dinero, 4 para
+  notación científica. El dinero (montos, ITBIS, impuestos, descuentos)
+  siempre lleva sus 2 decimales, incluso en cero (`"153.00"`, nunca
+  `"153"`) — el resto evita ceros de más: 4 decimales para
   `PrecioUnitarioItem`/`TipoCambio`, 3 para `Subcantidad`. `<ITBIS1/2/3>` es la
   tasa como **entero** (18, 16, 0).
 - **Fechas**: `dd-MM-yyyy` (campos de documento), `dd-MM-yyyy HH:mm:ss` GMT-4
