@@ -47,7 +47,15 @@ export function WorkspaceSwitcherMobile({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  if (scope.kind === "operator" || user.organizations.length === 0) return null;
+  if (scope.kind === "operator") return null;
+  // Fuera de scope tenant no hay switcher de tenant que mostrar — si además
+  // no hay ninguna organización, no queda nada que ofrecer acá (no debería
+  // pasar: para estar viendo una organización hay que ser miembro de
+  // alguna). En scope tenant sí se muestra siempre: el acceso directo a un
+  // tenant no depende de tener una organización.
+  if (scope.kind === "organization" && user.organizations.length === 0) {
+    return null;
+  }
 
   const active = ownerOrg(user, scope);
   const nombre =
